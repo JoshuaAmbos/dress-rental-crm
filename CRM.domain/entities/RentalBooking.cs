@@ -9,6 +9,7 @@ public class RentalBooking
     public DateTime RentalEndDate { get; set; }
     public decimal RentalFee { get; set; }
     public decimal SecurityDeposit { get; set; }
+    public string? AlterationNotes { get; set; }
     public string BookingStage { get; set; } = "Fitting"; // Fitting, Reserved, Active, Returned
     public bool AgreedToTerms { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

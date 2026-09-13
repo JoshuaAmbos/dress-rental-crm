@@ -57,6 +57,7 @@ public class TenantCrmDbContext : DbContext
             entity.Property(x => x.BookingStage).HasMaxLength(50).IsRequired();
             entity.Property(x => x.RentalFee).HasPrecision(18, 2);
             entity.Property(x => x.SecurityDeposit).HasPrecision(18, 2);
+            entity.Property(x => x.AlterationNotes).HasMaxLength(500);
 
             entity.HasOne(x => x.Customer)
                   .WithMany(x => x.RentalBookings)
