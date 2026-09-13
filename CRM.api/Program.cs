@@ -71,4 +71,34 @@ app.MapGet("/tenant/{companyId:int}/rental-items", async (
     return Results.Ok(items);
 });
 
+// Customer endpoints
+app.MapPost("/tenant/{companyId:int}/customers", async (
+    int companyId,
+    Customer customer,
+    ITenantDbContextFactory tenantFactory) =>
+{
+    await using var tenantDb = await tenantFactory.CreateAsync(companyId);
+
+    tenantDb.Customers.Add(customer);
+    await tenantDb.SaveChangesAsync();
+
+    return Results.Created(
+        $"/tenant/{companyId}/customers/{customer.CustomerId}",
+        customer);
+});
+
+app.MapGet("/tenant/{companyId:int}/customers", async (
+    int companyId,
+    ITenantDbContextFactory tenantFactory) =>
+{
+    await using var tenantDb = await tenantFactory.CreateAsync(companyId);
+
+    var customers = await tenantDb.Customers
+        .AsNoTracking()
+        .OrderBy(x => x.CustomerId)
+        .ToListAsync();
+
+    return Results.Ok(customers);
+});
+
 app.Run();

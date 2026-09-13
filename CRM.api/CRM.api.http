@@ -56,3 +56,23 @@ Content-Type: application/json
 ### 4. Read All Rental Items for Tenant 1
 GET {{host}}/tenant/1/rental-items
 Accept: application/json
+
+### Add Customer to Tenant 1
+POST {{host}}/tenant/1/customers
+Content-Type: application/json
+
+{
+  "customerCode": "CUST001",
+  "customerName": "Juan Dela Cruz",
+  "contactNumber": "09171234567",
+  "emailAddress": "juan@example.com",
+  "address": "Davao City",
+  "bustSize": 36.0,
+  "waistSize": 28.5,
+  "hipSize": 38.0,
+  "isActive": true
+}
+
+### Read All Customers for Tenant 1
+GET {{host}}/tenant/1/customers
+Accept: application/json
