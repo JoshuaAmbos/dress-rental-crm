@@ -4,6 +4,7 @@ public class RentalBooking
 {
     public int RentalBookingId { get; set; }
     public int CustomerId { get; set; }
+    public int CompanyId { get; set; }
     public string DressDescription { get; set; } = string.Empty;
     public DateTime RentalStartDate { get; set; }
     public DateTime RentalEndDate { get; set; }

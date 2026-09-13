@@ -4,6 +4,7 @@ using CRM.infrastructure.data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRM.infrastructure.Migrations.TenantCrmDb
 {
     [DbContext(typeof(TenantCrmDbContext))]
-    partial class TenantCrmDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260913190025_AddTenantNameToBooking")]
+    partial class AddTenantNameToBooking
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -65,9 +68,6 @@ namespace CRM.infrastructure.Migrations.TenantCrmDb
                     b.Property<decimal>("BustSize")
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
-
-                    b.Property<int>("CompanyId")
-                        .HasColumnType("int");
 
                     b.Property<string>("ContactNumber")
                         .IsRequired()
@@ -165,9 +165,6 @@ namespace CRM.infrastructure.Migrations.TenantCrmDb
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<int>("CompanyId")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -192,6 +189,10 @@ namespace CRM.infrastructure.Migrations.TenantCrmDb
                     b.Property<decimal>("SecurityDeposit")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("TenantName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("RentalBookingId");
 
