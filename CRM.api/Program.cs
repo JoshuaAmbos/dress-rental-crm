@@ -2,8 +2,15 @@ using Microsoft.EntityFrameworkCore;
 using CRM.domain.entities;
 using CRM.infrastructure.data;
 using CRM.infrastructure.services;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Prevent infinite navigation property cycles during JSON serialization
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+});
 
 // Add DbContexts
 builder.Services.AddDbContext<MasterCrmDbContext>(options =>
@@ -99,6 +106,51 @@ app.MapGet("/tenant/{companyId:int}/customers", async (
         .ToListAsync();
 
     return Results.Ok(customers);
+});
+
+// POST: Create a new Rental Booking with details
+app.MapPost("/tenant/{companyId:int}/bookings", async (
+    int companyId,
+    RentalBooking booking,
+    ITenantDbContextFactory tenantFactory) =>
+{
+    if (!booking.AgreedToTerms)
+    {
+        return Results.BadRequest(new { error = "Terms and conditions must be acknowledged before processing a rental." });
+    }
+
+    await using var tenantDb = await tenantFactory.CreateAsync(companyId);
+
+    // Verify Customer exists
+    var customerExists = await tenantDb.Customers.AnyAsync(c => c.CustomerId == booking.CustomerId);
+    if (!customerExists)
+    {
+        return Results.NotFound(new { error = $"Customer with ID {booking.CustomerId} not found." });
+    }
+
+    booking.CreatedAt = DateTime.UtcNow;
+    tenantDb.RentalBookings.Add(booking);
+    await tenantDb.SaveChangesAsync();
+
+    return Results.Created($"/tenant/{companyId}/bookings/{booking.RentalBookingId}", booking);
+});
+
+// GET: Retrieve all active and pending bookings with customer details
+app.MapGet("/tenant/{companyId:int}/bookings", async (
+    int companyId,
+    ITenantDbContextFactory tenantFactory) =>
+{
+    await using var tenantDb = await tenantFactory.CreateAsync(companyId);
+
+    var bookings = await tenantDb.RentalBookings
+        .Include(b => b.Customer)
+        .Include(b => b.BookingDetails)
+            .ThenInclude(d => d.RentalItem)
+        .AsNoTracking()
+        .OrderByDescending(b => b.RentalStartDate)
+        .ToListAsync();
+
+    return Results.Ok(bookings);
 });
 
 app.Run();

@@ -16,4 +16,7 @@ public class Customer
 
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // Nav properties
+    public ICollection<RentalBooking> RentalBookings { get; set; } = new List<RentalBooking>();
 }

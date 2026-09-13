@@ -9,4 +9,7 @@ public class RentalItem
     public decimal ReplacementValue { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // Nav properties
+    public ICollection<BookingDetail> BookingDetails { get; set; } = new List<BookingDetail>();
 }
