@@ -1,0 +1,7 @@
+Docker
+    MSSQL username = sa
+    MSSQL_SA_PASSWORD = ourStrong@Passw0rd!
+
+
+Dotnet Commands
+    Run CRM.api = dotnet run --project CRM.api

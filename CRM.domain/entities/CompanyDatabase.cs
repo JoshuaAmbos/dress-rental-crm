@@ -9,5 +9,5 @@ public class CompanyDatabase
     public string CredentialKey { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
 
-    public Company Company { get; set; } = null!;
+    public Company? Company { get; set; }
 }

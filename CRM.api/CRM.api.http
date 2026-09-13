@@ -1,8 +1,10 @@
 @host = http://localhost:5171
 
+###
 GET {{host}}/weatherforecast/
 Accept: application/json
 
+### Register Companies
 POST {{host}}/companies
 Content-Type: application/json
 
@@ -11,3 +13,46 @@ Content-Type: application/json
   "companyName": "Dream Dress Rentals Boutique",
   "isActive": true
 }
+
+### Register Devices
+POST {{host}}/devices
+Content-Type: application/json
+
+{
+  "companyId": 1,
+  "deviceCode": "DEV001",
+  "deviceName": "Main PC",
+  "isActive": true
+}
+
+### 1. Register Database Routing for Company 1
+POST {{host}}/company-databases
+Content-Type: application/json
+
+{
+  "companyId": 1,
+  "serverName": "localhost,1433",
+  "databaseName": "DB_TenantCRM",
+  "credentialKey": "TenantA",
+  "isActive": true
+}
+
+### 2. Test Dynamic Tenant Connection
+GET {{host}}/test-tenant/1
+Accept: application/json
+
+### 3. Add Rental Item into Tenant DB
+POST {{host}}/tenant/1/rental-items
+Content-Type: application/json
+
+{
+  "itemCode": "DRS001",
+  "styleName": "Emerald Velvet Evening Gown",
+  "rentalRate": 150.00,
+  "replacementValue": 600.00,
+  "isActive": true
+}
+
+### 4. Read All Rental Items for Tenant 1
+GET {{host}}/tenant/1/rental-items
+Accept: application/json
