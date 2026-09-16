@@ -1,0 +1,26 @@
+@host = http://localhost:5171
+
+### Create a Rental Booking for Customer 1 (UC-02)
+POST {{host}}/tenant/1/bookings
+Content-Type: application/json
+
+{
+  "customerId": 1,
+  "dressDescription": "Emerald Velvet Evening Gown (Size M)",
+  "rentalStartDate": "2026-09-20T10:00:00Z",
+  "rentalEndDate": "2026-09-23T18:00:00Z",
+  "rentalFee": 150.00,
+  "securityDeposit": 50.00,
+  "bookingStage": "Reserved",
+  "agreedToTerms": true,
+  "bookingDetails": [
+    {
+      "rentalItemId": 1,
+      "alterationNotes": "Shorten hem by 0.5 inches."
+    }
+  ]
+}
+
+### Get All Bookings for Tenant 1
+GET {{host}}/tenant/1/bookings
+Accept: application/json

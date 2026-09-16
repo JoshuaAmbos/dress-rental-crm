@@ -1,0 +1,30 @@
+@host = http://localhost:5171
+
+### Register a User
+POST {{host}}/api/users/register
+Content-Type: application/json
+
+{
+  "username": "staff_maria",
+  "email": "maria@boutique.com",
+  "password": "Password123!",
+  "role": "Staff"
+}
+
+### Login Superadmin
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "superadmin",
+  "password": "SuperSecret123!"
+}
+
+### Login Invalid Credentials (401)
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "superadmin",
+  "password": "WrongPassword!"
+}
