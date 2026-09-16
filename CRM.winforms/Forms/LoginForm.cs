@@ -18,7 +18,7 @@ public class LoginResult
 
 public partial class LoginForm : Form
 {
-    private static readonly HttpClient Http = new() { BaseAddress = new Uri("http://localhost:5171/") };
+    private static readonly HttpClient Http = new() { BaseAddress = new Uri("http://10.0.2.2:5171/") };
 
     private TextBox txtUsername = null!;
     private TextBox txtPassword = null!;
