@@ -1,14 +1,43 @@
-﻿using CRM.winforms.Models;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Text;
+using System.Windows.Forms;
 
-namespace CRM.winforms
+namespace CRM.winforms.Forms
 {
-    internal class MainForm : Form
+    public partial class MainForm : Form
     {
-        private LoginResult authenticatedUser;
-
-        public MainForm(LoginResult authenticatedUser)
+        public MainForm(Models.LoginResult authenticatedUser)
         {
-            this.authenticatedUser = authenticatedUser;
+            InitializeComponent();
+        }
+
+        private void panel1_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void logo_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void MainForm_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
