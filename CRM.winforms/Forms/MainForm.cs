@@ -12,6 +12,7 @@ public partial class MainForm : Form
     private readonly LoginResult _user;
     private UserControl? _activeView;
     private CustomerProfilesView? _customerProfilesView;
+    private DashboardView? _dashboardView;
 
     // colors
     public static readonly Color ColorSidebar = Color.FromArgb(52, 30, 33);
@@ -55,6 +56,12 @@ public partial class MainForm : Form
         SwitchView(_customerProfilesView);
     }
 
+    public void ShowDashboardView()
+    {
+        _dashboardView ??= new DashboardView();
+        SwitchView(_dashboardView);
+    }
+
     private void button1_Click(object sender, EventArgs e)
     {
         ShowCustomerProfiles();
@@ -66,6 +73,7 @@ public partial class MainForm : Form
 
     private void buttonDashboard_Click(object sender, EventArgs e)
     {
+        ShowDashboardView();
     }
 
     private void panel1_Paint(object sender, PaintEventArgs e) { }
