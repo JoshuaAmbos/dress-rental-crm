@@ -35,6 +35,9 @@
             label1 = new Label();
             primaryButtonNewCustomer = new CRM.winforms.Controls.PrimaryButton();
             dgvCustomers = new CRM.winforms.Controls.ModernDataGridView();
+            customerBindingSource = new BindingSource(components);
+            companyDatabaseBindingSource = new BindingSource(components);
+            searchBar1 = new CRM.winforms.Controls.SearchBar();
             customerIdDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             customerCodeDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             companyIdDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
@@ -47,9 +50,6 @@
             hipSizeDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             createdAtDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             rentalBookingsDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
-            customerBindingSource = new BindingSource(components);
-            companyDatabaseBindingSource = new BindingSource(components);
-            searchBar1 = new CRM.winforms.Controls.SearchBar();
             ((System.ComponentModel.ISupportInitialize)dgvCustomers).BeginInit();
             ((System.ComponentModel.ISupportInitialize)customerBindingSource).BeginInit();
             ((System.ComponentModel.ISupportInitialize)companyDatabaseBindingSource).BeginInit();
@@ -129,90 +129,6 @@
             dgvCustomers.Size = new Size(1646, 769);
             dgvCustomers.TabIndex = 4;
             // 
-            // customerIdDataGridViewTextBoxColumn
-            // 
-            customerIdDataGridViewTextBoxColumn.DataPropertyName = "CustomerId";
-            customerIdDataGridViewTextBoxColumn.HeaderText = "CustomerId";
-            customerIdDataGridViewTextBoxColumn.Name = "customerIdDataGridViewTextBoxColumn";
-            customerIdDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // customerCodeDataGridViewTextBoxColumn
-            // 
-            customerCodeDataGridViewTextBoxColumn.DataPropertyName = "CustomerCode";
-            customerCodeDataGridViewTextBoxColumn.HeaderText = "CustomerCode";
-            customerCodeDataGridViewTextBoxColumn.Name = "customerCodeDataGridViewTextBoxColumn";
-            customerCodeDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // companyIdDataGridViewTextBoxColumn
-            // 
-            companyIdDataGridViewTextBoxColumn.DataPropertyName = "CompanyId";
-            companyIdDataGridViewTextBoxColumn.HeaderText = "CompanyId";
-            companyIdDataGridViewTextBoxColumn.Name = "companyIdDataGridViewTextBoxColumn";
-            companyIdDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // customerNameDataGridViewTextBoxColumn
-            // 
-            customerNameDataGridViewTextBoxColumn.DataPropertyName = "CustomerName";
-            customerNameDataGridViewTextBoxColumn.HeaderText = "CustomerName";
-            customerNameDataGridViewTextBoxColumn.Name = "customerNameDataGridViewTextBoxColumn";
-            customerNameDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // contactNumberDataGridViewTextBoxColumn
-            // 
-            contactNumberDataGridViewTextBoxColumn.DataPropertyName = "ContactNumber";
-            contactNumberDataGridViewTextBoxColumn.HeaderText = "ContactNumber";
-            contactNumberDataGridViewTextBoxColumn.Name = "contactNumberDataGridViewTextBoxColumn";
-            contactNumberDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // emailAddressDataGridViewTextBoxColumn
-            // 
-            emailAddressDataGridViewTextBoxColumn.DataPropertyName = "EmailAddress";
-            emailAddressDataGridViewTextBoxColumn.HeaderText = "EmailAddress";
-            emailAddressDataGridViewTextBoxColumn.Name = "emailAddressDataGridViewTextBoxColumn";
-            emailAddressDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // addressDataGridViewTextBoxColumn
-            // 
-            addressDataGridViewTextBoxColumn.DataPropertyName = "Address";
-            addressDataGridViewTextBoxColumn.HeaderText = "Address";
-            addressDataGridViewTextBoxColumn.Name = "addressDataGridViewTextBoxColumn";
-            addressDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // bustSizeDataGridViewTextBoxColumn
-            // 
-            bustSizeDataGridViewTextBoxColumn.DataPropertyName = "BustSize";
-            bustSizeDataGridViewTextBoxColumn.HeaderText = "BustSize";
-            bustSizeDataGridViewTextBoxColumn.Name = "bustSizeDataGridViewTextBoxColumn";
-            bustSizeDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // waistSizeDataGridViewTextBoxColumn
-            // 
-            waistSizeDataGridViewTextBoxColumn.DataPropertyName = "WaistSize";
-            waistSizeDataGridViewTextBoxColumn.HeaderText = "WaistSize";
-            waistSizeDataGridViewTextBoxColumn.Name = "waistSizeDataGridViewTextBoxColumn";
-            waistSizeDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // hipSizeDataGridViewTextBoxColumn
-            // 
-            hipSizeDataGridViewTextBoxColumn.DataPropertyName = "HipSize";
-            hipSizeDataGridViewTextBoxColumn.HeaderText = "HipSize";
-            hipSizeDataGridViewTextBoxColumn.Name = "hipSizeDataGridViewTextBoxColumn";
-            hipSizeDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // createdAtDataGridViewTextBoxColumn
-            // 
-            createdAtDataGridViewTextBoxColumn.DataPropertyName = "CreatedAt";
-            createdAtDataGridViewTextBoxColumn.HeaderText = "CreatedAt";
-            createdAtDataGridViewTextBoxColumn.Name = "createdAtDataGridViewTextBoxColumn";
-            createdAtDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // rentalBookingsDataGridViewTextBoxColumn
-            // 
-            rentalBookingsDataGridViewTextBoxColumn.DataPropertyName = "RentalBookings";
-            rentalBookingsDataGridViewTextBoxColumn.HeaderText = "RentalBookings";
-            rentalBookingsDataGridViewTextBoxColumn.Name = "rentalBookingsDataGridViewTextBoxColumn";
-            rentalBookingsDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
             // customerBindingSource
             // 
             customerBindingSource.DataSource = typeof(domain.entities.Customer);
@@ -230,6 +146,90 @@
             searchBar1.Size = new Size(340, 40);
             searchBar1.TabIndex = 2;
             searchBar1.Load += searchBar1_Load;
+            // 
+            // customerIdDataGridViewTextBoxColumn
+            // 
+            customerIdDataGridViewTextBoxColumn.DataPropertyName = "CustomerId";
+            customerIdDataGridViewTextBoxColumn.HeaderText = "Customer ID";
+            customerIdDataGridViewTextBoxColumn.Name = "customerIdDataGridViewTextBoxColumn";
+            customerIdDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // customerCodeDataGridViewTextBoxColumn
+            // 
+            customerCodeDataGridViewTextBoxColumn.DataPropertyName = "CustomerCode";
+            customerCodeDataGridViewTextBoxColumn.HeaderText = "Code";
+            customerCodeDataGridViewTextBoxColumn.Name = "customerCodeDataGridViewTextBoxColumn";
+            customerCodeDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // companyIdDataGridViewTextBoxColumn
+            // 
+            companyIdDataGridViewTextBoxColumn.DataPropertyName = "CompanyId";
+            companyIdDataGridViewTextBoxColumn.HeaderText = "Company ID";
+            companyIdDataGridViewTextBoxColumn.Name = "companyIdDataGridViewTextBoxColumn";
+            companyIdDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // customerNameDataGridViewTextBoxColumn
+            // 
+            customerNameDataGridViewTextBoxColumn.DataPropertyName = "CustomerName";
+            customerNameDataGridViewTextBoxColumn.HeaderText = "Name";
+            customerNameDataGridViewTextBoxColumn.Name = "customerNameDataGridViewTextBoxColumn";
+            customerNameDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // contactNumberDataGridViewTextBoxColumn
+            // 
+            contactNumberDataGridViewTextBoxColumn.DataPropertyName = "ContactNumber";
+            contactNumberDataGridViewTextBoxColumn.HeaderText = "Contact";
+            contactNumberDataGridViewTextBoxColumn.Name = "contactNumberDataGridViewTextBoxColumn";
+            contactNumberDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // emailAddressDataGridViewTextBoxColumn
+            // 
+            emailAddressDataGridViewTextBoxColumn.DataPropertyName = "EmailAddress";
+            emailAddressDataGridViewTextBoxColumn.HeaderText = "Email";
+            emailAddressDataGridViewTextBoxColumn.Name = "emailAddressDataGridViewTextBoxColumn";
+            emailAddressDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // addressDataGridViewTextBoxColumn
+            // 
+            addressDataGridViewTextBoxColumn.DataPropertyName = "Address";
+            addressDataGridViewTextBoxColumn.HeaderText = "Address";
+            addressDataGridViewTextBoxColumn.Name = "addressDataGridViewTextBoxColumn";
+            addressDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // bustSizeDataGridViewTextBoxColumn
+            // 
+            bustSizeDataGridViewTextBoxColumn.DataPropertyName = "BustSize";
+            bustSizeDataGridViewTextBoxColumn.HeaderText = "Bust Size";
+            bustSizeDataGridViewTextBoxColumn.Name = "bustSizeDataGridViewTextBoxColumn";
+            bustSizeDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // waistSizeDataGridViewTextBoxColumn
+            // 
+            waistSizeDataGridViewTextBoxColumn.DataPropertyName = "WaistSize";
+            waistSizeDataGridViewTextBoxColumn.HeaderText = "Waist Size";
+            waistSizeDataGridViewTextBoxColumn.Name = "waistSizeDataGridViewTextBoxColumn";
+            waistSizeDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // hipSizeDataGridViewTextBoxColumn
+            // 
+            hipSizeDataGridViewTextBoxColumn.DataPropertyName = "HipSize";
+            hipSizeDataGridViewTextBoxColumn.HeaderText = "Hip Size";
+            hipSizeDataGridViewTextBoxColumn.Name = "hipSizeDataGridViewTextBoxColumn";
+            hipSizeDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // createdAtDataGridViewTextBoxColumn
+            // 
+            createdAtDataGridViewTextBoxColumn.DataPropertyName = "CreatedAt";
+            createdAtDataGridViewTextBoxColumn.HeaderText = "Created At";
+            createdAtDataGridViewTextBoxColumn.Name = "createdAtDataGridViewTextBoxColumn";
+            createdAtDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // rentalBookingsDataGridViewTextBoxColumn
+            // 
+            rentalBookingsDataGridViewTextBoxColumn.DataPropertyName = "RentalBookings";
+            rentalBookingsDataGridViewTextBoxColumn.HeaderText = "RentalBookings";
+            rentalBookingsDataGridViewTextBoxColumn.Name = "rentalBookingsDataGridViewTextBoxColumn";
+            rentalBookingsDataGridViewTextBoxColumn.ReadOnly = true;
             // 
             // CustomerProfilesView
             // 
@@ -256,6 +256,8 @@
         private Controls.PrimaryButton primaryButtonNewCustomer;
         private Controls.ModernDataGridView dgvCustomers;
         private BindingSource customerBindingSource;
+        private BindingSource companyDatabaseBindingSource;
+        private Controls.SearchBar searchBar1;
         private DataGridViewTextBoxColumn customerIdDataGridViewTextBoxColumn;
         private DataGridViewTextBoxColumn customerCodeDataGridViewTextBoxColumn;
         private DataGridViewTextBoxColumn companyIdDataGridViewTextBoxColumn;
@@ -268,7 +270,5 @@
         private DataGridViewTextBoxColumn hipSizeDataGridViewTextBoxColumn;
         private DataGridViewTextBoxColumn createdAtDataGridViewTextBoxColumn;
         private DataGridViewTextBoxColumn rentalBookingsDataGridViewTextBoxColumn;
-        private BindingSource companyDatabaseBindingSource;
-        private Controls.SearchBar searchBar1;
     }
 }
