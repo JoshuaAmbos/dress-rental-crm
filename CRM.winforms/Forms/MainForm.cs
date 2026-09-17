@@ -32,7 +32,7 @@ public partial class MainForm : Form
     {
         if (LicenseManager.UsageMode != LicenseUsageMode.Designtime)
         {
-            ShowCustomerProfiles();
+            ShowDashboardView();
         }
     }
 

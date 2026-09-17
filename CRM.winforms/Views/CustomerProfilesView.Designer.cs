@@ -35,9 +35,6 @@
             label1 = new Label();
             primaryButtonNewCustomer = new CRM.winforms.Controls.PrimaryButton();
             dgvCustomers = new CRM.winforms.Controls.ModernDataGridView();
-            customerBindingSource = new BindingSource(components);
-            companyDatabaseBindingSource = new BindingSource(components);
-            searchBar1 = new CRM.winforms.Controls.SearchBar();
             customerIdDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             customerCodeDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             companyIdDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
@@ -50,6 +47,10 @@
             hipSizeDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             createdAtDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             rentalBookingsDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
+            customerBindingSource = new BindingSource(components);
+            companyDatabaseBindingSource = new BindingSource(components);
+            searchBar1 = new CRM.winforms.Controls.SearchBar();
+            chkShowArchived = new CRM.winforms.Controls.AtelierCheckBox();
             ((System.ComponentModel.ISupportInitialize)dgvCustomers).BeginInit();
             ((System.ComponentModel.ISupportInitialize)customerBindingSource).BeginInit();
             ((System.ComponentModel.ISupportInitialize)companyDatabaseBindingSource).BeginInit();
@@ -73,7 +74,7 @@
             primaryButtonNewCustomer.FlatStyle = FlatStyle.Flat;
             primaryButtonNewCustomer.Font = new Font("Segoe UI Semibold", 9.5F, FontStyle.Bold);
             primaryButtonNewCustomer.ForeColor = Color.White;
-            primaryButtonNewCustomer.Location = new Point(1549, 33);
+            primaryButtonNewCustomer.Location = new Point(1549, 89);
             primaryButtonNewCustomer.Name = "primaryButtonNewCustomer";
             primaryButtonNewCustomer.Size = new Size(130, 38);
             primaryButtonNewCustomer.TabIndex = 3;
@@ -95,7 +96,9 @@
             dgvCustomers.AutoGenerateColumns = false;
             dgvCustomers.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvCustomers.BackgroundColor = Color.White;
+            dgvCustomers.BorderStyle = BorderStyle.None;
             dgvCustomers.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+            dgvCustomers.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
             dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft;
             dataGridViewCellStyle2.BackColor = Color.FromArgb(244, 238, 238);
             dataGridViewCellStyle2.Font = new Font("Segoe UI Semibold", 9.5F, FontStyle.Bold);
@@ -128,24 +131,6 @@
             dgvCustomers.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvCustomers.Size = new Size(1646, 769);
             dgvCustomers.TabIndex = 4;
-            // 
-            // customerBindingSource
-            // 
-            customerBindingSource.DataSource = typeof(domain.entities.Customer);
-            // 
-            // companyDatabaseBindingSource
-            // 
-            companyDatabaseBindingSource.DataSource = typeof(domain.entities.CompanyDatabase);
-            // 
-            // searchBar1
-            // 
-            searchBar1.BackColor = Color.Transparent;
-            searchBar1.Location = new Point(33, 93);
-            searchBar1.Name = "searchBar1";
-            searchBar1.Padding = new Padding(12, 8, 12, 8);
-            searchBar1.Size = new Size(340, 40);
-            searchBar1.TabIndex = 2;
-            searchBar1.Load += searchBar1_Load;
             // 
             // customerIdDataGridViewTextBoxColumn
             // 
@@ -231,10 +216,43 @@
             rentalBookingsDataGridViewTextBoxColumn.Name = "rentalBookingsDataGridViewTextBoxColumn";
             rentalBookingsDataGridViewTextBoxColumn.ReadOnly = true;
             // 
+            // customerBindingSource
+            // 
+            customerBindingSource.DataSource = typeof(domain.entities.Customer);
+            // 
+            // companyDatabaseBindingSource
+            // 
+            companyDatabaseBindingSource.DataSource = typeof(domain.entities.CompanyDatabase);
+            // 
+            // searchBar1
+            // 
+            searchBar1.BackColor = Color.Transparent;
+            searchBar1.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            searchBar1.Location = new Point(33, 93);
+            searchBar1.Name = "searchBar1";
+            searchBar1.Padding = new Padding(12, 8, 12, 8);
+            searchBar1.Size = new Size(340, 40);
+            searchBar1.TabIndex = 2;
+            searchBar1.Load += searchBar1_Load;
+            // 
+            // chkShowArchived
+            // 
+            chkShowArchived.BackColor = Color.Transparent;
+            chkShowArchived.Font = new Font("Segoe UI", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            chkShowArchived.ForeColor = Color.FromArgb(45, 35, 40);
+            chkShowArchived.Location = new Point(393, 102);
+            chkShowArchived.Name = "chkShowArchived";
+            chkShowArchived.Size = new Size(135, 25);
+            chkShowArchived.TabIndex = 5;
+            chkShowArchived.Text = "Show Archived";
+            chkShowArchived.UseVisualStyleBackColor = false;
+            chkShowArchived.CheckedChanged += chkShowArchived_CheckedChanged_1;
+            // 
             // CustomerProfilesView
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
+            Controls.Add(chkShowArchived);
             Controls.Add(dgvCustomers);
             Controls.Add(primaryButtonNewCustomer);
             Controls.Add(searchBar1);
@@ -270,5 +288,6 @@
         private DataGridViewTextBoxColumn hipSizeDataGridViewTextBoxColumn;
         private DataGridViewTextBoxColumn createdAtDataGridViewTextBoxColumn;
         private DataGridViewTextBoxColumn rentalBookingsDataGridViewTextBoxColumn;
+        private Controls.AtelierCheckBox chkShowArchived;
     }
 }
