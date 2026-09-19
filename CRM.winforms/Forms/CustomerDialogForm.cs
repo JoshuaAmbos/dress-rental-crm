@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using Microsoft.EntityFrameworkCore;
 using CRM.domain.entities;
 using CRM.infrastructure.data;
+using CRM.infrastructure.services;
 
 namespace CRM.winforms.Forms;
 
@@ -14,8 +15,8 @@ public partial class CustomerDialogForm : Form
     private readonly Func<TenantCrmDbContext> _dbFactory;
     private readonly int _companyId;
     private readonly int? _customerId;
+    private readonly string _existingCustomerCode = string.Empty;
 
-    private TextBox txtCode = null!;
     private TextBox txtFirstName = null!;
     private TextBox txtMiddleName = null!;
     private TextBox txtLastName = null!;
@@ -27,12 +28,16 @@ public partial class CustomerDialogForm : Form
     private NumericUpDown numHips = null!;
     private Button btnSave = null!;
     private Button btnCancel = null!;
+    private Label lblHeaderSubtitle = null!;
 
-    // Atelier Theme
-    private static readonly Color ColorHeaderBg = Color.FromArgb(249, 241, 241);
+    // Colors
+    private static readonly Color ColorHeaderBg = Color.FromArgb(250, 245, 245);
     private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
+    private static readonly Color ColorMutedText = Color.FromArgb(120, 110, 115);
     private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorBorder = Color.FromArgb(220, 210, 210);
+    private static readonly Color ColorDustyRoseHover = Color.FromArgb(171, 99, 108);
+    private static readonly Color ColorBorder = Color.FromArgb(224, 216, 216);
+    private static readonly Color ColorCardBg = Color.FromArgb(254, 252, 252);
 
     public CustomerDialogForm(Func<TenantCrmDbContext> dbFactory, int companyId, Customer? existingCustomer = null)
     {
@@ -44,88 +49,76 @@ public partial class CustomerDialogForm : Form
 
         if (existingCustomer != null)
         {
+            _existingCustomerCode = existingCustomer.CustomerCode;
             PopulateFields(existingCustomer);
             Text = "Edit Customer Profile";
+            lblHeaderSubtitle.Text = $"Customer Code: {_existingCustomerCode}";
         }
         else
         {
             Text = "New Customer Intake";
-            GenerateDefaultCode();
+            //lblHeaderSubtitle.Text = "Client Code: [System Generated on Save]";
         }
     }
 
     private void InitializeUI()
     {
-        // Increased height from 540 to 640 to accommodate two new name fields
-        ClientSize = new Size(460, 640);
+        ClientSize = new Size(640, 690);
+        MinimumSize = new Size(640, 600);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
         BackColor = Color.White;
-        Font = new Font("Segoe UI", 9.5f);
+        Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
-        // Header Panel
+        // 1. Header Panel (Dock: Top)
         var pnlHeader = new Panel
         {
             Dock = DockStyle.Top,
-            Height = 60,
-            BackColor = ColorHeaderBg
+            Height = 75,
+            BackColor = ColorHeaderBg,
+            Padding = new Padding(28, 14, 28, 14)
         };
+
         var lblTitle = new Label
         {
-            Text = _customerId.HasValue ? "Update Customer Profile" : "Add New Customer",
-            Font = new Font("Segoe UI Semibold", 12f, FontStyle.Bold),
+            Text = _customerId.HasValue ? "Edit Client Profile" : "Register New Client",
+            Font = new Font("Segoe UI", 13.5f, FontStyle.Bold),
             ForeColor = ColorEspresso,
-            Location = new Point(24, 18),
+            Location = new Point(28, 14),
             AutoSize = true
         };
-        pnlHeader.Controls.Add(lblTitle);
-        Controls.Add(pnlHeader);
 
-        // Content Area
-        int y = 80;
-        txtCode = AddField("Customer Code *", ref y);
-        txtFirstName = AddField("First Name *", ref y);
-        txtMiddleName = AddField("Middle Name", ref y);
-        txtLastName = AddField("Last Name *", ref y);
-        txtPhone = AddField("Contact Number", ref y);
-        txtEmail = AddField("Email Address", ref y);
-        txtAddress = AddField("Address / City", ref y);
-
-        // Measurements Row
-        var lblMeasurements = new Label
+        lblHeaderSubtitle = new Label
         {
-            Text = "Body Measurements (inches):",
-            Location = new Point(24, y),
-            AutoSize = true,
-            ForeColor = ColorEspresso,
-            Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold)
+            Text = "",
+            Font = new Font("Segoe UI", 9f, FontStyle.Regular),
+            ForeColor = ColorMutedText,
+            Location = new Point(29, 43),
+            AutoSize = true
         };
-        Controls.Add(lblMeasurements);
-        y += 24;
 
-        numBust = AddMeasurementSpinner("Bust", 24, y, 34.0m);
-        numWaist = AddMeasurementSpinner("Waist", 160, y, 26.0m);
-        numHips = AddMeasurementSpinner("Hips", 296, y, 36.0m);
-        y += 56;
+        pnlHeader.Controls.AddRange(new Control[] { lblTitle, lblHeaderSubtitle });
 
-        // Bottom Actions
+        // 2. Footer Panel (Dock: Bottom)
         var pnlFooter = new Panel
         {
             Dock = DockStyle.Bottom,
-            Height = 60,
-            BackColor = Color.FromArgb(253, 250, 250)
+            Height = 65,
+            BackColor = ColorHeaderBg,
+            Padding = new Padding(28, 14, 28, 14)
         };
 
         btnCancel = new Button
         {
             Text = "Cancel",
-            Size = new Size(95, 34),
-            Location = new Point(235, 13),
+            Size = new Size(100, 36),
+            Location = new Point(390, 14),
             FlatStyle = FlatStyle.Flat,
             BackColor = Color.White,
             ForeColor = ColorEspresso,
+            Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
             Cursor = Cursors.Hand
         };
         btnCancel.FlatAppearance.BorderColor = ColorBorder;
@@ -133,9 +126,9 @@ public partial class CustomerDialogForm : Form
 
         btnSave = new Button
         {
-            Text = "Save Profile",
-            Size = new Size(110, 34),
-            Location = new Point(336, 13),
+            Text = _customerId.HasValue ? "Update Client" : "Save Profile",
+            Size = new Size(114, 36),
+            Location = new Point(500, 14),
             FlatStyle = FlatStyle.Flat,
             BackColor = ColorDustyRose,
             ForeColor = Color.White,
@@ -143,58 +136,135 @@ public partial class CustomerDialogForm : Form
             Cursor = Cursors.Hand
         };
         btnSave.FlatAppearance.BorderSize = 0;
+        btnSave.MouseEnter += (s, e) => btnSave.BackColor = ColorDustyRoseHover;
+        btnSave.MouseLeave += (s, e) => btnSave.BackColor = ColorDustyRose;
         btnSave.Click += async (s, e) => await SaveCustomerAsync();
 
         pnlFooter.Controls.AddRange(new Control[] { btnCancel, btnSave });
+
+        // 3. Main Body (Dock: Fill)
+        var pnlBody = new Panel
+        {
+            Dock = DockStyle.Fill,
+            AutoScroll = true,
+            Padding = new Padding(28, 15, 28, 15),
+            BackColor = Color.White
+        };
+
+        int currentY = 15;
+
+        AddSectionHeader("Personal & Contact Details", ref currentY, pnlBody);
+
+        // Row 1: First Name & Middle Name
+        txtFirstName = AddCompactField("First Name *", 28, currentY, 275, pnlBody);
+        txtMiddleName = AddCompactField("Middle Name (Optional)", 323, currentY, 275, pnlBody);
+        currentY += 58;
+
+        // Row 2: Last Name & Phone
+        txtLastName = AddCompactField("Last Name *", 28, currentY, 275, pnlBody);
+        txtPhone = AddCompactField("Contact Number *", 323, currentY, 275, pnlBody);
+        currentY += 58;
+
+        // Row 3: Email Address
+        txtEmail = AddCompactField("Email Address", 28, currentY, 570, pnlBody);
+        currentY += 58;
+
+        // Row 4: Physical Address
+        txtAddress = AddCompactField("Address / City", 28, currentY, 570, pnlBody);
+        currentY += 68;
+
+        // Section: Measurements
+        AddSectionHeader("Body Measurements (Inches)", ref currentY, pnlBody);
+
+        var pnlMeasurements = new Panel
+        {
+            Location = new Point(28, currentY),
+            Size = new Size(570, 84),
+            BackColor = ColorCardBg,
+            BorderStyle = BorderStyle.FixedSingle
+        };
+
+        numBust = AddMeasurementSpinner("Bust", 25, 12, 34.0m, pnlMeasurements);
+        numWaist = AddMeasurementSpinner("Waist", 215, 12, 26.0m, pnlMeasurements);
+        numHips = AddMeasurementSpinner("Hips", 405, 12, 36.0m, pnlMeasurements);
+
+        pnlBody.Controls.Add(pnlMeasurements);
+
+        // Proper WinForms docking order: Fill added first, then Top/Bottom, followed by BringToFront()
+        Controls.Add(pnlBody);
+        Controls.Add(pnlHeader);
         Controls.Add(pnlFooter);
+
+        pnlBody.BringToFront();
     }
 
-    private TextBox AddField(string labelText, ref int y)
+    private void AddSectionHeader(string title, ref int y, Control parent)
+    {
+        var lbl = new Label
+        {
+            Text = title.ToUpperInvariant(),
+            Location = new Point(28, y),
+            AutoSize = true,
+            Font = new Font("Segoe UI Semibold", 8.25f, FontStyle.Bold),
+            ForeColor = ColorDustyRose
+        };
+        parent.Controls.Add(lbl);
+        y += 24;
+    }
+
+    private TextBox AddCompactField(string labelText, int x, int y, int width, Control parent)
     {
         var lbl = new Label
         {
             Text = labelText,
-            Location = new Point(24, y),
+            Location = new Point(x, y),
             AutoSize = true,
-            ForeColor = ColorEspresso
+            ForeColor = ColorEspresso,
+            Font = new Font("Segoe UI", 9f, FontStyle.Regular)
         };
+
         var txt = new TextBox
         {
-            Location = new Point(24, y + 20),
-            Width = 412,
-            BorderStyle = BorderStyle.FixedSingle
+            Location = new Point(x, y + 20),
+            Width = width,
+            BorderStyle = BorderStyle.FixedSingle,
+            Font = new Font("Segoe UI", 10f, FontStyle.Regular)
         };
-        Controls.AddRange(new Control[] { lbl, txt });
-        y += 52;
+
+        parent.Controls.AddRange(new Control[] { lbl, txt });
         return txt;
     }
 
-    private NumericUpDown AddMeasurementSpinner(string tag, int x, int y, decimal defaultVal)
+    private NumericUpDown AddMeasurementSpinner(string tag, int x, int y, decimal defaultVal, Control parent)
     {
         var lbl = new Label
         {
-            Text = tag,
+            Text = $"{tag} (in)",
             Location = new Point(x, y),
             AutoSize = true,
-            ForeColor = Color.FromArgb(120, 110, 115)
+            ForeColor = ColorEspresso,
+            Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold)
         };
+
         var num = new NumericUpDown
         {
-            Location = new Point(x, y + 18),
-            Width = 100,
+            Location = new Point(x, y + 22),
+            Width = 135,
             DecimalPlaces = 1,
             Minimum = 0,
             Maximum = 120,
             Value = defaultVal,
-            BorderStyle = BorderStyle.FixedSingle
+            BorderStyle = BorderStyle.FixedSingle,
+            TextAlign = HorizontalAlignment.Center,
+            Font = new Font("Segoe UI", 10f, FontStyle.Regular)
         };
-        Controls.AddRange(new Control[] { lbl, num });
+
+        parent.Controls.AddRange(new Control[] { lbl, num });
         return num;
     }
 
     private void PopulateFields(Customer c)
     {
-        txtCode.Text = c.CustomerCode;
         txtFirstName.Text = c.FirstName;
         txtMiddleName.Text = c.MiddleName;
         txtLastName.Text = c.LastName;
@@ -207,20 +277,15 @@ public partial class CustomerDialogForm : Form
         numHips.Value = Math.Clamp(c.HipSize, numHips.Minimum, numHips.Maximum);
     }
 
-    private void GenerateDefaultCode()
-    {
-        txtCode.Text = $"CUST-{DateTime.UtcNow:MMdd}-{Random.Shared.Next(100, 999)}";
-    }
-
     private async Task SaveCustomerAsync()
     {
-        var code = txtCode.Text.Trim();
         var fName = txtFirstName.Text.Trim();
         var lName = txtLastName.Text.Trim();
+        var phone = txtPhone.Text.Trim();
 
-        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(fName) || string.IsNullOrWhiteSpace(lName))
+        if (string.IsNullOrWhiteSpace(fName) || string.IsNullOrWhiteSpace(lName))
         {
-            MessageBox.Show("Customer Code, First Name, and Last Name are required.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show("First Name and Last Name are required.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
@@ -230,28 +295,19 @@ public partial class CustomerDialogForm : Form
         {
             await using var db = _dbFactory();
 
-            var codeExists = await db.Customers.AnyAsync(c =>
-                c.CompanyId == _companyId &&
-                c.CustomerCode == code &&
-                (!_customerId.HasValue || c.CustomerId != _customerId.Value));
-
-            if (codeExists)
-            {
-                MessageBox.Show($"Customer code '{code}' is already assigned.", "Duplicate Code", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                btnSave.Enabled = true;
-                return;
-            }
-
             if (!_customerId.HasValue)
             {
+                var generator = new CustomerCodeGenerator(_dbFactory);
+                string newCode = await generator.GenerateNextCodeAsync(_companyId);
+
                 var newCustomer = new Customer
                 {
                     CompanyId = _companyId,
-                    CustomerCode = code,
+                    CustomerCode = newCode,
                     FirstName = fName,
                     MiddleName = txtMiddleName.Text.Trim(),
                     LastName = lName,
-                    ContactNumber = txtPhone.Text.Trim(),
+                    ContactNumber = phone,
                     EmailAddress = txtEmail.Text.Trim(),
                     Address = txtAddress.Text.Trim(),
                     BustSize = numBust.Value,
@@ -260,6 +316,7 @@ public partial class CustomerDialogForm : Form
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow
                 };
+
                 db.Customers.Add(newCustomer);
             }
             else
@@ -268,14 +325,14 @@ public partial class CustomerDialogForm : Form
                 if (existing == null)
                 {
                     MessageBox.Show("The customer record could not be found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    btnSave.Enabled = true;
                     return;
                 }
 
-                existing.CustomerCode = code;
                 existing.FirstName = fName;
                 existing.MiddleName = txtMiddleName.Text.Trim();
                 existing.LastName = lName;
-                existing.ContactNumber = txtPhone.Text.Trim();
+                existing.ContactNumber = phone;
                 existing.EmailAddress = txtEmail.Text.Trim();
                 existing.Address = txtAddress.Text.Trim();
                 existing.BustSize = numBust.Value;

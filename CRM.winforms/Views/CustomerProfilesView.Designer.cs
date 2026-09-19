@@ -41,12 +41,9 @@
             searchBar1 = new CRM.winforms.Controls.SearchBar();
             chkShowArchived = new CRM.winforms.Controls.AtelierCheckBox();
             customerBindingSource2 = new BindingSource(components);
-            customerIdDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             customerCodeDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             companyIdDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
-            firstNameDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
-            middleNameDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
-            lastNameDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
+            FullName = new DataGridViewTextBoxColumn();
             contactNumberDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             emailAddressDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             addressDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
@@ -54,7 +51,6 @@
             waistSizeDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             hipSizeDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             createdAtDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
-            rentalBookingsDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             ((System.ComponentModel.ISupportInitialize)dgvCustomers).BeginInit();
             ((System.ComponentModel.ISupportInitialize)customerBindingSource1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)customerBindingSource).BeginInit();
@@ -102,9 +98,9 @@
             dgvCustomers.AutoGenerateColumns = false;
             dgvCustomers.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvCustomers.BackgroundColor = Color.White;
-            dgvCustomers.BorderStyle = BorderStyle.None;
+            dgvCustomers.BorderStyle = BorderStyle.Fixed3D;
             dgvCustomers.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
-            dgvCustomers.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
+            dgvCustomers.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
             dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft;
             dataGridViewCellStyle2.BackColor = Color.FromArgb(244, 238, 238);
             dataGridViewCellStyle2.Font = new Font("Segoe UI Semibold", 9.5F, FontStyle.Bold);
@@ -114,7 +110,7 @@
             dataGridViewCellStyle2.SelectionForeColor = Color.FromArgb(38, 22, 24);
             dgvCustomers.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle2;
             dgvCustomers.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvCustomers.Columns.AddRange(new DataGridViewColumn[] { customerIdDataGridViewTextBoxColumn, customerCodeDataGridViewTextBoxColumn, companyIdDataGridViewTextBoxColumn, firstNameDataGridViewTextBoxColumn, middleNameDataGridViewTextBoxColumn, lastNameDataGridViewTextBoxColumn, contactNumberDataGridViewTextBoxColumn, emailAddressDataGridViewTextBoxColumn, addressDataGridViewTextBoxColumn, bustSizeDataGridViewTextBoxColumn, waistSizeDataGridViewTextBoxColumn, hipSizeDataGridViewTextBoxColumn, createdAtDataGridViewTextBoxColumn, rentalBookingsDataGridViewTextBoxColumn });
+            dgvCustomers.Columns.AddRange(new DataGridViewColumn[] { customerCodeDataGridViewTextBoxColumn, companyIdDataGridViewTextBoxColumn, FullName, contactNumberDataGridViewTextBoxColumn, emailAddressDataGridViewTextBoxColumn, addressDataGridViewTextBoxColumn, bustSizeDataGridViewTextBoxColumn, waistSizeDataGridViewTextBoxColumn, hipSizeDataGridViewTextBoxColumn, createdAtDataGridViewTextBoxColumn });
             dgvCustomers.DataSource = customerBindingSource1;
             dataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleLeft;
             dataGridViewCellStyle3.BackColor = Color.White;
@@ -137,6 +133,7 @@
             dgvCustomers.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvCustomers.Size = new Size(1646, 769);
             dgvCustomers.TabIndex = 4;
+            dgvCustomers.CellContentClick += dgvCustomers_CellContentClick_1;
             // 
             // customerBindingSource1
             // 
@@ -178,65 +175,50 @@
             // 
             customerBindingSource2.DataSource = typeof(domain.entities.Customer);
             // 
-            // customerIdDataGridViewTextBoxColumn
-            // 
-            customerIdDataGridViewTextBoxColumn.DataPropertyName = "CustomerId";
-            customerIdDataGridViewTextBoxColumn.HeaderText = "CustomerId";
-            customerIdDataGridViewTextBoxColumn.Name = "customerIdDataGridViewTextBoxColumn";
-            customerIdDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
             // customerCodeDataGridViewTextBoxColumn
             // 
             customerCodeDataGridViewTextBoxColumn.DataPropertyName = "CustomerCode";
-            customerCodeDataGridViewTextBoxColumn.HeaderText = "CustomerCode";
+            customerCodeDataGridViewTextBoxColumn.FillWeight = 76.21057F;
+            customerCodeDataGridViewTextBoxColumn.HeaderText = "Customer Code";
             customerCodeDataGridViewTextBoxColumn.Name = "customerCodeDataGridViewTextBoxColumn";
             customerCodeDataGridViewTextBoxColumn.ReadOnly = true;
             // 
             // companyIdDataGridViewTextBoxColumn
             // 
             companyIdDataGridViewTextBoxColumn.DataPropertyName = "CompanyId";
-            companyIdDataGridViewTextBoxColumn.HeaderText = "CompanyId";
+            companyIdDataGridViewTextBoxColumn.FillWeight = 74.563446F;
+            companyIdDataGridViewTextBoxColumn.HeaderText = "Company ID";
             companyIdDataGridViewTextBoxColumn.Name = "companyIdDataGridViewTextBoxColumn";
             companyIdDataGridViewTextBoxColumn.ReadOnly = true;
             // 
-            // firstNameDataGridViewTextBoxColumn
+            // FullName
             // 
-            firstNameDataGridViewTextBoxColumn.DataPropertyName = "FirstName";
-            firstNameDataGridViewTextBoxColumn.HeaderText = "FirstName";
-            firstNameDataGridViewTextBoxColumn.Name = "firstNameDataGridViewTextBoxColumn";
-            firstNameDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // middleNameDataGridViewTextBoxColumn
-            // 
-            middleNameDataGridViewTextBoxColumn.DataPropertyName = "MiddleName";
-            middleNameDataGridViewTextBoxColumn.HeaderText = "MiddleName";
-            middleNameDataGridViewTextBoxColumn.Name = "middleNameDataGridViewTextBoxColumn";
-            middleNameDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // lastNameDataGridViewTextBoxColumn
-            // 
-            lastNameDataGridViewTextBoxColumn.DataPropertyName = "LastName";
-            lastNameDataGridViewTextBoxColumn.HeaderText = "LastName";
-            lastNameDataGridViewTextBoxColumn.Name = "lastNameDataGridViewTextBoxColumn";
-            lastNameDataGridViewTextBoxColumn.ReadOnly = true;
+            FullName.DataPropertyName = "FullName";
+            FullName.FillWeight = 134.2422F;
+            FullName.HeaderText = "Name";
+            FullName.Name = "FullName";
+            FullName.ReadOnly = true;
             // 
             // contactNumberDataGridViewTextBoxColumn
             // 
             contactNumberDataGridViewTextBoxColumn.DataPropertyName = "ContactNumber";
-            contactNumberDataGridViewTextBoxColumn.HeaderText = "ContactNumber";
+            contactNumberDataGridViewTextBoxColumn.FillWeight = 139.5939F;
+            contactNumberDataGridViewTextBoxColumn.HeaderText = "Contact";
             contactNumberDataGridViewTextBoxColumn.Name = "contactNumberDataGridViewTextBoxColumn";
             contactNumberDataGridViewTextBoxColumn.ReadOnly = true;
             // 
             // emailAddressDataGridViewTextBoxColumn
             // 
             emailAddressDataGridViewTextBoxColumn.DataPropertyName = "EmailAddress";
-            emailAddressDataGridViewTextBoxColumn.HeaderText = "EmailAddress";
+            emailAddressDataGridViewTextBoxColumn.FillWeight = 144.962967F;
+            emailAddressDataGridViewTextBoxColumn.HeaderText = "Email";
             emailAddressDataGridViewTextBoxColumn.Name = "emailAddressDataGridViewTextBoxColumn";
             emailAddressDataGridViewTextBoxColumn.ReadOnly = true;
             // 
             // addressDataGridViewTextBoxColumn
             // 
             addressDataGridViewTextBoxColumn.DataPropertyName = "Address";
+            addressDataGridViewTextBoxColumn.FillWeight = 157.609558F;
             addressDataGridViewTextBoxColumn.HeaderText = "Address";
             addressDataGridViewTextBoxColumn.Name = "addressDataGridViewTextBoxColumn";
             addressDataGridViewTextBoxColumn.ReadOnly = true;
@@ -244,37 +226,34 @@
             // bustSizeDataGridViewTextBoxColumn
             // 
             bustSizeDataGridViewTextBoxColumn.DataPropertyName = "BustSize";
-            bustSizeDataGridViewTextBoxColumn.HeaderText = "BustSize";
+            bustSizeDataGridViewTextBoxColumn.FillWeight = 74.563446F;
+            bustSizeDataGridViewTextBoxColumn.HeaderText = "Bust Size";
             bustSizeDataGridViewTextBoxColumn.Name = "bustSizeDataGridViewTextBoxColumn";
             bustSizeDataGridViewTextBoxColumn.ReadOnly = true;
             // 
             // waistSizeDataGridViewTextBoxColumn
             // 
             waistSizeDataGridViewTextBoxColumn.DataPropertyName = "WaistSize";
-            waistSizeDataGridViewTextBoxColumn.HeaderText = "WaistSize";
+            waistSizeDataGridViewTextBoxColumn.FillWeight = 74.563446F;
+            waistSizeDataGridViewTextBoxColumn.HeaderText = "Waist Size";
             waistSizeDataGridViewTextBoxColumn.Name = "waistSizeDataGridViewTextBoxColumn";
             waistSizeDataGridViewTextBoxColumn.ReadOnly = true;
             // 
             // hipSizeDataGridViewTextBoxColumn
             // 
             hipSizeDataGridViewTextBoxColumn.DataPropertyName = "HipSize";
-            hipSizeDataGridViewTextBoxColumn.HeaderText = "HipSize";
+            hipSizeDataGridViewTextBoxColumn.FillWeight = 74.563446F;
+            hipSizeDataGridViewTextBoxColumn.HeaderText = "Hip Size";
             hipSizeDataGridViewTextBoxColumn.Name = "hipSizeDataGridViewTextBoxColumn";
             hipSizeDataGridViewTextBoxColumn.ReadOnly = true;
             // 
             // createdAtDataGridViewTextBoxColumn
             // 
             createdAtDataGridViewTextBoxColumn.DataPropertyName = "CreatedAt";
+            createdAtDataGridViewTextBoxColumn.FillWeight = 74.563446F;
             createdAtDataGridViewTextBoxColumn.HeaderText = "CreatedAt";
             createdAtDataGridViewTextBoxColumn.Name = "createdAtDataGridViewTextBoxColumn";
             createdAtDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // rentalBookingsDataGridViewTextBoxColumn
-            // 
-            rentalBookingsDataGridViewTextBoxColumn.DataPropertyName = "RentalBookings";
-            rentalBookingsDataGridViewTextBoxColumn.HeaderText = "RentalBookings";
-            rentalBookingsDataGridViewTextBoxColumn.Name = "rentalBookingsDataGridViewTextBoxColumn";
-            rentalBookingsDataGridViewTextBoxColumn.ReadOnly = true;
             // 
             // CustomerProfilesView
             // 
@@ -309,12 +288,9 @@
         private Controls.AtelierCheckBox chkShowArchived;
         private BindingSource customerBindingSource1;
         private BindingSource customerBindingSource2;
-        private DataGridViewTextBoxColumn customerIdDataGridViewTextBoxColumn;
         private DataGridViewTextBoxColumn customerCodeDataGridViewTextBoxColumn;
         private DataGridViewTextBoxColumn companyIdDataGridViewTextBoxColumn;
-        private DataGridViewTextBoxColumn firstNameDataGridViewTextBoxColumn;
-        private DataGridViewTextBoxColumn middleNameDataGridViewTextBoxColumn;
-        private DataGridViewTextBoxColumn lastNameDataGridViewTextBoxColumn;
+        private DataGridViewTextBoxColumn FullName;
         private DataGridViewTextBoxColumn contactNumberDataGridViewTextBoxColumn;
         private DataGridViewTextBoxColumn emailAddressDataGridViewTextBoxColumn;
         private DataGridViewTextBoxColumn addressDataGridViewTextBoxColumn;
@@ -322,6 +298,5 @@
         private DataGridViewTextBoxColumn waistSizeDataGridViewTextBoxColumn;
         private DataGridViewTextBoxColumn hipSizeDataGridViewTextBoxColumn;
         private DataGridViewTextBoxColumn createdAtDataGridViewTextBoxColumn;
-        private DataGridViewTextBoxColumn rentalBookingsDataGridViewTextBoxColumn;
     }
 }

@@ -285,4 +285,9 @@ public partial class CustomerProfilesView : UserControl
     private void Label1_Click(object sender, EventArgs e) { }
     private void PictureBox1_Click(object sender, EventArgs e) { }
     private void ChkShowArchived_CheckedChanged_1(object sender, EventArgs e) { }
+
+    private void dgvCustomers_CellContentClick_1(object sender, DataGridViewCellEventArgs e)
+    {
+
+    }
 }
