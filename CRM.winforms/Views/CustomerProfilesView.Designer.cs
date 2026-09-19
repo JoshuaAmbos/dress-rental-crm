@@ -35,10 +35,18 @@
             label1 = new Label();
             primaryButtonNewCustomer = new CRM.winforms.Controls.PrimaryButton();
             dgvCustomers = new CRM.winforms.Controls.ModernDataGridView();
+            customerBindingSource1 = new BindingSource(components);
+            customerBindingSource = new BindingSource(components);
+            companyDatabaseBindingSource = new BindingSource(components);
+            searchBar1 = new CRM.winforms.Controls.SearchBar();
+            chkShowArchived = new CRM.winforms.Controls.AtelierCheckBox();
+            customerBindingSource2 = new BindingSource(components);
             customerIdDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             customerCodeDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             companyIdDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
-            customerNameDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
+            firstNameDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
+            middleNameDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
+            lastNameDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             contactNumberDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             emailAddressDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             addressDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
@@ -47,13 +55,11 @@
             hipSizeDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             createdAtDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             rentalBookingsDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
-            customerBindingSource = new BindingSource(components);
-            companyDatabaseBindingSource = new BindingSource(components);
-            searchBar1 = new CRM.winforms.Controls.SearchBar();
-            chkShowArchived = new CRM.winforms.Controls.AtelierCheckBox();
             ((System.ComponentModel.ISupportInitialize)dgvCustomers).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)customerBindingSource1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)customerBindingSource).BeginInit();
             ((System.ComponentModel.ISupportInitialize)companyDatabaseBindingSource).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)customerBindingSource2).BeginInit();
             SuspendLayout();
             // 
             // label1
@@ -65,7 +71,7 @@
             label1.Size = new Size(153, 37);
             label1.TabIndex = 0;
             label1.Text = "Customers";
-            label1.Click += label1_Click;
+            label1.Click += Label1_Click;
             // 
             // primaryButtonNewCustomer
             // 
@@ -108,8 +114,8 @@
             dataGridViewCellStyle2.SelectionForeColor = Color.FromArgb(38, 22, 24);
             dgvCustomers.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle2;
             dgvCustomers.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvCustomers.Columns.AddRange(new DataGridViewColumn[] { customerIdDataGridViewTextBoxColumn, customerCodeDataGridViewTextBoxColumn, companyIdDataGridViewTextBoxColumn, customerNameDataGridViewTextBoxColumn, contactNumberDataGridViewTextBoxColumn, emailAddressDataGridViewTextBoxColumn, addressDataGridViewTextBoxColumn, bustSizeDataGridViewTextBoxColumn, waistSizeDataGridViewTextBoxColumn, hipSizeDataGridViewTextBoxColumn, createdAtDataGridViewTextBoxColumn, rentalBookingsDataGridViewTextBoxColumn });
-            dgvCustomers.DataSource = customerBindingSource;
+            dgvCustomers.Columns.AddRange(new DataGridViewColumn[] { customerIdDataGridViewTextBoxColumn, customerCodeDataGridViewTextBoxColumn, companyIdDataGridViewTextBoxColumn, firstNameDataGridViewTextBoxColumn, middleNameDataGridViewTextBoxColumn, lastNameDataGridViewTextBoxColumn, contactNumberDataGridViewTextBoxColumn, emailAddressDataGridViewTextBoxColumn, addressDataGridViewTextBoxColumn, bustSizeDataGridViewTextBoxColumn, waistSizeDataGridViewTextBoxColumn, hipSizeDataGridViewTextBoxColumn, createdAtDataGridViewTextBoxColumn, rentalBookingsDataGridViewTextBoxColumn });
+            dgvCustomers.DataSource = customerBindingSource1;
             dataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleLeft;
             dataGridViewCellStyle3.BackColor = Color.White;
             dataGridViewCellStyle3.Font = new Font("Segoe UI", 9.5F);
@@ -132,89 +138,9 @@
             dgvCustomers.Size = new Size(1646, 769);
             dgvCustomers.TabIndex = 4;
             // 
-            // customerIdDataGridViewTextBoxColumn
+            // customerBindingSource1
             // 
-            customerIdDataGridViewTextBoxColumn.DataPropertyName = "CustomerId";
-            customerIdDataGridViewTextBoxColumn.HeaderText = "Customer ID";
-            customerIdDataGridViewTextBoxColumn.Name = "customerIdDataGridViewTextBoxColumn";
-            customerIdDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // customerCodeDataGridViewTextBoxColumn
-            // 
-            customerCodeDataGridViewTextBoxColumn.DataPropertyName = "CustomerCode";
-            customerCodeDataGridViewTextBoxColumn.HeaderText = "Code";
-            customerCodeDataGridViewTextBoxColumn.Name = "customerCodeDataGridViewTextBoxColumn";
-            customerCodeDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // companyIdDataGridViewTextBoxColumn
-            // 
-            companyIdDataGridViewTextBoxColumn.DataPropertyName = "CompanyId";
-            companyIdDataGridViewTextBoxColumn.HeaderText = "Company ID";
-            companyIdDataGridViewTextBoxColumn.Name = "companyIdDataGridViewTextBoxColumn";
-            companyIdDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // customerNameDataGridViewTextBoxColumn
-            // 
-            customerNameDataGridViewTextBoxColumn.DataPropertyName = "CustomerName";
-            customerNameDataGridViewTextBoxColumn.HeaderText = "Name";
-            customerNameDataGridViewTextBoxColumn.Name = "customerNameDataGridViewTextBoxColumn";
-            customerNameDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // contactNumberDataGridViewTextBoxColumn
-            // 
-            contactNumberDataGridViewTextBoxColumn.DataPropertyName = "ContactNumber";
-            contactNumberDataGridViewTextBoxColumn.HeaderText = "Contact";
-            contactNumberDataGridViewTextBoxColumn.Name = "contactNumberDataGridViewTextBoxColumn";
-            contactNumberDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // emailAddressDataGridViewTextBoxColumn
-            // 
-            emailAddressDataGridViewTextBoxColumn.DataPropertyName = "EmailAddress";
-            emailAddressDataGridViewTextBoxColumn.HeaderText = "Email";
-            emailAddressDataGridViewTextBoxColumn.Name = "emailAddressDataGridViewTextBoxColumn";
-            emailAddressDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // addressDataGridViewTextBoxColumn
-            // 
-            addressDataGridViewTextBoxColumn.DataPropertyName = "Address";
-            addressDataGridViewTextBoxColumn.HeaderText = "Address";
-            addressDataGridViewTextBoxColumn.Name = "addressDataGridViewTextBoxColumn";
-            addressDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // bustSizeDataGridViewTextBoxColumn
-            // 
-            bustSizeDataGridViewTextBoxColumn.DataPropertyName = "BustSize";
-            bustSizeDataGridViewTextBoxColumn.HeaderText = "Bust Size";
-            bustSizeDataGridViewTextBoxColumn.Name = "bustSizeDataGridViewTextBoxColumn";
-            bustSizeDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // waistSizeDataGridViewTextBoxColumn
-            // 
-            waistSizeDataGridViewTextBoxColumn.DataPropertyName = "WaistSize";
-            waistSizeDataGridViewTextBoxColumn.HeaderText = "Waist Size";
-            waistSizeDataGridViewTextBoxColumn.Name = "waistSizeDataGridViewTextBoxColumn";
-            waistSizeDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // hipSizeDataGridViewTextBoxColumn
-            // 
-            hipSizeDataGridViewTextBoxColumn.DataPropertyName = "HipSize";
-            hipSizeDataGridViewTextBoxColumn.HeaderText = "Hip Size";
-            hipSizeDataGridViewTextBoxColumn.Name = "hipSizeDataGridViewTextBoxColumn";
-            hipSizeDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // createdAtDataGridViewTextBoxColumn
-            // 
-            createdAtDataGridViewTextBoxColumn.DataPropertyName = "CreatedAt";
-            createdAtDataGridViewTextBoxColumn.HeaderText = "Created At";
-            createdAtDataGridViewTextBoxColumn.Name = "createdAtDataGridViewTextBoxColumn";
-            createdAtDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // rentalBookingsDataGridViewTextBoxColumn
-            // 
-            rentalBookingsDataGridViewTextBoxColumn.DataPropertyName = "RentalBookings";
-            rentalBookingsDataGridViewTextBoxColumn.HeaderText = "RentalBookings";
-            rentalBookingsDataGridViewTextBoxColumn.Name = "rentalBookingsDataGridViewTextBoxColumn";
-            rentalBookingsDataGridViewTextBoxColumn.ReadOnly = true;
+            customerBindingSource1.DataSource = typeof(domain.entities.Customer);
             // 
             // customerBindingSource
             // 
@@ -233,7 +159,7 @@
             searchBar1.Padding = new Padding(12, 8, 12, 8);
             searchBar1.Size = new Size(340, 40);
             searchBar1.TabIndex = 2;
-            searchBar1.Load += searchBar1_Load;
+            searchBar1.Load += SearchBar1_Load;
             // 
             // chkShowArchived
             // 
@@ -246,7 +172,109 @@
             chkShowArchived.TabIndex = 5;
             chkShowArchived.Text = "Show Archived";
             chkShowArchived.UseVisualStyleBackColor = false;
-            chkShowArchived.CheckedChanged += chkShowArchived_CheckedChanged_1;
+            chkShowArchived.CheckedChanged += ChkShowArchived_CheckedChanged_1;
+            // 
+            // customerBindingSource2
+            // 
+            customerBindingSource2.DataSource = typeof(domain.entities.Customer);
+            // 
+            // customerIdDataGridViewTextBoxColumn
+            // 
+            customerIdDataGridViewTextBoxColumn.DataPropertyName = "CustomerId";
+            customerIdDataGridViewTextBoxColumn.HeaderText = "CustomerId";
+            customerIdDataGridViewTextBoxColumn.Name = "customerIdDataGridViewTextBoxColumn";
+            customerIdDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // customerCodeDataGridViewTextBoxColumn
+            // 
+            customerCodeDataGridViewTextBoxColumn.DataPropertyName = "CustomerCode";
+            customerCodeDataGridViewTextBoxColumn.HeaderText = "CustomerCode";
+            customerCodeDataGridViewTextBoxColumn.Name = "customerCodeDataGridViewTextBoxColumn";
+            customerCodeDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // companyIdDataGridViewTextBoxColumn
+            // 
+            companyIdDataGridViewTextBoxColumn.DataPropertyName = "CompanyId";
+            companyIdDataGridViewTextBoxColumn.HeaderText = "CompanyId";
+            companyIdDataGridViewTextBoxColumn.Name = "companyIdDataGridViewTextBoxColumn";
+            companyIdDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // firstNameDataGridViewTextBoxColumn
+            // 
+            firstNameDataGridViewTextBoxColumn.DataPropertyName = "FirstName";
+            firstNameDataGridViewTextBoxColumn.HeaderText = "FirstName";
+            firstNameDataGridViewTextBoxColumn.Name = "firstNameDataGridViewTextBoxColumn";
+            firstNameDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // middleNameDataGridViewTextBoxColumn
+            // 
+            middleNameDataGridViewTextBoxColumn.DataPropertyName = "MiddleName";
+            middleNameDataGridViewTextBoxColumn.HeaderText = "MiddleName";
+            middleNameDataGridViewTextBoxColumn.Name = "middleNameDataGridViewTextBoxColumn";
+            middleNameDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // lastNameDataGridViewTextBoxColumn
+            // 
+            lastNameDataGridViewTextBoxColumn.DataPropertyName = "LastName";
+            lastNameDataGridViewTextBoxColumn.HeaderText = "LastName";
+            lastNameDataGridViewTextBoxColumn.Name = "lastNameDataGridViewTextBoxColumn";
+            lastNameDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // contactNumberDataGridViewTextBoxColumn
+            // 
+            contactNumberDataGridViewTextBoxColumn.DataPropertyName = "ContactNumber";
+            contactNumberDataGridViewTextBoxColumn.HeaderText = "ContactNumber";
+            contactNumberDataGridViewTextBoxColumn.Name = "contactNumberDataGridViewTextBoxColumn";
+            contactNumberDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // emailAddressDataGridViewTextBoxColumn
+            // 
+            emailAddressDataGridViewTextBoxColumn.DataPropertyName = "EmailAddress";
+            emailAddressDataGridViewTextBoxColumn.HeaderText = "EmailAddress";
+            emailAddressDataGridViewTextBoxColumn.Name = "emailAddressDataGridViewTextBoxColumn";
+            emailAddressDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // addressDataGridViewTextBoxColumn
+            // 
+            addressDataGridViewTextBoxColumn.DataPropertyName = "Address";
+            addressDataGridViewTextBoxColumn.HeaderText = "Address";
+            addressDataGridViewTextBoxColumn.Name = "addressDataGridViewTextBoxColumn";
+            addressDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // bustSizeDataGridViewTextBoxColumn
+            // 
+            bustSizeDataGridViewTextBoxColumn.DataPropertyName = "BustSize";
+            bustSizeDataGridViewTextBoxColumn.HeaderText = "BustSize";
+            bustSizeDataGridViewTextBoxColumn.Name = "bustSizeDataGridViewTextBoxColumn";
+            bustSizeDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // waistSizeDataGridViewTextBoxColumn
+            // 
+            waistSizeDataGridViewTextBoxColumn.DataPropertyName = "WaistSize";
+            waistSizeDataGridViewTextBoxColumn.HeaderText = "WaistSize";
+            waistSizeDataGridViewTextBoxColumn.Name = "waistSizeDataGridViewTextBoxColumn";
+            waistSizeDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // hipSizeDataGridViewTextBoxColumn
+            // 
+            hipSizeDataGridViewTextBoxColumn.DataPropertyName = "HipSize";
+            hipSizeDataGridViewTextBoxColumn.HeaderText = "HipSize";
+            hipSizeDataGridViewTextBoxColumn.Name = "hipSizeDataGridViewTextBoxColumn";
+            hipSizeDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // createdAtDataGridViewTextBoxColumn
+            // 
+            createdAtDataGridViewTextBoxColumn.DataPropertyName = "CreatedAt";
+            createdAtDataGridViewTextBoxColumn.HeaderText = "CreatedAt";
+            createdAtDataGridViewTextBoxColumn.Name = "createdAtDataGridViewTextBoxColumn";
+            createdAtDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // rentalBookingsDataGridViewTextBoxColumn
+            // 
+            rentalBookingsDataGridViewTextBoxColumn.DataPropertyName = "RentalBookings";
+            rentalBookingsDataGridViewTextBoxColumn.HeaderText = "RentalBookings";
+            rentalBookingsDataGridViewTextBoxColumn.Name = "rentalBookingsDataGridViewTextBoxColumn";
+            rentalBookingsDataGridViewTextBoxColumn.ReadOnly = true;
             // 
             // CustomerProfilesView
             // 
@@ -262,8 +290,10 @@
             Size = new Size(1712, 955);
             Load += CustomerProfilesView_Load;
             ((System.ComponentModel.ISupportInitialize)dgvCustomers).EndInit();
+            ((System.ComponentModel.ISupportInitialize)customerBindingSource1).EndInit();
             ((System.ComponentModel.ISupportInitialize)customerBindingSource).EndInit();
             ((System.ComponentModel.ISupportInitialize)companyDatabaseBindingSource).EndInit();
+            ((System.ComponentModel.ISupportInitialize)customerBindingSource2).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -276,10 +306,15 @@
         private BindingSource customerBindingSource;
         private BindingSource companyDatabaseBindingSource;
         private Controls.SearchBar searchBar1;
+        private Controls.AtelierCheckBox chkShowArchived;
+        private BindingSource customerBindingSource1;
+        private BindingSource customerBindingSource2;
         private DataGridViewTextBoxColumn customerIdDataGridViewTextBoxColumn;
         private DataGridViewTextBoxColumn customerCodeDataGridViewTextBoxColumn;
         private DataGridViewTextBoxColumn companyIdDataGridViewTextBoxColumn;
-        private DataGridViewTextBoxColumn customerNameDataGridViewTextBoxColumn;
+        private DataGridViewTextBoxColumn firstNameDataGridViewTextBoxColumn;
+        private DataGridViewTextBoxColumn middleNameDataGridViewTextBoxColumn;
+        private DataGridViewTextBoxColumn lastNameDataGridViewTextBoxColumn;
         private DataGridViewTextBoxColumn contactNumberDataGridViewTextBoxColumn;
         private DataGridViewTextBoxColumn emailAddressDataGridViewTextBoxColumn;
         private DataGridViewTextBoxColumn addressDataGridViewTextBoxColumn;
@@ -288,6 +323,5 @@
         private DataGridViewTextBoxColumn hipSizeDataGridViewTextBoxColumn;
         private DataGridViewTextBoxColumn createdAtDataGridViewTextBoxColumn;
         private DataGridViewTextBoxColumn rentalBookingsDataGridViewTextBoxColumn;
-        private Controls.AtelierCheckBox chkShowArchived;
     }
 }

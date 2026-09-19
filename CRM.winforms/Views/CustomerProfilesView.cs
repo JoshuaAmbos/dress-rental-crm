@@ -1,12 +1,8 @@
-﻿using System;
-using System.ComponentModel;
-using System.Drawing;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using Microsoft.EntityFrameworkCore;
-using CRM.domain.entities;
+﻿using CRM.domain.entities;
 using CRM.infrastructure.data;
+using CRM.winforms.Forms;
+using Microsoft.EntityFrameworkCore;
+using System.ComponentModel;
 
 namespace CRM.winforms.Views;
 
@@ -17,10 +13,17 @@ public partial class CustomerProfilesView : UserControl
 
     private readonly Func<int> _getCompanyId;
 
-    public event Action<Customer>? CustomerEditRequested;
-
     public CustomerProfilesView() : this(() => 1)
     {
+    }
+
+    // load on view
+    private void CustomerProfilesView_Load(object sender, EventArgs e)
+    {
+        if (LicenseManager.UsageMode != LicenseUsageMode.Designtime && !DesignMode)
+        {
+            _ = LoadCustomerDataAsync();
+        }
     }
 
     public CustomerProfilesView(Func<int> getCompanyId)
@@ -32,11 +35,17 @@ public partial class CustomerProfilesView : UserControl
         {
             AddActionColumns();
 
-            primaryButtonNewCustomer?.Click += BtnNewCustomer_Click;
+            if (primaryButtonNewCustomer != null)
+                primaryButtonNewCustomer.Click += BtnNewCustomer_Click;
 
-            dgvCustomers?.CellContentClick += DgvCustomers_CellContentClick;
+            if (dgvCustomers != null)
+                dgvCustomers.CellContentClick += DgvCustomers_CellContentClick;
 
-            chkShowArchived?.CheckedChanged += ChkShowArchived_CheckedChanged;
+            if (chkShowArchived != null)
+                chkShowArchived.CheckedChanged += ChkShowArchived_CheckedChanged;
+
+            // load data on initialization
+            _ = LoadCustomerDataAsync();
         }
     }
 
@@ -128,8 +137,9 @@ public partial class CustomerProfilesView : UserControl
 
     private async Task OnArchiveCustomerAsync(Customer customer)
     {
+        var displayName = $"{customer.FirstName} {customer.LastName}".Trim();
         var confirm = MessageBox.Show(
-            $"Archive client profile for '{customer.CustomerName}'?\n\nTheir records will be preserved, but hidden from active lists.",
+            $"Archive client profile for '{displayName}'?\n\nTheir records will be preserved, but hidden from active lists.",
             "Archive Customer",
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Question);
@@ -156,8 +166,9 @@ public partial class CustomerProfilesView : UserControl
 
     private async Task OnRestoreCustomerAsync(Customer customer)
     {
+        var displayName = $"{customer.FirstName} {customer.LastName}".Trim();
         var confirm = MessageBox.Show(
-            $"Restore and reactivate client '{customer.CustomerName}'?",
+            $"Restore and reactivate client '{displayName}'?",
             "Restore Customer",
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Question);
@@ -182,6 +193,7 @@ public partial class CustomerProfilesView : UserControl
         }
     }
 
+    // show archive toggle
     private void ChkShowArchived_CheckedChanged(object? sender, EventArgs e)
     {
         bool showArchived = chkShowArchived?.Checked ?? false;
@@ -195,14 +207,6 @@ public partial class CustomerProfilesView : UserControl
             .UseSqlServer(ConnectionString)
             .Options;
         return new TenantCrmDbContext(options);
-    }
-
-    private void CustomerProfilesView_Load(object sender, EventArgs e)
-    {
-        if (LicenseManager.UsageMode != LicenseUsageMode.Designtime && !DesignMode)
-        {
-            _ = LoadCustomerDataAsync();
-        }
     }
 
     public async Task LoadCustomerDataAsync(string search = "")
@@ -223,19 +227,26 @@ public partial class CustomerProfilesView : UserControl
             {
                 query = query.Where(c =>
                     c.CustomerCode.Contains(search) ||
-                    c.CustomerName.Contains(search) ||
+                    c.FirstName.Contains(search) ||
+                    c.LastName.Contains(search) ||
+                    (c.MiddleName != null && c.MiddleName.Contains(search)) ||
                     c.ContactNumber.Contains(search) ||
                     c.EmailAddress.Contains(search) ||
                     c.Address.Contains(search));
             }
 
             var list = await query
-                .OrderBy(c => c.CustomerName)
-                .ToListAsync();
+            .OrderBy(c => c.LastName)
+            .ThenBy(c => c.FirstName)
+            .ToListAsync();
 
-            if (customerBindingSource != null)
+            if (customerBindingSource1 != null)
             {
-                customerBindingSource.DataSource = list;
+                customerBindingSource1.DataSource = list;
+            }
+            else if (dgvCustomers != null)
+            {
+                dgvCustomers.DataSource = list;
             }
         }
         catch (Exception ex)
@@ -245,6 +256,7 @@ public partial class CustomerProfilesView : UserControl
         }
     }
 
+    // after adding/editing a customer
     private async void BtnNewCustomer_Click(object? sender, EventArgs e)
     {
         using var dialog = new CustomerDialogForm(GetDbContext, _getCompanyId());
@@ -255,7 +267,8 @@ public partial class CustomerProfilesView : UserControl
         }
     }
 
-    private void searchBar1_SearchTextChanged(object? sender, EventArgs e)
+    // live search
+    private void SearchBar1_SearchTextChanged(object? sender, EventArgs e)
     {
         if (searchBar1 != null)
         {
@@ -263,16 +276,13 @@ public partial class CustomerProfilesView : UserControl
         }
     }
 
-    private void searchBar1_Load(object sender, EventArgs e)
+    private void SearchBar1_Load(object sender, EventArgs e)
     {
-        if (searchBar1 != null)
-        {
-            searchBar1.SearchTextChanged += searchBar1_SearchTextChanged;
-        }
+        searchBar1?.SearchTextChanged += SearchBar1_SearchTextChanged;
     }
 
-    private void textBox1_TextChanged(object sender, EventArgs e) { }
-    private void label1_Click(object sender, EventArgs e) { }
-    private void pictureBox1_Click(object sender, EventArgs e) { }
-    private void chkShowArchived_CheckedChanged_1(object sender, EventArgs e) { }
+    private void TextBox1_TextChanged(object sender, EventArgs e) { }
+    private void Label1_Click(object sender, EventArgs e) { }
+    private void PictureBox1_Click(object sender, EventArgs e) { }
+    private void ChkShowArchived_CheckedChanged_1(object sender, EventArgs e) { }
 }

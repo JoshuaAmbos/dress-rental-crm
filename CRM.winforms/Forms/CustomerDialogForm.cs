@@ -7,16 +7,18 @@ using Microsoft.EntityFrameworkCore;
 using CRM.domain.entities;
 using CRM.infrastructure.data;
 
-namespace CRM.winforms.Views;
+namespace CRM.winforms.Forms;
 
-public class CustomerDialogForm : Form
+public partial class CustomerDialogForm : Form
 {
     private readonly Func<TenantCrmDbContext> _dbFactory;
     private readonly int _companyId;
     private readonly int? _customerId;
 
     private TextBox txtCode = null!;
-    private TextBox txtName = null!;
+    private TextBox txtFirstName = null!;
+    private TextBox txtMiddleName = null!;
+    private TextBox txtLastName = null!;
     private TextBox txtPhone = null!;
     private TextBox txtEmail = null!;
     private TextBox txtAddress = null!;
@@ -54,7 +56,8 @@ public class CustomerDialogForm : Form
 
     private void InitializeUI()
     {
-        ClientSize = new Size(460, 540);
+        // Increased height from 540 to 640 to accommodate two new name fields
+        ClientSize = new Size(460, 640);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -83,7 +86,9 @@ public class CustomerDialogForm : Form
         // Content Area
         int y = 80;
         txtCode = AddField("Customer Code *", ref y);
-        txtName = AddField("Full Name *", ref y);
+        txtFirstName = AddField("First Name *", ref y);
+        txtMiddleName = AddField("Middle Name", ref y);
+        txtLastName = AddField("Last Name *", ref y);
         txtPhone = AddField("Contact Number", ref y);
         txtEmail = AddField("Email Address", ref y);
         txtAddress = AddField("Address / City", ref y);
@@ -190,7 +195,9 @@ public class CustomerDialogForm : Form
     private void PopulateFields(Customer c)
     {
         txtCode.Text = c.CustomerCode;
-        txtName.Text = c.CustomerName;
+        txtFirstName.Text = c.FirstName;
+        txtMiddleName.Text = c.MiddleName;
+        txtLastName.Text = c.LastName;
         txtPhone.Text = c.ContactNumber;
         txtEmail.Text = c.EmailAddress;
         txtAddress.Text = c.Address;
@@ -208,11 +215,12 @@ public class CustomerDialogForm : Form
     private async Task SaveCustomerAsync()
     {
         var code = txtCode.Text.Trim();
-        var name = txtName.Text.Trim();
+        var fName = txtFirstName.Text.Trim();
+        var lName = txtLastName.Text.Trim();
 
-        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(name))
+        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(fName) || string.IsNullOrWhiteSpace(lName))
         {
-            MessageBox.Show("Customer Code and Full Name are required.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show("Customer Code, First Name, and Last Name are required.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
@@ -229,7 +237,7 @@ public class CustomerDialogForm : Form
 
             if (codeExists)
             {
-                MessageBox.Show($"Customer code '{code}' is already assigned to another client.", "Duplicate Code", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show($"Customer code '{code}' is already assigned.", "Duplicate Code", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 btnSave.Enabled = true;
                 return;
             }
@@ -240,7 +248,9 @@ public class CustomerDialogForm : Form
                 {
                     CompanyId = _companyId,
                     CustomerCode = code,
-                    CustomerName = name,
+                    FirstName = fName,
+                    MiddleName = txtMiddleName.Text.Trim(),
+                    LastName = lName,
                     ContactNumber = txtPhone.Text.Trim(),
                     EmailAddress = txtEmail.Text.Trim(),
                     Address = txtAddress.Text.Trim(),
@@ -262,7 +272,9 @@ public class CustomerDialogForm : Form
                 }
 
                 existing.CustomerCode = code;
-                existing.CustomerName = name;
+                existing.FirstName = fName;
+                existing.MiddleName = txtMiddleName.Text.Trim();
+                existing.LastName = lName;
                 existing.ContactNumber = txtPhone.Text.Trim();
                 existing.EmailAddress = txtEmail.Text.Trim();
                 existing.Address = txtAddress.Text.Trim();

@@ -39,14 +39,17 @@ public class TenantCrmDbContext : DbContext
         {
             entity.HasKey(x => x.CustomerId);
             entity.Property(x => x.CustomerCode).HasMaxLength(50).IsRequired();
-            entity.Property(x => x.CustomerName).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.FirstName).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.MiddleName).HasMaxLength(100);
+            entity.Property(x => x.LastName).HasMaxLength(100).IsRequired();
+            entity.Ignore(x => x.FullName);
             entity.Property(x => x.ContactNumber).HasMaxLength(30);
             entity.Property(x => x.EmailAddress).HasMaxLength(150);
             entity.Property(x => x.Address).HasMaxLength(300);
             entity.Property(x => x.BustSize).HasPrecision(5, 2);
             entity.Property(x => x.WaistSize).HasPrecision(5, 2);
             entity.Property(x => x.HipSize).HasPrecision(5, 2);
-            entity.HasIndex(x => x.CustomerCode).IsUnique();
+            entity.HasIndex(x => new { x.CompanyId, x.CustomerCode }).IsUnique();
         });
 
         // RentalBooking
