@@ -83,7 +83,7 @@ public partial class CustomerDialogForm : Form
 
         var lblTitle = new Label
         {
-            Text = _customerId.HasValue ? "Edit Client Profile" : "Register New Client",
+            Text = _customerId.HasValue ? "Edit Customer Profile" : "Register New Customer",
             Font = new Font("Segoe UI", 13.5f, FontStyle.Bold),
             ForeColor = ColorEspresso,
             Location = new Point(28, 14),
