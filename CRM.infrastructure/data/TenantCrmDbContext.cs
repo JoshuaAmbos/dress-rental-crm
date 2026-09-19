@@ -1,5 +1,6 @@
-using Microsoft.EntityFrameworkCore;
 using CRM.domain.entities;
+using Microsoft.EntityFrameworkCore;
+using System.Reflection.Emit;
 
 namespace CRM.infrastructure.data;
 
@@ -10,28 +11,29 @@ public class TenantCrmDbContext : DbContext
     {
     }
 
-    public DbSet<RentalItem> RentalItems => Set<RentalItem>();
+    public DbSet<Garment> RentalItems => Set<Garment>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<RentalBooking> RentalBookings => Set<RentalBooking>();
     public DbSet<BookingDetail> BookingDetails => Set<BookingDetail>();
     public DbSet<ServiceIncident> ServiceIncidents => Set<ServiceIncident>();
     public DbSet<LoyaltyAward> LoyaltyAwards => Set<LoyaltyAward>();
-    public DbSet<RentalTerm> RentalTerms => Set<RentalTerm>();
+    public DbSet<Garment> Garments { get; set; } = null!;
     public DbSet<SystemConfiguration> SystemConfigurations => Set<SystemConfiguration>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
 
-        // RentalItem
-        builder.Entity<RentalItem>(entity =>
+        // Garment
+        builder.Entity<Garment>(entity =>
         {
-            entity.HasKey(x => x.RentalItemId);
-            entity.Property(x => x.ItemCode).HasMaxLength(50).IsRequired();
-            entity.Property(x => x.StyleName).HasMaxLength(200).IsRequired();
-            entity.Property(x => x.RentalRate).HasPrecision(18, 2);
-            entity.Property(x => x.ReplacementValue).HasPrecision(18, 2);
-            entity.HasIndex(x => x.ItemCode).IsUnique();
+            entity.HasKey(e => e.GarmentId);
+            entity.Property(e => e.RentalRate).HasPrecision(18, 2);
+            entity.Property(e => e.SecurityDeposit).HasPrecision(18, 2);
+            entity.Property(e => e.ReplacementValue).HasPrecision(18, 2);
+            entity.Property(e => e.BustSize).HasPrecision(5, 2);
+            entity.Property(e => e.WaistSize).HasPrecision(5, 2);
+            entity.Property(e => e.HipSize).HasPrecision(5, 2);
         });
 
         // Customer

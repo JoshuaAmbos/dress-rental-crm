@@ -1,8 +1,13 @@
-﻿using CRM.domain.entities;
+﻿using System;
+using System.ComponentModel;
+using System.Drawing;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using Microsoft.EntityFrameworkCore;
+using CRM.domain.entities;
 using CRM.infrastructure.data;
 using CRM.winforms.Forms;
-using Microsoft.EntityFrameworkCore;
-using System.ComponentModel;
 
 namespace CRM.winforms.Views;
 
@@ -17,19 +22,12 @@ public partial class CustomerProfilesView : UserControl
     {
     }
 
-    // load on view
-    private void CustomerProfilesView_Load(object sender, EventArgs e)
-    {
-        if (LicenseManager.UsageMode != LicenseUsageMode.Designtime && !DesignMode)
-        {
-            _ = LoadCustomerDataAsync();
-        }
-    }
-
     public CustomerProfilesView(Func<int> getCompanyId)
     {
         _getCompanyId = getCompanyId ?? (() => 1);
         InitializeComponent();
+
+        searchBar1.SetCueBanner("Search by customer name, conta...");
 
         if (!DesignMode)
         {
@@ -39,47 +37,128 @@ public partial class CustomerProfilesView : UserControl
                 primaryButtonNewCustomer.Click += BtnNewCustomer_Click;
 
             if (dgvCustomers != null)
+            {
+                dgvCustomers.CellContentClick -= DgvCustomers_CellContentClick;
                 dgvCustomers.CellContentClick += DgvCustomers_CellContentClick;
+            }
 
             if (chkShowArchived != null)
                 chkShowArchived.CheckedChanged += ChkShowArchived_CheckedChanged;
 
-            // load data on initialization
+            _ = LoadCustomerDataAsync();
+        }
+    }
+
+    private void CustomerProfilesView_Load(object sender, EventArgs e)
+    {
+        if (LicenseManager.UsageMode != LicenseUsageMode.Designtime && !DesignMode)
+        {
             _ = LoadCustomerDataAsync();
         }
     }
 
     private void AddActionColumns()
     {
-        if (dgvCustomers == null || dgvCustomers.Columns.Contains("colEdit")) return;
+        if (dgvCustomers == null) return;
 
+        dgvCustomers.Columns.Clear();
+        dgvCustomers.AutoGenerateColumns = false;
+
+        // 1. Client Code
+        dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = "Code",
+            HeaderText = "CODE",
+            FillWeight = 85,
+            MinimumWidth = 80
+        });
+
+        // 2. Client Name
+        dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = "Name",
+            HeaderText = "NAME",
+            FillWeight = 125,
+            MinimumWidth = 110
+        });
+
+        // 3. Contact Number
+        dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = "Phone",
+            HeaderText = "PHONE",
+            FillWeight = 95,
+            MinimumWidth = 90
+        });
+
+        // 4. Email Address
+        dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = "Email",
+            HeaderText = "EMAIL ADDRESS",
+            FillWeight = 135,
+            MinimumWidth = 120
+        });
+
+        // 5. City / Location
+        dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = "Address",
+            HeaderText = "CITY / ADDRESS",
+            FillWeight = 110,
+            MinimumWidth = 100
+        });
+
+        // 6. Measurements
+        dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = "BustSize",
+            HeaderText = "BUST SIZE",
+            FillWeight = 75,
+            MinimumWidth = 70
+        });
+
+        dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = "WaistSize",
+            HeaderText = "WAIST SIZE",
+            FillWeight = 75,
+            MinimumWidth = 70
+        });
+
+        dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = "HipSize",
+            HeaderText = "HIP SIZE",
+            FillWeight = 75,
+            MinimumWidth = 70
+        });
+
+        // 7. Edit Action (Widened to 96px to prevent header clipping)
         var colEdit = new DataGridViewButtonColumn
         {
             Name = "colEdit",
-            HeaderText = "Action",
+            HeaderText = "ACTIONS",
             Text = "Edit",
             UseColumnTextForButtonValue = true,
-            Width = 70,
-            FlatStyle = FlatStyle.Flat
+            SortMode = DataGridViewColumnSortMode.NotSortable,
+            Resizable = DataGridViewTriState.False,
+            Width = 96,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.None
         };
-        colEdit.DefaultCellStyle.BackColor = Color.FromArgb(244, 238, 238);
-        colEdit.DefaultCellStyle.ForeColor = Color.FromArgb(38, 22, 24);
-        colEdit.DefaultCellStyle.SelectionBackColor = Color.FromArgb(190, 110, 120);
-        colEdit.DefaultCellStyle.SelectionForeColor = Color.White;
 
+        // 8. Archive / Restore Action
         var colArchive = new DataGridViewButtonColumn
         {
             Name = "colArchive",
             HeaderText = "",
             Text = "Archive",
             UseColumnTextForButtonValue = true,
-            Width = 75,
-            FlatStyle = FlatStyle.Flat
+            SortMode = DataGridViewColumnSortMode.NotSortable,
+            Resizable = DataGridViewTriState.False,
+            Width = 88,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.None
         };
-        colArchive.DefaultCellStyle.BackColor = Color.FromArgb(245, 240, 235);
-        colArchive.DefaultCellStyle.ForeColor = Color.FromArgb(140, 95, 60);
-        colArchive.DefaultCellStyle.SelectionBackColor = Color.FromArgb(140, 95, 60);
-        colArchive.DefaultCellStyle.SelectionForeColor = Color.White;
 
         dgvCustomers.Columns.Add(colEdit);
         dgvCustomers.Columns.Add(colArchive);
@@ -103,10 +182,20 @@ public partial class CustomerProfilesView : UserControl
     {
         if (e.RowIndex < 0 || e.RowIndex >= dgvCustomers.Rows.Count) return;
 
-        var clickedColumn = dgvCustomers.Columns[e.ColumnIndex].Name;
+        var clickedColumn = dgvCustomers.Columns[e.ColumnIndex]?.Name;
+        if (clickedColumn == null) return;
+
         var row = dgvCustomers.Rows[e.RowIndex];
 
-        if (row.DataBoundItem is not Customer customer) return;
+        // Safely extract the Customer entity from either direct binding or anonymous projection
+        Customer? customer = row.DataBoundItem as Customer;
+        if (customer == null && row.DataBoundItem != null)
+        {
+            var prop = row.DataBoundItem.GetType().GetProperty("CustomerEntity");
+            customer = prop?.GetValue(row.DataBoundItem) as Customer;
+        }
+
+        if (customer == null) return;
 
         if (clickedColumn == "colEdit")
         {
@@ -193,7 +282,6 @@ public partial class CustomerProfilesView : UserControl
         }
     }
 
-    // show archive toggle
     private void ChkShowArchived_CheckedChanged(object? sender, EventArgs e)
     {
         bool showArchived = chkShowArchived?.Checked ?? false;
@@ -229,24 +317,41 @@ public partial class CustomerProfilesView : UserControl
                     c.CustomerCode.Contains(search) ||
                     c.FirstName.Contains(search) ||
                     c.LastName.Contains(search) ||
-                    (c.MiddleName != null && c.MiddleName.Contains(search)) ||
-                    c.ContactNumber.Contains(search) ||
-                    c.EmailAddress.Contains(search) ||
-                    c.Address.Contains(search));
+                    (c.ContactNumber != null && c.ContactNumber.Contains(search)) ||
+                    (c.EmailAddress != null && c.EmailAddress.Contains(search)) ||
+                    (c.Address != null && c.Address.Contains(search)));
             }
 
-            var list = await query
-            .OrderBy(c => c.LastName)
-            .ThenBy(c => c.FirstName)
-            .ToListAsync();
+            var customers = await query
+                .OrderBy(c => c.LastName)
+                .ThenBy(c => c.FirstName)
+                .ToListAsync();
 
-            if (customerBindingSource1 != null)
+            var displayList = customers.Select(c =>
             {
-                customerBindingSource1.DataSource = list;
-            }
-            else if (dgvCustomers != null)
+                string fullName = $"{c.FirstName} {c.LastName}".Trim();
+                if (string.IsNullOrWhiteSpace(fullName))
+                {
+                    fullName = !string.IsNullOrWhiteSpace(c.FirstName) ? c.FirstName : $"Client ({c.CustomerCode})";
+                }
+
+                return new
+                {
+                    CustomerEntity = c,
+                    Code = c.CustomerCode,
+                    Name = fullName,
+                    Phone = string.IsNullOrWhiteSpace(c.ContactNumber) ? "—" : c.ContactNumber,
+                    Email = string.IsNullOrWhiteSpace(c.EmailAddress) ? "—" : c.EmailAddress,
+                    Address = string.IsNullOrWhiteSpace(c.Address) ? "—" : c.Address,
+                    BustSize = c.BustSize > 0 ? $"{c.BustSize:0.#} in" : "—",
+                    WaistSize = c.WaistSize > 0 ? $"{c.WaistSize:0.#} in" : "—",
+                    HipSize = c.HipSize > 0 ? $"{c.HipSize:0.#} in" : "—"
+                };
+            }).ToList();
+
+            if (dgvCustomers != null)
             {
-                dgvCustomers.DataSource = list;
+                dgvCustomers.DataSource = displayList;
             }
         }
         catch (Exception ex)
@@ -256,7 +361,6 @@ public partial class CustomerProfilesView : UserControl
         }
     }
 
-    // after adding/editing a customer
     private async void BtnNewCustomer_Click(object? sender, EventArgs e)
     {
         using var dialog = new CustomerDialogForm(GetDbContext, _getCompanyId());
@@ -267,7 +371,6 @@ public partial class CustomerProfilesView : UserControl
         }
     }
 
-    // live search
     private void SearchBar1_SearchTextChanged(object? sender, EventArgs e)
     {
         if (searchBar1 != null)
@@ -279,15 +382,5 @@ public partial class CustomerProfilesView : UserControl
     private void SearchBar1_Load(object sender, EventArgs e)
     {
         searchBar1?.SearchTextChanged += SearchBar1_SearchTextChanged;
-    }
-
-    private void TextBox1_TextChanged(object sender, EventArgs e) { }
-    private void Label1_Click(object sender, EventArgs e) { }
-    private void PictureBox1_Click(object sender, EventArgs e) { }
-    private void ChkShowArchived_CheckedChanged_1(object sender, EventArgs e) { }
-
-    private void dgvCustomers_CellContentClick_1(object sender, DataGridViewCellEventArgs e)
-    {
-
     }
 }

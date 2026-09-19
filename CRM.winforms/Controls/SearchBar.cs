@@ -66,7 +66,7 @@ public class SearchBar : UserControl
         this.Click += (s, e) => _innerTextBox.Focus();
         this.Controls.Add(_innerTextBox);
 
-        SetCueBanner("Search customer by name, code, phone...");
+        SetCueBanner("Placeholder text...");
     }
 
     public void SetCueBanner(string placeholder)

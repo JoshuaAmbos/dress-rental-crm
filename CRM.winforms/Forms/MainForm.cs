@@ -11,8 +11,11 @@ public partial class MainForm : Form
 {
     private readonly LoginResult _user;
     private UserControl? _activeView;
-    private CustomerProfilesView? _customerProfilesView;
     private DashboardView? _dashboardView;
+    private CustomerProfilesView? _customerProfilesView;
+    private RentalBookingsView? _bookingsView;
+    private CatalogView? _catalogView;
+
 
     // colors
     public static readonly Color ColorSidebar = Color.FromArgb(52, 30, 33);
@@ -50,33 +53,58 @@ public partial class MainForm : Form
         _activeView = view;
     }
 
-    public void ShowCustomerProfiles()
-    {
-        _customerProfilesView ??= new CustomerProfilesView();
-        SwitchView(_customerProfilesView);
-    }
-
+    // main views
     public void ShowDashboardView()
     {
         _dashboardView ??= new DashboardView();
         SwitchView(_dashboardView);
     }
 
-    private void button1_Click(object sender, EventArgs e)
+    public void ShowCustomerProfiles()
     {
-        ShowCustomerProfiles();
+        _customerProfilesView ??= new CustomerProfilesView();
+        SwitchView(_customerProfilesView);
     }
 
-    private void button2_Click(object sender, EventArgs e)
+    public void ShowRentalBookingsView()
     {
+        //if (buttonRentals != null) SetActiveButton(buttonRentals);
+        //_bookingsView ??= new RentalBookingsView(GetActiveCompanyId);
+        _bookingsView ??= new RentalBookingsView();
+        SwitchView(_bookingsView);
+        //_ = _bookingsView.LoadPipelineDataAsync();
     }
 
-    private void buttonDashboard_Click(object sender, EventArgs e)
+    public void ShowCatalogView()
+    {
+        _catalogView ??= new CatalogView();
+        SwitchView(_catalogView);
+    }
+
+    // button click handlers
+    private void ButtonDashboard_Click(object sender, EventArgs e)
     {
         ShowDashboardView();
     }
 
-    private void panel1_Paint(object sender, PaintEventArgs e) { }
-    private void logo_Click(object sender, EventArgs e) { }
-    private void panelContents_Paint(object sender, PaintEventArgs e) { }
+    private void ButtonCustomers_Click(object sender, EventArgs e)
+    {
+        ShowCustomerProfiles();
+    }
+
+    private void ButtonRentals_Click(object sender, EventArgs e)
+    {
+        ShowRentalBookingsView();
+    }
+
+    private void ButtonCatalog_Click(object sender, EventArgs e)
+    {
+        ShowCatalogView();
+    }
+
+
+
+    private void Panel1_Paint(object sender, PaintEventArgs e) { }
+    private void Logo_Click(object sender, EventArgs e) { }
+    private void PanelContents_Paint(object sender, PaintEventArgs e) { }
 }

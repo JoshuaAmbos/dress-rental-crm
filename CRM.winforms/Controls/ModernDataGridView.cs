@@ -8,18 +8,15 @@ namespace CRM.winforms.Controls;
 
 public class ModernDataGridView : DataGridView
 {
-    // Palette
-    private static readonly Color ColorHeaderBg = Color.FromArgb(249, 241, 241);
-    private static readonly Color ColorHeaderText = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorGridLine = Color.FromArgb(238, 230, 230);
-    private static readonly Color ColorRowHover = Color.FromArgb(253, 248, 248);
-    private static readonly Color ColorAltRow = Color.FromArgb(254, 252, 252);
-    private static readonly Color ColorSelectionBg = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorTextPrimary = Color.FromArgb(44, 34, 38);
-    private static readonly Color ColorSubtext = Color.FromArgb(120, 110, 115);
+    // Atelier Palette
+    private static readonly Color ColorHeaderBg = Color.White;
+    private static readonly Color ColorHeaderText = Color.FromArgb(130, 120, 125);
+    private static readonly Color ColorGridLine = Color.FromArgb(242, 236, 238);
+    private static readonly Color ColorSelectionBg = Color.FromArgb(190, 110, 120); // Dusty Rose
+    private static readonly Color ColorTextPrimary = Color.FromArgb(44, 34, 38);   // Espresso
+    private static readonly Color ColorSubtext = Color.FromArgb(150, 140, 145);
+    private static readonly Color ColorBorder = Color.FromArgb(226, 218, 220);
 
-    // Interaction State
-    private int _hoveredRowIndex = -1;
     private Point _mouseDownCell = new(-1, -1);
 
     [Category("Appearance")]
@@ -37,26 +34,28 @@ public class ModernDataGridView : DataGridView
 
         DoubleBuffered = true;
 
-        // Grid Structure
-        BackgroundColor = Color.White;
-        BorderStyle = BorderStyle.None;
-        CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
-        GridColor = ColorGridLine;
-        RowHeadersVisible = false;
-        MultiSelect = false;
+        // Structure & Grid Setup
         ReadOnly = true;
+        AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+        SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+        MultiSelect = false;
         AllowUserToAddRows = false;
         AllowUserToDeleteRows = false;
         AllowUserToResizeRows = false;
         AllowUserToOrderColumns = false;
-        SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-        AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+        RowHeadersVisible = false;
         EnableHeadersVisualStyles = false;
+        BackgroundColor = Color.White;
+        BorderStyle = BorderStyle.None;
 
-        // Dimensions & Fonts
+        // Disable built-in cell borders; we handle the clean bottom border manually
+        CellBorderStyle = DataGridViewCellBorderStyle.None;
+        GridColor = ColorGridLine;
+
+        // Modern Dimensions & Typography
         ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-        ColumnHeadersHeight = 42;
-        RowTemplate.Height = 38;
+        ColumnHeadersHeight = 44;
+        RowTemplate.Height = 42;
         Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
         // Header Styling
@@ -65,9 +64,9 @@ public class ModernDataGridView : DataGridView
         {
             BackColor = ColorHeaderBg,
             ForeColor = ColorHeaderText,
-            Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
+            Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
             Alignment = DataGridViewContentAlignment.MiddleLeft,
-            Padding = new Padding(14, 0, 14, 0),
+            Padding = new Padding(12, 0, 12, 0),
             SelectionBackColor = ColorHeaderBg,
             SelectionForeColor = ColorHeaderText
         };
@@ -79,57 +78,28 @@ public class ModernDataGridView : DataGridView
             ForeColor = ColorTextPrimary,
             SelectionBackColor = ColorSelectionBg,
             SelectionForeColor = Color.White,
-            Padding = new Padding(14, 0, 14, 0),
+            Padding = new Padding(12, 0, 12, 0),
             Alignment = DataGridViewContentAlignment.MiddleLeft
         };
 
-        // Alternating Rows
         AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle
         {
-            BackColor = ColorAltRow,
+            BackColor = Color.White,
             ForeColor = ColorTextPrimary,
             SelectionBackColor = ColorSelectionBg,
             SelectionForeColor = Color.White,
-            Padding = new Padding(14, 0, 14, 0),
+            Padding = new Padding(12, 0, 12, 0),
             Alignment = DataGridViewContentAlignment.MiddleLeft
         };
     }
 
-    // Row Hover Effects
-    protected override void OnCellMouseEnter(DataGridViewCellEventArgs e)
-    {
-        base.OnCellMouseEnter(e);
-        if (e.RowIndex >= 0 && e.RowIndex != _hoveredRowIndex)
-        {
-            int previous = _hoveredRowIndex;
-            _hoveredRowIndex = e.RowIndex;
-            if (previous >= 0 && previous < RowCount) InvalidateRow(previous);
-            InvalidateRow(_hoveredRowIndex);
-        }
-    }
-
-    protected override void OnCellMouseLeave(DataGridViewCellEventArgs e)
-    {
-        base.OnCellMouseLeave(e);
-        if (_hoveredRowIndex >= 0)
-        {
-            int previous = _hoveredRowIndex;
-            _hoveredRowIndex = -1;
-            if (previous < RowCount) InvalidateRow(previous);
-        }
-    }
-
-    // Button Click State Tracking
     protected override void OnCellMouseDown(DataGridViewCellMouseEventArgs e)
     {
         base.OnCellMouseDown(e);
-        if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
+        if (e.RowIndex >= 0 && e.ColumnIndex >= 0 && Columns[e.ColumnIndex] is DataGridViewButtonColumn)
         {
             _mouseDownCell = new Point(e.ColumnIndex, e.RowIndex);
-            if (Columns[e.ColumnIndex] is DataGridViewButtonColumn)
-            {
-                InvalidateCell(e.ColumnIndex, e.RowIndex);
-            }
+            InvalidateCell(e.ColumnIndex, e.RowIndex);
         }
     }
 
@@ -141,78 +111,167 @@ public class ModernDataGridView : DataGridView
             int col = _mouseDownCell.X;
             int row = _mouseDownCell.Y;
             _mouseDownCell = new Point(-1, -1);
-            if (col < ColumnCount && row < RowCount && Columns[col] is DataGridViewButtonColumn)
+            if (col < ColumnCount && row < RowCount)
             {
                 InvalidateCell(col, row);
             }
         }
     }
 
-    // Custom Rendering
-    protected override void OnRowPrePaint(DataGridViewRowPrePaintEventArgs e)
-    {
-        base.OnRowPrePaint(e);
-
-        var row = Rows[e.RowIndex];
-        if (!row.Selected && e.RowIndex == _hoveredRowIndex)
-        {
-            using var hoverBrush = new SolidBrush(ColorRowHover);
-            e.Graphics.FillRectangle(hoverBrush, e.RowBounds);
-        }
-    }
-
-    // Custom Rendering
     protected override void OnCellPainting(DataGridViewCellPaintingEventArgs e)
     {
-        if (e.RowIndex >= 0 && e.ColumnIndex >= 0 && Columns[e.ColumnIndex] is DataGridViewButtonColumn)
+        if (e.Graphics == null) return;
+
+        // 1. Column Headers
+        if (e.RowIndex == -1)
         {
-            e.Paint(e.ClipBounds, DataGridViewPaintParts.Background | DataGridViewPaintParts.Border);
-
-            var cellValue = e.FormattedValue?.ToString() ?? string.Empty;
-            var isSelected = (e.State & DataGridViewElementStates.Selected) != 0;
-            var isPressed = _mouseDownCell.X == e.ColumnIndex && _mouseDownCell.Y == e.RowIndex;
-
-            var btnRect = new Rectangle(e.CellBounds.X + 6, e.CellBounds.Y + 5, e.CellBounds.Width - 12, e.CellBounds.Height - 10);
-            if (btnRect.Width <= 0 || btnRect.Height <= 0) return;
-
-            // Safe fallback to prevent CS8602 on nullable CellStyle
-            Color btnBg = e.CellStyle?.BackColor ?? Color.FromArgb(244, 238, 238);
-            Color btnFg = e.CellStyle?.ForeColor ?? Color.FromArgb(38, 22, 24);
-
-            if (isSelected)
+            using (var bgBrush = new SolidBrush(ColorHeaderBg))
             {
-                btnBg = Color.White;
-                btnFg = ColorSelectionBg;
+                e.Graphics.FillRectangle(bgBrush, e.CellBounds);
             }
 
-            if (isPressed)
+            // Draw crisp bottom dividing line under header
+            using (var linePen = new Pen(ColorGridLine, 1.2f))
             {
-                btnBg = Color.FromArgb(
-                    Math.Max(0, btnBg.R - 20),
-                    Math.Max(0, btnBg.G - 20),
-                    Math.Max(0, btnBg.B - 20));
+                e.Graphics.DrawLine(linePen, e.CellBounds.Left, e.CellBounds.Bottom - 1, e.CellBounds.Right, e.CellBounds.Bottom - 1);
             }
 
-            if (e.Graphics == null) return;
-
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-
-            using (var path = CreateRoundedRect(btnRect, 5))
-            {
-                using var fillBrush = new SolidBrush(btnBg);
-                e.Graphics.FillPath(fillBrush, path);
-
-                using var borderPen = new Pen(Color.FromArgb(220, 210, 212), 1f);
-                e.Graphics.DrawPath(borderPen, path);
-            }
+            var headerText = e.FormattedValue?.ToString() ?? string.Empty;
+            var textRect = new Rectangle(
+                e.CellBounds.X + 12,
+                e.CellBounds.Y,
+                e.CellBounds.Width - 24,
+                e.CellBounds.Height);
 
             TextRenderer.DrawText(
                 e.Graphics,
-                cellValue,
-                new Font("Segoe UI Semibold", 8.75f, FontStyle.Bold),
-                btnRect,
-                btnFg,
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
+                headerText,
+                ColumnHeadersDefaultCellStyle.Font,
+                textRect,
+                ColorHeaderText,
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
+
+            e.Handled = true;
+            return;
+        }
+
+        // 2. Data Rows
+        if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
+        {
+            bool isSelected = (e.State & DataGridViewElementStates.Selected) != 0;
+            Color backColor = isSelected ? ColorSelectionBg : Color.White;
+
+            using (var bgBrush = new SolidBrush(backColor))
+            {
+                e.Graphics.FillRectangle(bgBrush, e.CellBounds);
+            }
+
+            // Bottom horizontal row divider line
+            using (var linePen = new Pen(ColorGridLine, 1f))
+            {
+                e.Graphics.DrawLine(linePen, e.CellBounds.Left, e.CellBounds.Bottom - 1, e.CellBounds.Right, e.CellBounds.Bottom - 1);
+            }
+
+            // Custom Button Column
+            if (Columns[e.ColumnIndex] is DataGridViewButtonColumn)
+            {
+                var cellValue = e.FormattedValue?.ToString() ?? string.Empty;
+                var isPressed = _mouseDownCell.X == e.ColumnIndex && _mouseDownCell.Y == e.RowIndex;
+
+                int btnHeight = 26;
+                int btnMarginX = 6;
+                int btnY = e.CellBounds.Y + (e.CellBounds.Height - btnHeight) / 2;
+                int btnWidth = e.CellBounds.Width - (btnMarginX * 2);
+
+                if (btnWidth > 0 && btnHeight > 0)
+                {
+                    var btnRect = new Rectangle(e.CellBounds.X + btnMarginX, btnY, btnWidth, btnHeight);
+
+                    Color btnBg;
+                    Color btnFg;
+                    Color btnBorderColor;
+
+                    if (isSelected)
+                    {
+                        // Clean contrast on selected rows
+                        btnBg = Color.White;
+                        btnFg = ColorSelectionBg;
+                        btnBorderColor = Color.White;
+
+                        if (cellValue == "Restore") btnFg = Color.FromArgb(40, 120, 60);
+                        if (cellValue == "Archive") btnFg = Color.FromArgb(175, 45, 55);
+                    }
+                    else
+                    {
+                        if (cellValue == "Restore")
+                        {
+                            btnBg = Color.FromArgb(240, 248, 242);
+                            btnFg = Color.FromArgb(40, 125, 60);
+                            btnBorderColor = Color.FromArgb(200, 230, 205);
+                        }
+                        else if (cellValue == "Archive")
+                        {
+                            btnBg = Color.FromArgb(253, 242, 242);
+                            btnFg = Color.FromArgb(175, 45, 55);
+                            btnBorderColor = Color.FromArgb(242, 212, 212);
+                        }
+                        else
+                        {
+                            btnBg = Color.FromArgb(248, 244, 245);
+                            btnFg = ColorTextPrimary;
+                            btnBorderColor = ColorBorder;
+                        }
+                    }
+
+                    if (isPressed)
+                    {
+                        btnBg = Color.FromArgb(
+                            Math.Max(0, btnBg.R - 20),
+                            Math.Max(0, btnBg.G - 20),
+                            Math.Max(0, btnBg.B - 20));
+                    }
+
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+                    using (var path = CreateRoundedRect(btnRect, 5))
+                    {
+                        using var fillBrush = new SolidBrush(btnBg);
+                        e.Graphics.FillPath(fillBrush, path);
+
+                        using var borderPen = new Pen(btnBorderColor, 1f);
+                        e.Graphics.DrawPath(borderPen, path);
+                    }
+
+                    TextRenderer.DrawText(
+                        e.Graphics,
+                        cellValue,
+                        new Font("Segoe UI Semibold", 8.75f, FontStyle.Bold),
+                        btnRect,
+                        btnFg,
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
+                }
+
+                e.Handled = true;
+                return;
+            }
+
+            // Standard Text Cells
+            Color textColor = isSelected ? Color.White : ColorTextPrimary;
+            var cellText = e.FormattedValue?.ToString() ?? string.Empty;
+
+            var textRect = new Rectangle(
+                e.CellBounds.X + 12,
+                e.CellBounds.Y,
+                e.CellBounds.Width - 24,
+                e.CellBounds.Height);
+
+            TextRenderer.DrawText(
+                e.Graphics,
+                cellText,
+                this.Font,
+                textRect,
+                textColor,
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.WordEllipsis);
 
             e.Handled = true;
             return;
@@ -221,7 +280,6 @@ public class ModernDataGridView : DataGridView
         base.OnCellPainting(e);
     }
 
-    // Empty State Drawing
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
@@ -235,23 +293,23 @@ public class ModernDataGridView : DataGridView
             using var brush = new SolidBrush(Color.White);
             g.FillRectangle(brush, emptyRect);
 
-            using var titleFont = new Font("Segoe UI Semibold", 11.5f, FontStyle.Bold);
-            using var subFont = new Font("Segoe UI", 9f);
+            using var titleFont = new Font("Segoe UI Semibold", 12f, FontStyle.Bold);
+            using var subFont = new Font("Segoe UI", 9.5f);
 
-            var titleRect = new Rectangle(0, emptyRect.Top + (emptyRect.Height / 2) - 22, Width, 26);
-            var subRect = new Rectangle(0, titleRect.Bottom, Width, 20);
+            var titleRect = new Rectangle(0, emptyRect.Top + (emptyRect.Height / 2) - 28, Width, 28);
+            var subRect = new Rectangle(0, titleRect.Bottom, Width, 24);
 
             TextRenderer.DrawText(
                 g,
                 EmptyStateMessage,
                 titleFont,
                 titleRect,
-                ColorHeaderText,
+                ColorTextPrimary,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
 
             TextRenderer.DrawText(
                 g,
-                "Try adjusting your search criteria or add a new record.",
+                "Try adjusting your search filters or create a new record.",
                 subFont,
                 subRect,
                 ColorSubtext,
@@ -259,7 +317,6 @@ public class ModernDataGridView : DataGridView
         }
     }
 
-    // Geometry Helpers
     private static GraphicsPath CreateRoundedRect(Rectangle r, int radius)
     {
         var path = new GraphicsPath();

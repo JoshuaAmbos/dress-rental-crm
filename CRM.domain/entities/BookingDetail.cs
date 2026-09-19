@@ -13,5 +13,5 @@ public class BookingDetail
     [JsonIgnore]
     public RentalBooking RentalBooking { get; set; } = null!;
 
-    public RentalItem RentalItem { get; set; } = null!;
+    public Garment RentalItem { get; set; } = null!;
 }

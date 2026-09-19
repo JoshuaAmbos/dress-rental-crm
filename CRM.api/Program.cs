@@ -194,13 +194,13 @@ app.MapGet("/test-tenant/{companyId:int}", async (int companyId, ITenantDbContex
 
 app.MapPost("/tenant/{companyId:int}/rental-items", async (
     int companyId,
-    RentalItem rentalItem,
+    Garment rentalItem,
     ITenantDbContextFactory tenantFactory) =>
 {
     await using var tenantDb = await tenantFactory.CreateAsync(companyId);
     tenantDb.RentalItems.Add(rentalItem);
     await tenantDb.SaveChangesAsync();
-    return Results.Created($"/tenant/{companyId}/rental-items/{rentalItem.RentalItemId}", rentalItem);
+    return Results.Created($"/tenant/{companyId}/rental-items/{rentalItem.GarmentId}", rentalItem);
 });
 
 app.MapGet("/tenant/{companyId:int}/rental-items", async (
@@ -210,7 +210,7 @@ app.MapGet("/tenant/{companyId:int}/rental-items", async (
     await using var tenantDb = await tenantFactory.CreateAsync(companyId);
     var items = await tenantDb.RentalItems
         .AsNoTracking()
-        .OrderBy(x => x.RentalItemId)
+        .OrderBy(x => x.GarmentId)
         .ToListAsync();
     return Results.Ok(items);
 });

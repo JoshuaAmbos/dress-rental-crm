@@ -33,7 +33,10 @@
             flowLayoutPanelSidebar = new FlowLayoutPanel();
             buttonDashboard = new Button();
             buttonCustomers = new Button();
-            button2 = new Button();
+            buttonRentals = new Button();
+            buttonCatalog = new Button();
+            buttonInquiries = new Button();
+            buttonLoyaltyAwards = new Button();
             panelContents = new Panel();
             panelHeader.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)logo).BeginInit();
@@ -60,14 +63,17 @@
             logo.SizeMode = PictureBoxSizeMode.StretchImage;
             logo.TabIndex = 0;
             logo.TabStop = false;
-            logo.Click += logo_Click;
+            logo.Click += Logo_Click;
             // 
             // flowLayoutPanelSidebar
             // 
             flowLayoutPanelSidebar.BackColor = Color.White;
             flowLayoutPanelSidebar.Controls.Add(buttonDashboard);
             flowLayoutPanelSidebar.Controls.Add(buttonCustomers);
-            flowLayoutPanelSidebar.Controls.Add(button2);
+            flowLayoutPanelSidebar.Controls.Add(buttonRentals);
+            flowLayoutPanelSidebar.Controls.Add(buttonCatalog);
+            flowLayoutPanelSidebar.Controls.Add(buttonInquiries);
+            flowLayoutPanelSidebar.Controls.Add(buttonLoyaltyAwards);
             flowLayoutPanelSidebar.Location = new Point(-3, 87);
             flowLayoutPanelSidebar.Name = "flowLayoutPanelSidebar";
             flowLayoutPanelSidebar.Padding = new Padding(8, 20, 0, 0);
@@ -82,7 +88,7 @@
             buttonDashboard.TabIndex = 2;
             buttonDashboard.Text = "Dashboard";
             buttonDashboard.UseVisualStyleBackColor = true;
-            buttonDashboard.Click += buttonDashboard_Click;
+            buttonDashboard.Click += ButtonDashboard_Click;
             // 
             // buttonCustomers
             // 
@@ -92,17 +98,45 @@
             buttonCustomers.TabIndex = 3;
             buttonCustomers.Text = "Customers";
             buttonCustomers.UseVisualStyleBackColor = true;
-            buttonCustomers.Click += button1_Click;
+            buttonCustomers.Click += ButtonCustomers_Click;
             // 
-            // button2
+            // buttonRentals
             // 
-            button2.Location = new Point(11, 113);
-            button2.Name = "button2";
-            button2.Size = new Size(180, 39);
-            button2.TabIndex = 4;
-            button2.Text = "Dashboard";
-            button2.UseVisualStyleBackColor = true;
-            button2.Click += button2_Click;
+            buttonRentals.Location = new Point(11, 113);
+            buttonRentals.Name = "buttonRentals";
+            buttonRentals.Size = new Size(180, 39);
+            buttonRentals.TabIndex = 4;
+            buttonRentals.Text = "Rentals";
+            buttonRentals.UseVisualStyleBackColor = true;
+            buttonRentals.Click += ButtonRentals_Click;
+            // 
+            // buttonCatalog
+            // 
+            buttonCatalog.Location = new Point(11, 158);
+            buttonCatalog.Name = "buttonCatalog";
+            buttonCatalog.Size = new Size(180, 39);
+            buttonCatalog.TabIndex = 5;
+            buttonCatalog.Text = "Catalog";
+            buttonCatalog.UseVisualStyleBackColor = true;
+            buttonCatalog.Click += ButtonCatalog_Click;
+            // 
+            // buttonInquiries
+            // 
+            buttonInquiries.Location = new Point(11, 203);
+            buttonInquiries.Name = "buttonInquiries";
+            buttonInquiries.Size = new Size(180, 39);
+            buttonInquiries.TabIndex = 6;
+            buttonInquiries.Text = "Inquiries";
+            buttonInquiries.UseVisualStyleBackColor = true;
+            // 
+            // buttonLoyaltyAwards
+            // 
+            buttonLoyaltyAwards.Location = new Point(11, 248);
+            buttonLoyaltyAwards.Name = "buttonLoyaltyAwards";
+            buttonLoyaltyAwards.Size = new Size(180, 39);
+            buttonLoyaltyAwards.TabIndex = 7;
+            buttonLoyaltyAwards.Text = "Loyalty Awards";
+            buttonLoyaltyAwards.UseVisualStyleBackColor = true;
             // 
             // panelContents
             // 
@@ -111,13 +145,13 @@
             panelContents.Name = "panelContents";
             panelContents.Size = new Size(1712, 955);
             panelContents.TabIndex = 3;
-            panelContents.Paint += panelContents_Paint;
+            panelContents.Paint += PanelContents_Paint;
             // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            BackColor = Color.FromArgb(224, 224, 224);
+            BackColor = Color.WhiteSmoke;
             ClientSize = new Size(1904, 1041);
             Controls.Add(panelContents);
             Controls.Add(flowLayoutPanelSidebar);
@@ -139,7 +173,10 @@
         private FlowLayoutPanel flowLayoutPanelSidebar;
         private Button buttonDashboard;
         private Button buttonCustomers;
-        private Button button2;
+        private Button buttonRentals;
         private Panel panelContents;
+        private Button buttonCatalog;
+        private Button buttonInquiries;
+        private Button buttonLoyaltyAwards;
     }
 }
