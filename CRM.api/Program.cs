@@ -283,11 +283,14 @@ app.MapGet("/tenant/{companyId:int}/bookings", async (
 {
     await using var tenantDb = await tenantFactory.CreateAsync(companyId);
 
+    var activeStages = new[] { "Fitting", "Reserved", "Active", "Overdue" };
+
     var bookings = await tenantDb.RentalBookings
         .Include(b => b.Customer)
         .Include(b => b.BookingDetails)
-            .ThenInclude(d => d.RentalItem)
+            .ThenInclude(d => d.Garment) // Changed from RentalItem to Garment
         .AsNoTracking()
+        .Where(b => b.CompanyId == companyId && activeStages.Contains(b.BookingStage))
         .OrderByDescending(b => b.RentalStartDate)
         .ToListAsync();
 

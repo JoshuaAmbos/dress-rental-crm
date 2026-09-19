@@ -57,33 +57,54 @@ public class TenantCrmDbContext : DbContext
         // RentalBooking
         builder.Entity<RentalBooking>(entity =>
         {
-            entity.HasKey(x => x.RentalBookingId);
-            entity.Property(x => x.DressDescription).HasMaxLength(200).IsRequired();
-            entity.Property(x => x.BookingStage).HasMaxLength(50).IsRequired();
-            entity.Property(x => x.RentalFee).HasPrecision(18, 2);
-            entity.Property(x => x.SecurityDeposit).HasPrecision(18, 2);
-            entity.Property(x => x.AlterationNotes).HasMaxLength(500);
+            entity.ToTable("RentalBookings");
 
+            entity.HasKey(x => x.RentalBookingId);
+
+            entity.Property(x => x.BookingStage)
+                  .HasMaxLength(50)
+                  .IsRequired();
+
+            entity.Property(x => x.RentalFee)
+                  .HasPrecision(18, 2);
+
+            entity.Property(x => x.SecurityDeposit)
+                  .HasPrecision(18, 2);
+
+            entity.Property(x => x.AlterationNotes)
+                  .HasMaxLength(500);
+
+            // Relationship to Customer
             entity.HasOne(x => x.Customer)
                   .WithMany(x => x.RentalBookings)
                   .HasForeignKey(x => x.CustomerId)
                   .OnDelete(DeleteBehavior.Restrict);
+
+            // 1-to-Many Relationship to BookingDetail (Multi-Item)
+            entity.HasMany(x => x.BookingDetails)
+                  .WithOne(x => x.RentalBooking)
+                  .HasForeignKey(x => x.RentalBookingId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         // BookingDetail
         builder.Entity<BookingDetail>(entity =>
         {
+            entity.ToTable("BookingDetails");
+
             entity.HasKey(x => x.BookingDetailId);
-            entity.Property(x => x.AlterationNotes).HasMaxLength(500);
 
-            entity.HasOne(x => x.RentalBooking)
-                  .WithMany(x => x.BookingDetails)
-                  .HasForeignKey(x => x.RentalBookingId)
-                  .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(x => x.AlterationNotes)
+                  .HasMaxLength(500);
 
-            entity.HasOne(x => x.RentalItem)
+            // If BookingDetail tracks line-item rental pricing:
+            entity.Property(x => x.UnitPrice)
+                  .HasPrecision(18, 2);
+
+            // Many-to-1 Relationship to Garment
+            entity.HasOne(x => x.Garment)
                   .WithMany(x => x.BookingDetails)
-                  .HasForeignKey(x => x.RentalItemId)
+                  .HasForeignKey(x => x.GarmentId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 

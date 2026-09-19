@@ -1,9 +1,4 @@
-﻿using System;
-using System.Drawing;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using CRM.domain.entities;
 using CRM.infrastructure.data;
 using CRM.infrastructure.services;
@@ -16,6 +11,8 @@ public partial class CustomerDialogForm : Form
     private readonly int _companyId;
     private readonly int? _customerId;
     private readonly string _existingCustomerCode = string.Empty;
+
+    public int? CreatedCustomerId { get; private set; }
 
     private TextBox txtFirstName = null!;
     private TextBox txtMiddleName = null!;
@@ -30,7 +27,6 @@ public partial class CustomerDialogForm : Form
     private Button btnCancel = null!;
     private Label lblHeaderSubtitle = null!;
 
-    // Colors
     private static readonly Color ColorHeaderBg = Color.FromArgb(250, 245, 245);
     private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
     private static readonly Color ColorMutedText = Color.FromArgb(120, 110, 115);
@@ -39,9 +35,14 @@ public partial class CustomerDialogForm : Form
     private static readonly Color ColorBorder = Color.FromArgb(224, 216, 216);
     private static readonly Color ColorCardBg = Color.FromArgb(254, 252, 252);
 
-    public CustomerDialogForm(Func<TenantCrmDbContext> dbFactory, int companyId, Customer? existingCustomer = null)
+    public CustomerDialogForm(Func<TenantCrmDbContext> dbFactory, int companyId)
+        : this(dbFactory, companyId, null)
     {
-        _dbFactory = dbFactory;
+    }
+
+    public CustomerDialogForm(Func<TenantCrmDbContext> dbFactory, int companyId, Customer? existingCustomer)
+    {
+        _dbFactory = dbFactory ?? throw new ArgumentNullException(nameof(dbFactory));
         _companyId = companyId;
         _customerId = existingCustomer?.CustomerId;
 
@@ -57,7 +58,6 @@ public partial class CustomerDialogForm : Form
         else
         {
             Text = "New Customer Intake";
-            //lblHeaderSubtitle.Text = "Client Code: [System Generated on Save]";
         }
     }
 
@@ -72,7 +72,6 @@ public partial class CustomerDialogForm : Form
         BackColor = Color.White;
         Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
-        // 1. Header Panel (Dock: Top)
         var pnlHeader = new Panel
         {
             Dock = DockStyle.Top,
@@ -101,7 +100,6 @@ public partial class CustomerDialogForm : Form
 
         pnlHeader.Controls.AddRange(new Control[] { lblTitle, lblHeaderSubtitle });
 
-        // 2. Footer Panel (Dock: Bottom)
         var pnlFooter = new Panel
         {
             Dock = DockStyle.Bottom,
@@ -142,7 +140,6 @@ public partial class CustomerDialogForm : Form
 
         pnlFooter.Controls.AddRange(new Control[] { btnCancel, btnSave });
 
-        // 3. Main Body (Dock: Fill)
         var pnlBody = new Panel
         {
             Dock = DockStyle.Fill,
@@ -152,28 +149,22 @@ public partial class CustomerDialogForm : Form
         };
 
         int currentY = 15;
-
         AddSectionHeader("Personal & Contact Details", ref currentY, pnlBody);
 
-        // Row 1: First Name & Middle Name
         txtFirstName = AddCompactField("First Name *", 28, currentY, 275, pnlBody);
         txtMiddleName = AddCompactField("Middle Name (Optional)", 323, currentY, 275, pnlBody);
         currentY += 58;
 
-        // Row 2: Last Name & Phone
         txtLastName = AddCompactField("Last Name *", 28, currentY, 275, pnlBody);
         txtPhone = AddCompactField("Contact Number *", 323, currentY, 275, pnlBody);
         currentY += 58;
 
-        // Row 3: Email Address
         txtEmail = AddCompactField("Email Address", 28, currentY, 570, pnlBody);
         currentY += 58;
 
-        // Row 4: Physical Address
         txtAddress = AddCompactField("Address / City", 28, currentY, 570, pnlBody);
         currentY += 68;
 
-        // Section: Measurements
         AddSectionHeader("Body Measurements (Inches)", ref currentY, pnlBody);
 
         var pnlMeasurements = new Panel
@@ -190,7 +181,6 @@ public partial class CustomerDialogForm : Form
 
         pnlBody.Controls.Add(pnlMeasurements);
 
-        // Proper WinForms docking order: Fill added first, then Top/Bottom, followed by BringToFront()
         Controls.Add(pnlBody);
         Controls.Add(pnlHeader);
         Controls.Add(pnlFooter);
@@ -294,13 +284,14 @@ public partial class CustomerDialogForm : Form
         try
         {
             await using var db = _dbFactory();
+            Customer targetCustomer;
 
             if (!_customerId.HasValue)
             {
                 var generator = new CustomerCodeGenerator(_dbFactory);
                 string newCode = await generator.GenerateNextCodeAsync(_companyId);
 
-                var newCustomer = new Customer
+                targetCustomer = new Customer
                 {
                     CompanyId = _companyId,
                     CustomerCode = newCode,
@@ -317,7 +308,7 @@ public partial class CustomerDialogForm : Form
                     CreatedAt = DateTime.UtcNow
                 };
 
-                db.Customers.Add(newCustomer);
+                db.Customers.Add(targetCustomer);
             }
             else
             {
@@ -338,9 +329,13 @@ public partial class CustomerDialogForm : Form
                 existing.BustSize = numBust.Value;
                 existing.WaistSize = numWaist.Value;
                 existing.HipSize = numHips.Value;
+
+                targetCustomer = existing;
             }
 
             await db.SaveChangesAsync();
+            CreatedCustomerId = targetCustomer.CustomerId;
+
             DialogResult = DialogResult.OK;
             Close();
         }
