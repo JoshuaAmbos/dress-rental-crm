@@ -73,7 +73,7 @@ public partial class LoginForm : Form
 
     private void InitializeLoginUI()
     {
-        this.Text = "Vantage CRM - Sign In";
+        this.Text = "Atelier CRM - Sign In";
         this.FormBorderStyle = FormBorderStyle.Sizable;
         this.WindowState = FormWindowState.Maximized;
         this.MinimumSize = new Size(1100, 700);
@@ -107,29 +107,29 @@ public partial class LoginForm : Form
 
         pnlBrandContent.Paint += (s, e) =>
         {
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            //e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-            using var badgeBrush = new SolidBrush(Color.FromArgb(249, 241, 241));
-            using var badgePen = new Pen(ColorPrimary, 2f);
-            e.Graphics.FillEllipse(badgeBrush, 1, 1, 70, 70);
-            e.Graphics.DrawEllipse(badgePen, 1, 1, 70, 70);
+            //using var badgeBrush = new SolidBrush(Color.FromArgb(249, 241, 241));
+            //using var badgePen = new Pen(ColorPrimary, 2f);
+            //e.Graphics.FillEllipse(badgeBrush, 1, 1, 70, 70);
+            //e.Graphics.DrawEllipse(badgePen, 1, 1, 70, 70);
 
-            using var badgeFont = new Font("Segoe UI Semibold", 24f, FontStyle.Bold);
-            using var textBrush = new SolidBrush(ColorPrimary);
-            var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-            e.Graphics.DrawString("D", badgeFont, textBrush, new RectangleF(0, 0, 72, 72), sf);
+            //using var badgeFont = new Font("Segoe UI Semibold", 24f, FontStyle.Bold);
+            //using var textBrush = new SolidBrush(ColorPrimary);
+            //var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+            //e.Graphics.DrawString("A", badgeFont, textBrush, new RectangleF(0, 0, 72, 72), sf);
 
-            using var bulletBrush = new SolidBrush(ColorPrimary);
-            int startY = 200 + 8;
-            for (int i = 0; i < 3; i++)
-            {
-                e.Graphics.FillEllipse(bulletBrush, 2, startY + (i * 38), 9, 9);
-            }
+            //using var bulletBrush = new SolidBrush(ColorPrimary);
+            //int startY = 200 + 8;
+            //for (int i = 0; i < 3; i++)
+            //{
+            //    e.Graphics.FillEllipse(bulletBrush, 2, startY + (i * 38), 9, 9);
+            //}
         };
 
         var lblTitle = new Label
         {
-            Text = "VANTAGE - DRESS RENTAL CRM",
+            Text = "ATELIER - DRESS RENTAL CRM",
             Font = new Font("Segoe UI Semibold", 21f, FontStyle.Bold),
             ForeColor = Color.White,
             AutoSize = false,
@@ -168,7 +168,7 @@ public partial class LoginForm : Form
                 Font = new Font("Segoe UI", 10.5f),
                 ForeColor = Color.FromArgb(235, 225, 226),
                 AutoSize = false,
-                Location = new Point(24, featureY),
+                Location = new Point(0, featureY),
                 Size = new Size(396, 26),
                 BackColor = Color.Transparent
             };
