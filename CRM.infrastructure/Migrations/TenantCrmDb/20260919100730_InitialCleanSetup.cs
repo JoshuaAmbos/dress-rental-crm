@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace CRM.infrastructure.Migrations.TenantCrmDb
 {
     /// <inheritdoc />
-    public partial class AddGarmentCatalog : Migration
+    public partial class InitialCleanSetup : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

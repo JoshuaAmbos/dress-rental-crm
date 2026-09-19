@@ -35,6 +35,15 @@
             secondaryButtonRented = new CRM.winforms.Controls.SecondaryButton();
             secondaryButtonCleaning = new CRM.winforms.Controls.SecondaryButton();
             secondaryButtonAlterations = new CRM.winforms.Controls.SecondaryButton();
+            garmentCardControl1 = new CRM.winforms.Controls.GarmentCardControl();
+            flpGarments = new FlowLayoutPanel();
+            garmentCardControl2 = new CRM.winforms.Controls.GarmentCardControl();
+            garmentCardControl3 = new CRM.winforms.Controls.GarmentCardControl();
+            garmentCardControl4 = new CRM.winforms.Controls.GarmentCardControl();
+            garmentCardControl5 = new CRM.winforms.Controls.GarmentCardControl();
+            garmentCardControl6 = new CRM.winforms.Controls.GarmentCardControl();
+            garmentCardControl7 = new CRM.winforms.Controls.GarmentCardControl();
+            flpGarments.SuspendLayout();
             SuspendLayout();
             // 
             // label1
@@ -96,8 +105,9 @@
             secondaryButtonRented.Name = "secondaryButtonRented";
             secondaryButtonRented.Size = new Size(109, 34);
             secondaryButtonRented.TabIndex = 6;
-            secondaryButtonRented.Text = "RentedOut";
+            secondaryButtonRented.Text = "Rented Out";
             secondaryButtonRented.UseVisualStyleBackColor = false;
+            secondaryButtonRented.Click += secondaryButtonRented_Click;
             // 
             // secondaryButtonCleaning
             // 
@@ -127,11 +137,90 @@
             secondaryButtonAlterations.Text = "Alterations";
             secondaryButtonAlterations.UseVisualStyleBackColor = false;
             // 
+            // garmentCardControl1
+            // 
+            garmentCardControl1.BackColor = Color.Transparent;
+            garmentCardControl1.Location = new Point(12, 12);
+            garmentCardControl1.Margin = new Padding(12);
+            garmentCardControl1.Name = "garmentCardControl1";
+            garmentCardControl1.Size = new Size(240, 340);
+            garmentCardControl1.TabIndex = 9;
+            // 
+            // flpGarments
+            // 
+            flpGarments.AutoScroll = true;
+            flpGarments.Controls.Add(garmentCardControl1);
+            flpGarments.Controls.Add(garmentCardControl2);
+            flpGarments.Controls.Add(garmentCardControl3);
+            flpGarments.Controls.Add(garmentCardControl4);
+            flpGarments.Controls.Add(garmentCardControl5);
+            flpGarments.Controls.Add(garmentCardControl6);
+            flpGarments.Controls.Add(garmentCardControl7);
+            flpGarments.Location = new Point(22, 131);
+            flpGarments.Name = "flpGarments";
+            flpGarments.Size = new Size(1657, 791);
+            flpGarments.TabIndex = 11;
+            // 
+            // garmentCardControl2
+            // 
+            garmentCardControl2.BackColor = Color.Transparent;
+            garmentCardControl2.Location = new Point(276, 12);
+            garmentCardControl2.Margin = new Padding(12);
+            garmentCardControl2.Name = "garmentCardControl2";
+            garmentCardControl2.Size = new Size(240, 340);
+            garmentCardControl2.TabIndex = 10;
+            // 
+            // garmentCardControl3
+            // 
+            garmentCardControl3.BackColor = Color.Transparent;
+            garmentCardControl3.Location = new Point(540, 12);
+            garmentCardControl3.Margin = new Padding(12);
+            garmentCardControl3.Name = "garmentCardControl3";
+            garmentCardControl3.Size = new Size(240, 340);
+            garmentCardControl3.TabIndex = 11;
+            // 
+            // garmentCardControl4
+            // 
+            garmentCardControl4.BackColor = Color.Transparent;
+            garmentCardControl4.Location = new Point(804, 12);
+            garmentCardControl4.Margin = new Padding(12);
+            garmentCardControl4.Name = "garmentCardControl4";
+            garmentCardControl4.Size = new Size(240, 340);
+            garmentCardControl4.TabIndex = 12;
+            // 
+            // garmentCardControl5
+            // 
+            garmentCardControl5.BackColor = Color.Transparent;
+            garmentCardControl5.Location = new Point(1068, 12);
+            garmentCardControl5.Margin = new Padding(12);
+            garmentCardControl5.Name = "garmentCardControl5";
+            garmentCardControl5.Size = new Size(240, 340);
+            garmentCardControl5.TabIndex = 13;
+            // 
+            // garmentCardControl6
+            // 
+            garmentCardControl6.BackColor = Color.Transparent;
+            garmentCardControl6.Location = new Point(1332, 12);
+            garmentCardControl6.Margin = new Padding(12);
+            garmentCardControl6.Name = "garmentCardControl6";
+            garmentCardControl6.Size = new Size(240, 340);
+            garmentCardControl6.TabIndex = 14;
+            // 
+            // garmentCardControl7
+            // 
+            garmentCardControl7.BackColor = Color.Transparent;
+            garmentCardControl7.Location = new Point(12, 376);
+            garmentCardControl7.Margin = new Padding(12);
+            garmentCardControl7.Name = "garmentCardControl7";
+            garmentCardControl7.Size = new Size(240, 340);
+            garmentCardControl7.TabIndex = 15;
+            // 
             // CatalogView
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.FromArgb(249, 241, 241);
+            Controls.Add(flpGarments);
             Controls.Add(secondaryButtonAlterations);
             Controls.Add(secondaryButtonCleaning);
             Controls.Add(secondaryButtonRented);
@@ -142,6 +231,7 @@
             Name = "CatalogView";
             Padding = new Padding(30);
             Size = new Size(1712, 955);
+            flpGarments.ResumeLayout(false);
             ResumeLayout(false);
             PerformLayout();
         }
@@ -155,5 +245,13 @@
         private Controls.SecondaryButton secondaryButtonRented;
         private Controls.SecondaryButton secondaryButtonCleaning;
         private Controls.SecondaryButton secondaryButtonAlterations;
+        private Controls.GarmentCardControl garmentCardControl1;
+        private FlowLayoutPanel flpGarments;
+        private Controls.GarmentCardControl garmentCardControl2;
+        private Controls.GarmentCardControl garmentCardControl3;
+        private Controls.GarmentCardControl garmentCardControl4;
+        private Controls.GarmentCardControl garmentCardControl5;
+        private Controls.GarmentCardControl garmentCardControl6;
+        private Controls.GarmentCardControl garmentCardControl7;
     }
 }

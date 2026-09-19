@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.IO;
 using System.Windows.Forms;
 
 namespace CRM.winforms.Controls;
@@ -18,11 +19,12 @@ public class GarmentCardControl : UserControl
 
     private bool _isHovered;
     private Image? _garmentImage;
-    private string _garmentCode = "SKU-000";
-    private string _garmentName = "Gown Name";
+    private string? _imagePath;
+    private string _itemCode = "SKU-000";
+    private string _styleName = "Gown Name";
     private string _category = "Evening Gown";
-    private string _sizeLabel = "Size M (34-26-36)";
-    private decimal _rentalPrice = 0.00m;
+    private string _sizeLabel = "Size M";
+    private decimal _rentalRate = 0.00m;
     private string _status = "Available"; // "Available", "Rented", "In Cleaning", "Alterations"
 
     // Exposed click event that passes the ID or card reference
@@ -31,22 +33,22 @@ public class GarmentCardControl : UserControl
 
     [Browsable(false)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public int GarmentId { get; set; }
+    public int RentalItemId { get; set; }
 
     [Category("Garment Data")]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public string GarmentCode
+    public string ItemCode
     {
-        get => _garmentCode;
-        set { _garmentCode = value; Invalidate(); }
+        get => _itemCode;
+        set { _itemCode = value; Invalidate(); }
     }
 
     [Category("Garment Data")]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public string GarmentName
+    public string StyleName
     {
-        get => _garmentName;
-        set { _garmentName = value; Invalidate(); }
+        get => _styleName;
+        set { _styleName = value; Invalidate(); }
     }
 
     [Category("Garment Data")]
@@ -67,10 +69,10 @@ public class GarmentCardControl : UserControl
 
     [Category("Garment Data")]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public decimal RentalPrice
+    public decimal RentalRate
     {
-        get => _rentalPrice;
-        set { _rentalPrice = value; Invalidate(); }
+        get => _rentalRate;
+        set { _rentalRate = value; Invalidate(); }
     }
 
     [Category("Garment Data")]
@@ -79,6 +81,19 @@ public class GarmentCardControl : UserControl
     {
         get => _status;
         set { _status = value; Invalidate(); }
+    }
+
+    [Category("Garment Data")]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public string? ImagePath
+    {
+        get => _imagePath;
+        set
+        {
+            _imagePath = value;
+            LoadImageFromPath(_imagePath);
+            Invalidate();
+        }
     }
 
     [Category("Garment Data")]
@@ -105,6 +120,26 @@ public class GarmentCardControl : UserControl
         BackColor = Color.Transparent;
     }
 
+    private void LoadImageFromPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            _garmentImage = null;
+            return;
+        }
+
+        try
+        {
+            // Load file into memory stream to prevent file lock
+            using var stream = new MemoryStream(File.ReadAllBytes(path));
+            _garmentImage = Image.FromStream(stream);
+        }
+        catch
+        {
+            _garmentImage = null;
+        }
+    }
+
     protected override void OnMouseEnter(EventArgs e)
     {
         base.OnMouseEnter(e);
@@ -123,7 +158,6 @@ public class GarmentCardControl : UserControl
     {
         base.OnMouseClick(e);
 
-        // Check if the bottom action button area was clicked
         var actionRect = new Rectangle(14, Height - 46, Width - 28, 32);
         if (actionRect.Contains(e.Location))
         {
@@ -169,13 +203,11 @@ public class GarmentCardControl : UserControl
             }
             else
             {
-                // Soft placeholder canvas
                 using (var phBrush = new SolidBrush(ColorImagePlaceholder))
                 {
                     g.FillRectangle(phBrush, imgRect);
                 }
 
-                // Placeholder initial / icon indicator
                 using (var iconFont = new Font("Segoe UI", 26f, FontStyle.Regular))
                 {
                     TextRenderer.DrawText(
@@ -190,7 +222,6 @@ public class GarmentCardControl : UserControl
 
             g.ResetClip();
 
-            // Image outline
             using var imgPen = new Pen(ColorBorder, 1f);
             g.DrawPath(imgPen, imgPath);
         }
@@ -198,28 +229,28 @@ public class GarmentCardControl : UserControl
         // 3. Status Badge (Top-Right overlay on image)
         DrawStatusBadge(g, imgRect.Right - 8, imgRect.Top + 8);
 
-        // 4. Garment Code & Category (Subtext)
+        // 4. Garment ItemCode & Category (Subtext)
         int textY = 172;
         var subtextRect = new Rectangle(14, textY, Width - 28, 16);
         using (var subFont = new Font("Segoe UI", 8.25f, FontStyle.Bold))
         {
             TextRenderer.DrawText(
                 g,
-                $"{_garmentCode.ToUpper()} • {_category.ToUpper()}",
+                $"{_itemCode.ToUpper()} • {_category.ToUpper()}",
                 subFont,
                 subtextRect,
                 ColorTextMuted,
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
         }
 
-        // 5. Garment Title
+        // 5. Garment StyleName
         textY += 18;
         var titleRect = new Rectangle(14, textY, Width - 28, 22);
         using (var titleFont = new Font("Segoe UI Semibold", 10.5f, FontStyle.Bold))
         {
             TextRenderer.DrawText(
                 g,
-                _garmentName,
+                _styleName,
                 titleFont,
                 titleRect,
                 ColorTextPrimary,
@@ -247,14 +278,14 @@ public class GarmentCardControl : UserControl
         {
             TextRenderer.DrawText(
                 g,
-                $"₱{_rentalPrice:N0} / lease",
+                $"₱{_rentalRate:N0} / lease",
                 priceFont,
                 priceRect,
-                ColorBorderHover, // Dusty Rose Accent
+                ColorBorderHover,
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
         }
 
-        // 8. Quick Action Button ("View / Book")
+        // 8. Quick Action Button
         var actionRect = new Rectangle(14, Height - 44, Width - 28, 30);
         using (var btnPath = CreateRoundedRectangle(actionRect, 6))
         {
