@@ -38,7 +38,6 @@ partial class Step1ClientSelectionView
         Name = "Step1ClientSelectionView";
         Padding = new Padding(30);
         Size = new Size(1712, 955);
-        Load += Step1ClientSelectionView_Load;
         ResumeLayout(false);
     }
 

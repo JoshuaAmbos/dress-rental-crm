@@ -74,7 +74,7 @@ partial class NewBookingWizardView
         btnCancel.FlatStyle = FlatStyle.Flat;
         btnCancel.Font = new Font("Segoe UI Semibold", 9.5F, FontStyle.Bold);
         btnCancel.ForeColor = Color.FromArgb(90, 75, 80);
-        btnCancel.Location = new Point(38, 839);
+        btnCancel.Location = new Point(67, 839);
         btnCancel.Name = "btnCancel";
         btnCancel.Size = new Size(110, 38);
         btnCancel.TabIndex = 9;
@@ -88,7 +88,7 @@ partial class NewBookingWizardView
         btnNext.FlatStyle = FlatStyle.Flat;
         btnNext.Font = new Font("Segoe UI Semibold", 9.5F, FontStyle.Bold);
         btnNext.ForeColor = Color.White;
-        btnNext.Location = new Point(1549, 839);
+        btnNext.Location = new Point(1519, 839);
         btnNext.Name = "btnNext";
         btnNext.Size = new Size(130, 38);
         btnNext.TabIndex = 10;
@@ -103,7 +103,6 @@ partial class NewBookingWizardView
         panelContentHost.Name = "panelContentHost";
         panelContentHost.Size = new Size(1641, 546);
         panelContentHost.TabIndex = 11;
-        panelContentHost.Paint += panelContentHost_Paint;
         // 
         // NewBookingWizardView
         // 
@@ -119,7 +118,6 @@ partial class NewBookingWizardView
         Name = "NewBookingWizardView";
         Padding = new Padding(30);
         Size = new Size(1712, 955);
-        Load += NewBookingWizardView_Load;
         ResumeLayout(false);
         PerformLayout();
     }

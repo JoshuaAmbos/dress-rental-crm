@@ -1,6 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
-using CRM.infrastructure.data;
+﻿using CRM.infrastructure.data;
+using CRM.winforms.Models;
 using CRM.winforms.Models.RentalBookingModels;
+using Microsoft.EntityFrameworkCore;
 
 namespace CRM.winforms.Services.RentalBookingServices;
 
@@ -68,6 +69,28 @@ public class RentalBookingService
                 IsOverdue = b.RentalEndDate.Date < today && b.BookingStage != "Returned"
             }).ToList()
         };
+    }
+
+    public async Task<List<GarmentPickerRowViewModel>> GetAvailableGarmentsAsync(int companyId, DateTime startDate, DateTime endDate, string search = "")
+    {
+        await using var db = _contextFactory();
+
+        var query = db.Garments
+            .AsNoTracking()
+            .Where(g => g.CompanyId == companyId && g.IsActive);
+
+        var list = await query.OrderBy(g => g.StyleName).ToListAsync();
+
+        return list.Select(g => new GarmentPickerRowViewModel
+        {
+            GarmentEntity = g,
+            GarmentId = g.GarmentId,
+            Code = g.ItemCode,
+            Title = g.StyleName,
+            SizeLabel = string.IsNullOrWhiteSpace(g.Size) ? "Standard" : g.Size,
+            RentalRate = g.RentalRate,
+            SecurityDeposit = g.SecurityDeposit
+        }).ToList();
     }
 
     public async Task ProcessReturnAsync(int bookingId)

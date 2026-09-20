@@ -5,39 +5,42 @@ using CRM.winforms.Forms;
 using CRM.winforms.models;
 using CRM.winforms.Models;
 using CRM.winforms.Services;
-using System;
 using System.ComponentModel;
-using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace CRM.winforms.Views;
 
 public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
 {
-    private readonly Func<TenantCrmDbContext> _contextFactory;
-    private readonly CustomerProfileService _customerService;
-    private readonly Func<int> _getCompanyId;
+    private readonly Func<TenantCrmDbContext>? _contextFactory;
+    private readonly CustomerProfileService? _customerService;
+    private readonly Func<int>? _getCompanyId;
 
-    // Controls instantiated in code (works even if designer canvas is empty)
+    private Customer? _selectedCustomer;
+    public event Action<bool>? StepValidityChanged;
+
     private SearchBar searchBarClients = null!;
     private ListBox listBoxCustomers = null!;
     private Button btnQuickAdd = null!;
-    private Customer? _selectedCustomer;
 
     // Atelier Palette
     private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
     private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorSelectedBg = Color.FromArgb(254, 242, 243);
-    private static readonly Color ColorAvatarBg = Color.FromArgb(240, 233, 234);
-    private static readonly Color ColorAvatarText = Color.FromArgb(142, 108, 114);
     private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
-    private static readonly Color ColorDivider = Color.FromArgb(242, 235, 235);
     private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);
+    private static readonly Color ColorDivider = Color.FromArgb(242, 235, 235);
+    private static readonly Color ColorCardBg = Color.White;
+    private static readonly Color ColorSelectedBg = Color.FromArgb(254, 242, 243);
+    private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
 
-    public string StepTitle => "Client Selection";
+    public string StepTitle => "Select Client";
+
+    public Step1ClientSelectionView()
+    {
+        InitializeComponent();
+        BuildStep1Layout();
+    }
 
     public Step1ClientSelectionView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId)
     {
@@ -53,10 +56,30 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
     private void BuildStep1Layout()
     {
         Dock = DockStyle.Fill;
-        BackColor = Color.Transparent;
+        BackColor = ColorViewBg;
         Padding = new Padding(32, 20, 32, 20);
 
-        // 1. Search Bar Top
+        // Header
+        var pnlHeader = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 36,
+            BackColor = Color.Transparent
+        };
+
+        var lblTitle = new Label
+        {
+            Text = "Select Client",
+            Font = new Font("Segoe UI Semibold", 15.5f, FontStyle.Bold),
+            ForeColor = ColorEspresso,
+            Location = new Point(0, 0),
+            AutoSize = true
+        };
+        pnlHeader.Controls.Add(lblTitle);
+
+        var pnlHeaderSpacer = new Panel { Dock = DockStyle.Top, Height = 14, BackColor = Color.Transparent };
+
+        // Search Bar
         searchBarClients = new SearchBar
         {
             Dock = DockStyle.Top,
@@ -65,9 +88,9 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
         searchBarClients.SetCueBanner("Search by client name, code, or phone number...");
         searchBarClients.SearchTextChanged += async (s, e) => await LoadClientsAsync(searchBarClients.TextValue);
 
-        var pnlTopSpacer = new Panel { Dock = DockStyle.Top, Height = 14 };
+        var pnlTopSpacer = new Panel { Dock = DockStyle.Top, Height = 14, BackColor = Color.Transparent };
 
-        // 2. Quick-Add Footer Button
+        // Quick-Add Footer Button
         btnQuickAdd = new Button
         {
             Text = "+ Quick-Add New Client",
@@ -82,9 +105,9 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
         btnQuickAdd.FlatAppearance.BorderColor = ColorBorder;
         btnQuickAdd.Click += BtnQuickAdd_Click;
 
-        var pnlBottomSpacer = new Panel { Dock = DockStyle.Bottom, Height = 14 };
+        var pnlBottomSpacer = new Panel { Dock = DockStyle.Bottom, Height = 14, BackColor = Color.Transparent };
 
-        // 3. Card Wrapper with Border for ListBox
+        // List Border Wrapper
         var pnlListBorder = new Panel
         {
             Dock = DockStyle.Fill,
@@ -92,14 +115,14 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
             BackColor = ColorBorder
         };
 
-        // 4. Owner-Drawn Client List
+        // Client ListBox
         listBoxCustomers = new ListBox
         {
             Dock = DockStyle.Fill,
             BorderStyle = BorderStyle.None,
-            BackColor = Color.White,
+            BackColor = ColorCardBg,
             DrawMode = DrawMode.OwnerDrawFixed,
-            ItemHeight = 62,
+            ItemHeight = 64,
             IntegralHeight = false
         };
         listBoxCustomers.DrawItem += ListBoxCustomers_DrawItem;
@@ -107,17 +130,19 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
 
         pnlListBorder.Controls.Add(listBoxCustomers);
 
-        // Add to view in correct docking order
+        // Assembly (Reverse Dock Order)
         Controls.Add(pnlListBorder);
         Controls.Add(pnlBottomSpacer);
         Controls.Add(btnQuickAdd);
         Controls.Add(pnlTopSpacer);
         Controls.Add(searchBarClients);
+        Controls.Add(pnlHeaderSpacer);
+        Controls.Add(pnlHeader);
     }
 
     public async Task LoadClientsAsync(string search = "")
     {
-        if (DesignMode || LicenseManager.UsageMode == LicenseUsageMode.Designtime)
+        if (DesignMode || LicenseManager.UsageMode == LicenseUsageMode.Designtime || _customerService == null || _getCompanyId == null)
             return;
 
         try
@@ -132,7 +157,7 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
                 listBoxCustomers.Items.Add(c);
             }
 
-            if (listBoxCustomers.Items.Count > 0)
+            if (listBoxCustomers.Items.Count > 0 && listBoxCustomers.SelectedIndex < 0)
             {
                 listBoxCustomers.SelectedIndex = 0;
             }
@@ -160,32 +185,29 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
         bool isSelected = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
         var bounds = e.Bounds;
 
-        // Background
-        using (var bgBrush = new SolidBrush(isSelected ? ColorSelectedBg : Color.White))
+        using (var bgBrush = new SolidBrush(isSelected ? ColorSelectedBg : ColorCardBg))
         {
             g.FillRectangle(bgBrush, bounds);
         }
 
-        // Left Pink Accent Bar (Selected Only)
         if (isSelected)
         {
             using var barBrush = new SolidBrush(ColorDustyRose);
             g.FillRectangle(barBrush, new Rectangle(bounds.Left, bounds.Top, 4, bounds.Height));
         }
 
-        // Row Divider
         using (var dividerPen = new Pen(ColorDivider, 1f))
         {
             g.DrawLine(dividerPen, bounds.Left, bounds.Bottom - 1, bounds.Right, bounds.Bottom - 1);
         }
 
-        // Avatar Circle with Initials
+        // Initials Avatar
         int avatarDiameter = 36;
         int avatarX = bounds.Left + 16;
         int avatarY = bounds.Top + (bounds.Height - avatarDiameter) / 2;
         var avatarRect = new Rectangle(avatarX, avatarY, avatarDiameter, avatarDiameter);
 
-        using (var avatarBrush = new SolidBrush(ColorAvatarBg))
+        using (var avatarBrush = new SolidBrush(Color.FromArgb(240, 233, 234)))
         {
             g.FillEllipse(avatarBrush, avatarRect);
         }
@@ -193,13 +215,13 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
         string initials = GetInitials(item.Name);
         using (var avatarFont = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold))
         {
-            TextRenderer.DrawText(g, initials, avatarFont, avatarRect, ColorAvatarText,
+            TextRenderer.DrawText(g, initials, avatarFont, avatarRect, Color.FromArgb(142, 108, 114),
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
         }
 
-        // Name & Subtitle
+        // Client Info
         int textX = avatarX + avatarDiameter + 14;
-        int textY = bounds.Top + 12;
+        int textY = bounds.Top + 14;
 
         using (var nameFont = new Font("Segoe UI Semibold", 9.75f, FontStyle.Bold))
         using (var subFont = new Font("Segoe UI", 8.5f, FontStyle.Regular))
@@ -209,7 +231,7 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
             TextRenderer.DrawText(g, subtitle, subFont, new Point(textX, textY + 18), ColorSubtext);
         }
 
-        // Measurements & Checkmark (Right Aligned)
+        // Measurements & Selected Checkmark
         string sizeText = FormatMeasurements(item);
         using (var sizeFont = new Font("Segoe UI", 9f, FontStyle.Regular))
         using (var checkFont = new Font("Segoe UI Semibold", 10f, FontStyle.Bold))
@@ -235,11 +257,19 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
         if (listBoxCustomers.SelectedItem is CustomerRowViewModel selected)
         {
             _selectedCustomer = selected.CustomerEntity;
+            StepValidityChanged?.Invoke(true);
+        }
+        else
+        {
+            _selectedCustomer = null;
+            StepValidityChanged?.Invoke(false);
         }
     }
 
     private async void BtnQuickAdd_Click(object? sender, EventArgs e)
     {
+        if (_contextFactory == null || _getCompanyId == null) return;
+
         using var dialog = new CustomerDialogForm(_contextFactory, _getCompanyId());
         if (dialog.ShowDialog(this) == DialogResult.OK && dialog.CreatedCustomerId.HasValue)
         {
@@ -254,28 +284,6 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
             }
         }
     }
-
-    private static string GetInitials(string fullName)
-    {
-        if (string.IsNullOrWhiteSpace(fullName)) return "--";
-        var parts = fullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 1)
-            return parts[0].Length >= 2 ? parts[0][..2].ToUpperInvariant() : parts[0].ToUpperInvariant();
-
-        return $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant();
-    }
-
-    private static string FormatMeasurements(CustomerRowViewModel item)
-    {
-        string b = item.BustSize.Replace(" in", "").Trim();
-        string w = item.WaistSize.Replace(" in", "").Trim();
-        string h = item.HipSize.Replace(" in", "").Trim();
-
-        if (b == "—" && w == "—" && h == "—") return "—";
-        return $"{b} – {w} – {h} in";
-    }
-
-    // --- IBookingWizardStep Members ---
 
     public void OnStepEnter(BookingDraftModel draft)
     {
@@ -300,13 +308,22 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
         return true;
     }
 
-    private void Step1ClientSelectionView_Load(object sender, EventArgs e)
+    private static string GetInitials(string fullName)
     {
-
+        if (string.IsNullOrWhiteSpace(fullName)) return "--";
+        var parts = fullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return (parts.Length == 1)
+            ? (parts[0].Length >= 2 ? parts[0][..2].ToUpperInvariant() : parts[0].ToUpperInvariant())
+            : $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant();
     }
 
-    private void searchBar1_Load(object sender, EventArgs e)
+    private static string FormatMeasurements(CustomerRowViewModel item)
     {
+        string b = item.BustSize.Replace(" in", "").Trim();
+        string w = item.WaistSize.Replace(" in", "").Trim();
+        string h = item.HipSize.Replace(" in", "").Trim();
 
+        if (b == "—" && w == "—" && h == "—") return "—";
+        return $"{b} – {w} – {h} in";
     }
 }
