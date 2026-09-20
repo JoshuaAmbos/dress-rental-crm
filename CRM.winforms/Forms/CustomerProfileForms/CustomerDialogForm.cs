@@ -273,9 +273,17 @@ public partial class CustomerDialogForm : Form
         var lName = txtLastName.Text.Trim();
         var phone = txtPhone.Text.Trim();
 
-        if (string.IsNullOrWhiteSpace(fName) || string.IsNullOrWhiteSpace(lName))
+        if (string.IsNullOrWhiteSpace(fName) || string.IsNullOrWhiteSpace(lName) || string.IsNullOrWhiteSpace(phone))
         {
-            MessageBox.Show("First Name and Last Name are required.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show("Please fill in all required fields.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        var cleanPhone = new string(txtPhone.Text.Where(char.IsDigit).ToArray());
+        if (cleanPhone.Length != 11)
+        {
+            MessageBox.Show("Please enter a valid phone number.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            txtPhone.Focus();
             return;
         }
 

@@ -16,7 +16,9 @@ public partial class RentalBookingsView : UserControl
 
     private string _currentStageFilter = "All";
     private string _currentSearchTerm = string.Empty;
-    private List<BookingRowViewModel> _cachedRows = new();
+    private List<BookingRowViewModel> _cachedRows = [];
+
+    public event EventHandler? RequestNewBooking;
 
     public RentalBookingsView()
     {
@@ -61,12 +63,38 @@ public partial class RentalBookingsView : UserControl
         await LoadBookingsAsync();
     }
 
-    private async void PrimaryButtonNewBooking_Click(object sender, EventArgs e)
+    private void PrimaryButtonNewBooking_Click(object? sender, EventArgs e)
     {
-        using var bookingModal = new RentalBookingDialogForm(_contextFactory, _getCompanyId());
-        if (bookingModal.ShowDialog(this) == DialogResult.OK)
+        // If MainForm is handling navigation via event, notify it:
+        if (RequestNewBooking != null)
         {
-            await LoadBookingsAsync();
+            RequestNewBooking.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        // Direct host swap fallback: replaces RentalBookingsView inside its parent container
+        if (Parent is Control container)
+        {
+            var wizard = new NewBookingWizardView(_contextFactory, _getCompanyId, async () =>
+            {
+                // Callback executed when wizard is cancelled or completed:
+                container.SuspendLayout();
+                container.Controls.Clear();
+                this.Dock = DockStyle.Fill;
+                container.Controls.Add(this);
+                container.ResumeLayout();
+
+                // Refresh the pipeline and KPI cards with any newly created booking
+                await LoadBookingsAsync();
+            })
+            {
+                Dock = DockStyle.Fill
+            };
+
+            container.SuspendLayout();
+            container.Controls.Clear();
+            container.Controls.Add(wizard);
+            container.ResumeLayout();
         }
     }
 
