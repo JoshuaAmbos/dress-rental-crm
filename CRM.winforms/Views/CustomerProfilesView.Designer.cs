@@ -60,12 +60,12 @@ partial class CustomerProfilesView
         ((System.ComponentModel.ISupportInitialize)dgvCustomers).BeginInit();
         ((System.ComponentModel.ISupportInitialize)customerBindingSource3).BeginInit();
         SuspendLayout();
-        // 
-        // label1
-        // 
+        //// 
+        //// label1
+        //// 
         label1.AutoSize = true;
-        label1.Font = new Font("Segoe UI", 20.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-        label1.ForeColor = Color.FromArgb(38, 22, 24);
+        label1.Font = new Font("Segoe UI", 18f, FontStyle.Bold, GraphicsUnit.Point, 0);
+        label1.ForeColor = Color.FromArgb(38, 22, 24);  
         label1.Location = new Point(33, 28);
         label1.Name = "label1";
         label1.Size = new Size(153, 37);

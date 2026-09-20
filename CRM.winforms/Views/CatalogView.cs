@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+﻿using System.ComponentModel;
 using Microsoft.EntityFrameworkCore;
 using CRM.domain.entities;
 using CRM.infrastructure.data;
@@ -20,12 +13,16 @@ public partial class CatalogView : UserControl
     private string _currentStatusFilter = "All";
     private string _currentSearchTerm = string.Empty;
 
+    // Atelier Palette Consistency
+    private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
+    private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
+    private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
+
     // Parameterless constructor for WinForms Designer
     public CatalogView()
     {
         InitializeComponent();
 
-        // Default fallback factory using local connection string
         _contextFactory = () =>
         {
             var options = new DbContextOptionsBuilder<TenantCrmDbContext>()
@@ -50,6 +47,17 @@ public partial class CatalogView : UserControl
 
     private void ConfigureView()
     {
+        BackColor = ColorViewBg;
+        Padding = new Padding(32, 24, 32, 24);
+
+        if (label1 != null)
+        {
+            label1.Text = "Garment Catalog";
+            label1.UseMnemonic = false;
+            label1.Font = new Font("Segoe UI", 18f, FontStyle.Bold);
+            label1.ForeColor = ColorEspresso;
+        }
+
         searchBar1.SetCueBanner("Search by garment name, SKU, or category...");
 
         // Wire up live search
@@ -79,7 +87,6 @@ public partial class CatalogView : UserControl
         }
         catch (Exception ex)
         {
-            // This unwraps the real SQL Server error message:
             string realError = ex.GetBaseException().Message;
             MessageBox.Show($"Database Error: {realError}", "Catalog Load Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -87,10 +94,8 @@ public partial class CatalogView : UserControl
 
     public async Task LoadGarmentsAsync()
     {
-        // Suspend layout logic while batch-adding to eliminate UI flicker
         flpGarments.SuspendLayout();
 
-        // Dispose old cards to free up GDI+ resources and memory
         while (flpGarments.Controls.Count > 0)
         {
             var ctrl = flpGarments.Controls[0];
@@ -124,7 +129,6 @@ public partial class CatalogView : UserControl
 
             var garments = await query.OrderBy(g => g.ItemCode).ToListAsync();
 
-            // Create and append a card for every garment in the database
             var cardList = new List<Control>();
             foreach (var garment in garments)
             {
@@ -140,14 +144,12 @@ public partial class CatalogView : UserControl
                     ImagePath = garment.ImagePath
                 };
 
-                // Fixed: Corrected typo and wired both events
                 card.CardClicked += (s, e) => OpenGarmentDetails(garment.GarmentId);
                 card.ActionClicked += (s, e) => OpenGarmentDetails(garment.GarmentId);
 
                 cardList.Add(card);
             }
 
-            // Add all controls in one batch
             flpGarments.Controls.AddRange(cardList.ToArray());
         }
         finally
@@ -176,11 +178,14 @@ public partial class CatalogView : UserControl
 
     private void OpenGarmentDetails(int garmentId)
     {
-        // Placeholder for Garment detail/edit dialog
         MessageBox.Show(
             $"Opening details for Garment ID #{garmentId}",
             "Garment Details",
             MessageBoxButtons.OK,
             MessageBoxIcon.Information);
+    }
+
+    private void CatalogView_Load_1(object sender, EventArgs e)
+    {
     }
 }

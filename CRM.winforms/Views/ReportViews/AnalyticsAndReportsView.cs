@@ -1,7 +1,9 @@
 ﻿using CRM.infrastructure.data;
 using CRM.winforms.Controllers;
 using CRM.winforms.Controls;
+using CRM.winforms.Models;
 using System.Drawing.Drawing2D;
+using System.Text;
 
 namespace CRM.winforms.Views;
 
@@ -11,22 +13,35 @@ public partial class AnalyticsAndReportsView : UserControl
     private readonly Func<int> _getCompanyId;
     private readonly AnalyticsReportController _controller;
 
+    // Filter Controls
+    private DateTimePicker dtpStart = null!;
+    private DateTimePicker dtpEnd = null!;
+    private Button btnExportCsv = null!;
+    private Button btnApplyFilter = null!;
+    private FlowLayoutPanel pnlPresets = null!;
+    private string _activePreset = "All Time";
+
     // KPI Cards
     private KpiCardControl kpiRevenue = null!;
     private KpiCardControl kpiDeposits = null!;
-    private KpiCardControl kpiCompleted = null!;
+    private KpiCardControl kpiUtilization = null!;
     private KpiCardControl kpiReturnRate = null!;
 
     // Charts
     private AtelierBarChart chartRevenue = null!;
     private AtelierDonutChart chartStages = null!;
 
-    // Top Garments Table
+    // Grids
     private DataGridView dgvTopGarments = null!;
+    private DataGridView dgvAuditLedger = null!;
+
+    // Cached state
+    private List<RentalLedgerRowDto> _currentLedger = new();
 
     // Atelier Palette
     private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
     private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
+    private static readonly Color ColorDustyRoseHover = Color.FromArgb(171, 99, 108);
     private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
     private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);
     private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
@@ -35,8 +50,6 @@ public partial class AnalyticsAndReportsView : UserControl
     {
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         _getCompanyId = getCompanyId ?? throw new ArgumentNullException(nameof(getCompanyId));
-
-        // Instantiate the MVC Controller
         _controller = new AnalyticsReportController(_contextFactory);
 
         InitializeLayout();
@@ -48,11 +61,40 @@ public partial class AnalyticsAndReportsView : UserControl
         Dock = DockStyle.Fill;
         BackColor = ColorViewBg;
         AutoScroll = true;
-        Padding = new Padding(32, 24, 32, 24);
+        Padding = new Padding(32, 24, 32, 28);
         Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
-        // 1. Header (UseMnemonic = false prevents the _ underscore)
-        var pnlHeader = new Panel { Dock = DockStyle.Top, Height = 64, BackColor = Color.Transparent };
+        // 1. Header
+        var pnlHeader = BuildHeaderSection();
+
+        // 2. Interactive Slicer Bar
+        var pnlFilterBar = BuildFilterBar();
+
+        // 3. 4 KPI Cards Row
+        var pnlKpiRow = BuildKpiRow();
+
+        // 4. Visual Charts Row (Bar + Donut)
+        var pnlChartsRow = BuildChartsRow();
+
+        // 5. Top Garments Section
+        var pnlLeaderboard = BuildLeaderboardSection();
+
+        // 6. Detailed Audit Ledger Section
+        var pnlLedgerSection = BuildAuditLedgerSection();
+
+        // Adding top-down docking hierarchy in reverse order
+        Controls.Add(pnlLedgerSection);
+        Controls.Add(pnlLeaderboard);
+        Controls.Add(pnlChartsRow);
+        Controls.Add(pnlKpiRow);
+        Controls.Add(pnlFilterBar);
+        Controls.Add(pnlHeader);
+    }
+
+    private Panel BuildHeaderSection()
+    {
+        var pnl = new Panel { Dock = DockStyle.Top, Height = 60, BackColor = Color.Transparent };
+
         var lblTitle = new Label
         {
             Text = "Business Intelligence & Reports",
@@ -61,31 +103,175 @@ public partial class AnalyticsAndReportsView : UserControl
             ForeColor = ColorEspresso,
             AutoSize = true
         };
+
         var lblSub = new Label
         {
-            Text = "Track lease performance, inventory utilization, and customer return compliance.",
+            Text = "Executive lease revenue metrics, fleet utilization, and transaction compliance.",
             UseMnemonic = false,
             Font = new Font("Segoe UI", 9.75f),
             ForeColor = ColorSubtext,
-            Location = new Point(0, 34),
+            Location = new Point(0, 32),
             AutoSize = true
         };
-        pnlHeader.Controls.AddRange([lblTitle, lblSub]);
 
-        // 2. 4 KPI Cards Row
-        var pnlKpiRow = BuildKpiRow();
+        btnExportCsv = new Button
+        {
+            Text = "📥 Export to CSV",
+            Size = new Size(140, 36),
+            BackColor = Color.White,
+            ForeColor = ColorEspresso,
+            FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI Semibold", 9.25f, FontStyle.Bold),
+            Cursor = Cursors.Hand
+        };
+        btnExportCsv.FlatAppearance.BorderColor = ColorBorder;
+        btnExportCsv.Click += BtnExportCsv_Click;
 
-        // 3. Middle Charts Row (Bar + Donut)
-        var pnlChartsRow = BuildChartsRow();
+        pnl.Resize += (s, e) =>
+        {
+            btnExportCsv.Location = new Point(Math.Max(0, pnl.ClientSize.Width - btnExportCsv.Width), 10);
+        };
+        btnExportCsv.Location = new Point(Math.Max(0, pnl.ClientSize.Width - btnExportCsv.Width), 10);
 
-        // 4. Bottom Leaderboard Table
-        var pnlLeaderboard = BuildLeaderboardSection();
+        pnl.Controls.AddRange(new Control[] { lblTitle, lblSub, btnExportCsv });
+        return pnl;
+    }
 
-        // Order matters for DockStyle.Top
-        Controls.Add(pnlLeaderboard);
-        Controls.Add(pnlChartsRow);
-        Controls.Add(pnlKpiRow);
-        Controls.Add(pnlHeader);
+    private Panel BuildFilterBar()
+    {
+        var pnl = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 52,
+            BackColor = Color.Transparent,
+            Padding = new Padding(0, 8, 0, 8)
+        };
+
+        pnlPresets = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Left,
+            Width = 380,
+            WrapContents = false,
+            BackColor = Color.Transparent
+        };
+
+        string[] presets = { "This Month", "Last 30 Days", "Year to Date", "All Time" };
+        foreach (var preset in presets)
+        {
+            var btn = new Button
+            {
+                Text = preset,
+                Height = 32,
+                AutoSize = true,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 0, 6, 0),
+                BackColor = preset == _activePreset ? ColorDustyRose : Color.White,
+                ForeColor = preset == _activePreset ? Color.White : ColorEspresso
+            };
+            btn.FlatAppearance.BorderColor = ColorBorder;
+            btn.FlatAppearance.BorderSize = preset == _activePreset ? 0 : 1;
+
+            btn.Click += async (s, e) =>
+            {
+                _activePreset = preset;
+                ApplyPresetDates(preset);
+                HighlightActivePresetButton();
+                await LoadDashboardDataAsync();
+            };
+
+            pnlPresets.Controls.Add(btn);
+        }
+
+        var pnlDatePickers = new Panel
+        {
+            Dock = DockStyle.Right,
+            Width = 430,
+            BackColor = Color.Transparent
+        };
+
+        var lblFrom = new Label { Text = "From:", ForeColor = ColorSubtext, Location = new Point(0, 8), AutoSize = true };
+        dtpStart = new DateTimePicker
+        {
+            Format = DateTimePickerFormat.Short,
+            Width = 110,
+            Location = new Point(44, 4),
+            Font = new Font("Segoe UI", 9f),
+            Value = DateTime.Today.AddMonths(-1)
+        };
+
+        var lblTo = new Label { Text = "To:", ForeColor = ColorSubtext, Location = new Point(164, 8), AutoSize = true };
+        dtpEnd = new DateTimePicker
+        {
+            Format = DateTimePickerFormat.Short,
+            Width = 110,
+            Location = new Point(190, 4),
+            Font = new Font("Segoe UI", 9f),
+            Value = DateTime.Today
+        };
+
+        btnApplyFilter = new Button
+        {
+            Text = "Filter",
+            Size = new Size(80, 30),
+            Location = new Point(312, 4),
+            BackColor = ColorDustyRose,
+            ForeColor = Color.White,
+            FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
+            Cursor = Cursors.Hand
+        };
+        btnApplyFilter.FlatAppearance.BorderSize = 0;
+        btnApplyFilter.Click += async (s, e) =>
+        {
+            _activePreset = "Custom";
+            HighlightActivePresetButton();
+            await LoadDashboardDataAsync();
+        };
+
+        pnlDatePickers.Controls.AddRange(new Control[] { lblFrom, dtpStart, lblTo, dtpEnd, btnApplyFilter });
+
+        pnl.Controls.AddRange(new Control[] { pnlPresets, pnlDatePickers });
+        return pnl;
+    }
+
+    private void ApplyPresetDates(string preset)
+    {
+        var today = DateTime.Today;
+        switch (preset)
+        {
+            case "This Month":
+                dtpStart.Value = new DateTime(today.Year, today.Month, 1);
+                dtpEnd.Value = today;
+                break;
+            case "Last 30 Days":
+                dtpStart.Value = today.AddDays(-30);
+                dtpEnd.Value = today;
+                break;
+            case "Year to Date":
+                dtpStart.Value = new DateTime(today.Year, 1, 1);
+                dtpEnd.Value = today;
+                break;
+            case "All Time":
+                dtpStart.Value = new DateTime(2020, 1, 1);
+                dtpEnd.Value = today.AddYears(1);
+                break;
+        }
+    }
+
+    private void HighlightActivePresetButton()
+    {
+        foreach (Control c in pnlPresets.Controls)
+        {
+            if (c is Button btn)
+            {
+                bool isSelected = btn.Text == _activePreset;
+                btn.BackColor = isSelected ? ColorDustyRose : Color.White;
+                btn.ForeColor = isSelected ? Color.White : ColorEspresso;
+                btn.FlatAppearance.BorderSize = isSelected ? 0 : 1;
+            }
+        }
     }
 
     private Panel BuildKpiRow()
@@ -99,12 +285,12 @@ public partial class AnalyticsAndReportsView : UserControl
 
         kpiRevenue = new KpiCardControl { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 10, 0) };
         kpiDeposits = new KpiCardControl { Dock = DockStyle.Fill, Margin = new Padding(5, 0, 10, 0) };
-        kpiCompleted = new KpiCardControl { Dock = DockStyle.Fill, Margin = new Padding(5, 0, 10, 0) };
+        kpiUtilization = new KpiCardControl { Dock = DockStyle.Fill, Margin = new Padding(5, 0, 10, 0) };
         kpiReturnRate = new KpiCardControl { Dock = DockStyle.Fill, Margin = new Padding(5, 0, 0, 0) };
 
         table.Controls.Add(kpiRevenue, 0, 0);
         table.Controls.Add(kpiDeposits, 1, 0);
-        table.Controls.Add(kpiCompleted, 2, 0);
+        table.Controls.Add(kpiUtilization, 2, 0);
         table.Controls.Add(kpiReturnRate, 3, 0);
 
         pnl.Controls.Add(table);
@@ -118,13 +304,11 @@ public partial class AnalyticsAndReportsView : UserControl
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 62f));
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 38f));
 
-        // Card 1: Revenue Trend (Bar Chart)
         var cardLeft = CreateCardContainer("MONTHLY LEASE REVENUE TREND", out var bodyLeft);
         cardLeft.Margin = new Padding(0, 0, 10, 0);
         chartRevenue = new AtelierBarChart { Dock = DockStyle.Fill };
         bodyLeft.Controls.Add(chartRevenue);
 
-        // Card 2: Lifecycle Breakdown (Donut Chart)
         var cardRight = CreateCardContainer("BOOKING STATUS BREAKDOWN", out var bodyRight);
         cardRight.Margin = new Padding(5, 0, 0, 0);
         chartStages = new AtelierDonutChart { Dock = DockStyle.Fill };
@@ -139,10 +323,44 @@ public partial class AnalyticsAndReportsView : UserControl
 
     private Panel BuildLeaderboardSection()
     {
-        var pnl = new Panel { Dock = DockStyle.Top, Height = 280, Padding = new Padding(0, 6, 0, 18), BackColor = Color.Transparent };
-        var card = CreateCardContainer("MOST REQUESTED & PROFITABLE GARMENTS", out var body);
+        var pnl = new Panel { Dock = DockStyle.Top, Height = 260, Padding = new Padding(0, 6, 0, 14), BackColor = Color.Transparent };
+        var card = CreateCardContainer("TOP PERFORMING WARDROBE ASSETS", out var body);
 
-        dgvTopGarments = new DataGridView
+        dgvTopGarments = CreateBaseDataGrid();
+        dgvTopGarments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "ItemCode", HeaderText = "CODE", Width = 110, SortMode = DataGridViewColumnSortMode.NotSortable, DefaultCellStyle = { Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold) } });
+        dgvTopGarments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "StyleName", HeaderText = "GARMENT STYLE", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, SortMode = DataGridViewColumnSortMode.NotSortable });
+        dgvTopGarments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "Size", HeaderText = "SIZE", Width = 80, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleCenter } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleCenter } });
+        dgvTopGarments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalRentals", HeaderText = "TOTAL LEASES", Width = 120, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight } });
+        dgvTopGarments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalRevenueGenerated", HeaderText = "TOTAL REVENUE", Width = 140, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "₱#,##0.00", Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold), ForeColor = ColorDustyRose } });
+
+        body.Controls.Add(dgvTopGarments);
+        pnl.Controls.Add(card);
+        return pnl;
+    }
+
+    private Panel BuildAuditLedgerSection()
+    {
+        var pnl = new Panel { Dock = DockStyle.Top, Height = 340, Padding = new Padding(0, 6, 0, 16), BackColor = Color.Transparent };
+        var card = CreateCardContainer("ITEMIZED AUDIT LEDGER (TRANSACTION DRILL-DOWN)", out var body);
+
+        dgvAuditLedger = CreateBaseDataGrid();
+        dgvAuditLedger.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "BookingCode", HeaderText = "CODE", Width = 105, SortMode = DataGridViewColumnSortMode.NotSortable, DefaultCellStyle = { Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold) } });
+        dgvAuditLedger.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "ClientName", HeaderText = "CLIENT", Width = 160, SortMode = DataGridViewColumnSortMode.NotSortable });
+        dgvAuditLedger.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "GarmentSummary", HeaderText = "GARMENTS ALLOCATED", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, SortMode = DataGridViewColumnSortMode.NotSortable });
+        dgvAuditLedger.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "RentalStartDate", HeaderText = "START", Width = 95, SortMode = DataGridViewColumnSortMode.NotSortable, DefaultCellStyle = { Format = "MMM dd, yyyy" } });
+        dgvAuditLedger.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "RentalEndDate", HeaderText = "END", Width = 95, SortMode = DataGridViewColumnSortMode.NotSortable, DefaultCellStyle = { Format = "MMM dd, yyyy" } });
+        dgvAuditLedger.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "RentalFee", HeaderText = "FEE", Width = 110, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "₱#,##0.00", Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold), ForeColor = ColorDustyRose } });
+        dgvAuditLedger.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "SecurityDeposit", HeaderText = "DEPOSIT", Width = 110, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "₱#,##0.00" } });
+        dgvAuditLedger.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "Stage", HeaderText = "STAGE", Width = 95, SortMode = DataGridViewColumnSortMode.NotSortable });
+
+        body.Controls.Add(dgvAuditLedger);
+        pnl.Controls.Add(card);
+        return pnl;
+    }
+
+    private static DataGridView CreateBaseDataGrid()
+    {
+        var dgv = new DataGridView
         {
             Dock = DockStyle.Fill,
             BackgroundColor = Color.White,
@@ -157,88 +375,27 @@ public partial class AnalyticsAndReportsView : UserControl
             AutoGenerateColumns = false,
             SelectionMode = DataGridViewSelectionMode.FullRowSelect,
             MultiSelect = false,
-            RowTemplate = { Height = 46 }
+            RowTemplate = { Height = 44 }
         };
 
-        // Header Styling (Fixes the electric blue selection)
-        dgvTopGarments.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
-        dgvTopGarments.EnableHeadersVisualStyles = false;
-        dgvTopGarments.ColumnHeadersDefaultCellStyle.BackColor = Color.White;
-        dgvTopGarments.ColumnHeadersDefaultCellStyle.ForeColor = ColorSubtext;
-        dgvTopGarments.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.White;
-        dgvTopGarments.ColumnHeadersDefaultCellStyle.SelectionForeColor = ColorSubtext;
-        dgvTopGarments.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold);
-        dgvTopGarments.ColumnHeadersDefaultCellStyle.Padding = new Padding(12, 0, 12, 0);
-        dgvTopGarments.ColumnHeadersHeight = 38;
-        dgvTopGarments.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+        dgv.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
+        dgv.EnableHeadersVisualStyles = false;
+        dgv.ColumnHeadersDefaultCellStyle.BackColor = Color.White;
+        dgv.ColumnHeadersDefaultCellStyle.ForeColor = ColorSubtext;
+        dgv.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.White;
+        dgv.ColumnHeadersDefaultCellStyle.SelectionForeColor = ColorSubtext;
+        dgv.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold);
+        dgv.ColumnHeadersDefaultCellStyle.Padding = new Padding(10, 0, 10, 0);
+        dgv.ColumnHeadersHeight = 36;
+        dgv.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
 
-        // Row Styling (Atelier blush on row select, Espresso text)
-        dgvTopGarments.DefaultCellStyle.BackColor = Color.White;
-        dgvTopGarments.DefaultCellStyle.ForeColor = ColorEspresso;
-        dgvTopGarments.DefaultCellStyle.SelectionBackColor = Color.FromArgb(254, 246, 246);
-        dgvTopGarments.DefaultCellStyle.SelectionForeColor = ColorEspresso;
-        dgvTopGarments.DefaultCellStyle.Padding = new Padding(12, 0, 12, 0);
+        dgv.DefaultCellStyle.BackColor = Color.White;
+        dgv.DefaultCellStyle.ForeColor = ColorEspresso;
+        dgv.DefaultCellStyle.SelectionBackColor = Color.FromArgb(254, 246, 246);
+        dgv.DefaultCellStyle.SelectionForeColor = ColorEspresso;
+        dgv.DefaultCellStyle.Padding = new Padding(10, 0, 10, 0);
 
-        // Columns - all set to NotSortable to avoid blue highlight selection
-        var colCode = new DataGridViewTextBoxColumn
-        {
-            DataPropertyName = "ItemCode",
-            HeaderText = "CODE",
-            Width = 120,
-            SortMode = DataGridViewColumnSortMode.NotSortable,
-            DefaultCellStyle = { Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold) }
-        };
-
-        var colStyle = new DataGridViewTextBoxColumn
-        {
-            DataPropertyName = "StyleName",
-            HeaderText = "GARMENT STYLE",
-            SortMode = DataGridViewColumnSortMode.NotSortable,
-            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
-        };
-
-        var colSize = new DataGridViewTextBoxColumn
-        {
-            DataPropertyName = "Size",
-            HeaderText = "SIZE",
-            Width = 90,
-            SortMode = DataGridViewColumnSortMode.NotSortable,
-            HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleCenter } },
-            DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleCenter }
-        };
-
-        var colLeases = new DataGridViewTextBoxColumn
-        {
-            DataPropertyName = "TotalRentals",
-            HeaderText = "TOTAL LEASES",
-            Width = 130,
-            SortMode = DataGridViewColumnSortMode.NotSortable,
-            HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } },
-            DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight }
-        };
-
-        var colRev = new DataGridViewTextBoxColumn
-        {
-            DataPropertyName = "TotalRevenueGenerated",
-            HeaderText = "TOTAL REVENUE",
-            Width = 160,
-            SortMode = DataGridViewColumnSortMode.NotSortable,
-            HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } },
-            DefaultCellStyle =
-            {
-                Alignment = DataGridViewContentAlignment.MiddleRight,
-                Format = "$#,##0",
-                Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
-                ForeColor = ColorDustyRose,
-                SelectionForeColor = ColorDustyRose
-            }
-        };
-
-        dgvTopGarments.Columns.AddRange(new DataGridViewColumn[] { colCode, colStyle, colSize, colLeases, colRev });
-
-        body.Controls.Add(dgvTopGarments);
-        pnl.Controls.Add(card);
-        return pnl;
+        return dgv;
     }
 
     private static Panel CreateCardContainer(string title, out Panel bodyPanel)
@@ -250,17 +407,16 @@ public partial class AnalyticsAndReportsView : UserControl
             Padding = new Padding(18, 14, 18, 14)
         };
 
-        // Clip all inner children to the rounded bounds so sharp square corners never poke through
         card.Resize += (s, e) =>
         {
-            using var clipPath = CreateRoundedRectangle(new Rectangle(0, 0, card.Width, card.Height), 8);
+            using var clipPath = GraphicsHelper.CreateRoundedRectangle(new Rectangle(0, 0, card.Width, card.Height), 8);
             card.Region = new Region(clipPath);
         };
 
         card.Paint += (s, e) =>
         {
             using var pen = new Pen(ColorBorder, 1.25f);
-            using var path = CreateRoundedRectangle(new Rectangle(0, 0, card.Width - 1, card.Height - 1), 8);
+            using var path = GraphicsHelper.CreateRoundedRectangle(new Rectangle(0, 0, card.Width - 1, card.Height - 1), 8);
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             e.Graphics.DrawPath(pen, path);
         };
@@ -283,7 +439,6 @@ public partial class AnalyticsAndReportsView : UserControl
 
         card.Controls.Add(bodyPanel);
         card.Controls.Add(lbl);
-
         return card;
     }
 
@@ -291,22 +446,31 @@ public partial class AnalyticsAndReportsView : UserControl
     {
         try
         {
-            // Call through the MVC Controller layer
-            var data = await _controller.LoadDashboardMetricsAsync(_getCompanyId());
+            DateTime? start = _activePreset == "All Time" ? null : dtpStart.Value.Date;
+            DateTime? end = _activePreset == "All Time" ? null : dtpEnd.Value.Date;
+
+            var data = await _controller.LoadDashboardMetricsAsync(_getCompanyId(), start, end);
 
             // 1. KPI Cards
-            kpiRevenue.SetData("TOTAL LEASE REVENUE", $"${data.TotalLeaseRevenue:N0}", "Flat Lease Basis", ColorDustyRose, Color.FromArgb(254, 242, 243), ColorDustyRose);
-            kpiDeposits.SetData("SECURITY DEPOSITS HELD", $"${data.ActiveDepositsHeld:N0}", "Active Circulation", Color.FromArgb(37, 99, 235), Color.FromArgb(239, 246, 255), Color.FromArgb(29, 78, 216));
-            kpiCompleted.SetData("COMPLETED LEASES", data.TotalBookingsCompleted.ToString(), "Settled Returns", Color.FromArgb(5, 150, 105), Color.FromArgb(236, 253, 245), Color.FromArgb(5, 150, 105));
-            kpiReturnRate.SetData("ON-TIME RETURN RATE", $"{data.OnTimeReturnRate:0.#}%", "Turnaround Health", Color.FromArgb(124, 58, 237), Color.FromArgb(245, 243, 255), Color.FromArgb(124, 58, 237));
+            kpiRevenue.SetData("GROSS LEASE REVENUE", $"₱{data.TotalLeaseRevenue:N2}", "Filtered Period", ColorDustyRose, Color.FromArgb(254, 242, 243), ColorDustyRose);
+            kpiDeposits.SetData("SECURITY DEPOSITS HELD", $"₱{data.ActiveDepositsHeld:N2}", "Active Escrow", Color.FromArgb(37, 99, 235), Color.FromArgb(239, 246, 255), Color.FromArgb(29, 78, 216));
+            kpiUtilization.SetData("FLEET UTILIZATION", $"{data.FleetUtilizationRate:0.#}%", $"{data.CurrentlyRentedGarments}/{data.TotalActiveGarments} Rented", Color.FromArgb(5, 150, 105), Color.FromArgb(236, 253, 245), Color.FromArgb(5, 150, 105));
+            kpiReturnRate.SetData("RETURN COMPLIANCE", $"{data.OnTimeReturnRate:0.#}%", $"{data.TotalBookingsCompleted} Completed", Color.FromArgb(124, 58, 237), Color.FromArgb(245, 243, 255), Color.FromArgb(124, 58, 237));
 
             // 2. Charts
             chartRevenue.SetData(data.MonthlyRevenueTrend);
             chartStages.SetData(data.StageDistribution);
 
-            // 3. Grid
+            // 3. Leaderboard Grid
+            dgvTopGarments.DataSource = null;
             dgvTopGarments.DataSource = data.TopPerformingGarments;
             dgvTopGarments.ClearSelection();
+
+            // 4. Audit Ledger Grid
+            _currentLedger = data.AuditLedger;
+            dgvAuditLedger.DataSource = null;
+            dgvAuditLedger.DataSource = _currentLedger;
+            dgvAuditLedger.ClearSelection();
         }
         catch (Exception ex)
         {
@@ -314,15 +478,52 @@ public partial class AnalyticsAndReportsView : UserControl
         }
     }
 
-    private static GraphicsPath CreateRoundedRectangle(Rectangle rect, int radius)
+    private void BtnExportCsv_Click(object? sender, EventArgs e)
     {
-        var path = new GraphicsPath();
-        int d = radius * 2;
-        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
-        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
-        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
-        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
-        path.CloseFigure();
-        return path;
+        if (_currentLedger.Count == 0)
+        {
+            MessageBox.Show("No transaction records available to export for the selected filter.", "Export Notice", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        using var sfd = new SaveFileDialog
+        {
+            Filter = "CSV File (*.csv)|*.csv",
+            FileName = $"Vantage_Rental_Ledger_{DateTime.Now:yyyyMMdd_HHmm}.csv"
+        };
+
+        if (sfd.ShowDialog() != DialogResult.OK) return;
+
+        try
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("Booking Code,Client,Garments,Start Date,End Date,Rental Fee,Security Deposit,Stage,Payment Method");
+
+            foreach (var row in _currentLedger)
+            {
+                string client = EscapeCsv(row.ClientName);
+                string garments = EscapeCsv(row.GarmentSummary);
+                string stage = EscapeCsv(row.Stage);
+                string payment = EscapeCsv(row.PaymentMethod);
+
+                sb.AppendLine($"{row.BookingCode},{client},{garments},{row.RentalStartDate:yyyy-MM-dd},{row.RentalEndDate:yyyy-MM-dd},{row.RentalFee:F2},{row.SecurityDeposit:F2},{stage},{payment}");
+            }
+
+            File.WriteAllText(sfd.FileName, sb.ToString(), Encoding.UTF8);
+            MessageBox.Show($"Audit ledger successfully exported to:\n{sfd.FileName}", "Export Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to export CSV: {ex.Message}", "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private static string EscapeCsv(string field)
+    {
+        if (field.Contains(",") || field.Contains("\"") || field.Contains("\n") || field.Contains("\r"))
+        {
+            return $"\"{field.Replace("\"", "\"\"")}\"";
+        }
+        return field;
     }
 }

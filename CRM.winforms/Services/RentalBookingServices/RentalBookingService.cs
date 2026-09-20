@@ -82,7 +82,7 @@ public class RentalBookingService
             TotalCount = allRows.Count,
             ActiveCount = allRows.Count(r => r.Stage == "Active"),
             OverdueCount = allRows.Count(r => r.IsOverdue),
-            UpcomingCount = allRows.Count(r => r.EndDate.Date >= today && r.EndDate.Date <= sevenDaysAhead && r.Stage != "Returned"),
+            UpcomingCount = allRows.Count(r => r.Stage == "Active" && r.EndDate.Date >= today && r.EndDate.Date <= sevenDaysAhead),
             ReservedCount = allRows.Count(r => r.Stage == "Reserved"),
             FittingCount = allRows.Count(r => r.Stage == "Fitting"),
             ReturnedCount = allRows.Count(r => r.Stage == "Returned"),

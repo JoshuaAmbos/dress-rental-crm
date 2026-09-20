@@ -14,8 +14,8 @@ public class AnalyticsReportController
         _analyticsService = new AnalyticsReportService(contextFactory);
     }
 
-    public async Task<AnalyticsDashboardDto> LoadDashboardMetricsAsync(int companyId)
+    public async Task<AnalyticsDashboardDto> LoadDashboardMetricsAsync(int companyId, DateTime? startDate = null, DateTime? endDate = null)
     {
-        return await _analyticsService.GetAnalyticsOverviewAsync(companyId);
+        return await _analyticsService.GetAnalyticsOverviewAsync(companyId, startDate, endDate);
     }
 }

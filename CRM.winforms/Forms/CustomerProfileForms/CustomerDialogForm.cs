@@ -1,4 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using Microsoft.EntityFrameworkCore;
 using CRM.domain.entities;
 using CRM.infrastructure.data;
 using CRM.infrastructure.services;
@@ -14,6 +20,7 @@ public partial class CustomerDialogForm : Form
 
     public int? CreatedCustomerId { get; private set; }
 
+    // Inputs
     private TextBox txtFirstName = null!;
     private TextBox txtMiddleName = null!;
     private TextBox txtLastName = null!;
@@ -23,17 +30,25 @@ public partial class CustomerDialogForm : Form
     private NumericUpDown numBust = null!;
     private NumericUpDown numWaist = null!;
     private NumericUpDown numHips = null!;
+
+    // Buttons
     private Button btnSave = null!;
     private Button btnCancel = null!;
-    private Label lblHeaderSubtitle = null!;
+    private Button btnClose = null!;
 
-    private static readonly Color ColorHeaderBg = Color.FromArgb(250, 245, 245);
+    private Point _dragStartPoint;
+
+    // Atelier Palette (High-Definition Borders)
     private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorMutedText = Color.FromArgb(120, 110, 115);
     private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
     private static readonly Color ColorDustyRoseHover = Color.FromArgb(171, 99, 108);
-    private static readonly Color ColorBorder = Color.FromArgb(224, 216, 216);
-    private static readonly Color ColorCardBg = Color.FromArgb(254, 252, 252);
+    private static readonly Color ColorSectionTag = Color.FromArgb(180, 95, 105);
+    private static readonly Color ColorSubtext = Color.FromArgb(130, 120, 125);
+    private static readonly Color ColorFormBorder = Color.FromArgb(170, 150, 155); // Prominent dialog frame
+    private static readonly Color ColorInputBorder = Color.FromArgb(204, 188, 184); // Defined input outline
+    private static readonly Color ColorDivider = Color.FromArgb(220, 208, 205);
+    private static readonly Color ColorInputBg = Color.White;
+    private static readonly Color ColorCloseBtnBg = Color.FromArgb(246, 240, 238);
 
     public CustomerDialogForm(Func<TenantCrmDbContext> dbFactory, int companyId)
         : this(dbFactory, companyId, null)
@@ -46,90 +61,173 @@ public partial class CustomerDialogForm : Form
         _companyId = companyId;
         _customerId = existingCustomer?.CustomerId;
 
-        InitializeUI();
+        FormBorderStyle = FormBorderStyle.None;
+        StartPosition = FormStartPosition.CenterParent;
+        Size = new Size(580, 650);
+        BackColor = Color.White;
+        Font = new Font("Segoe UI", 9.5f);
+        DoubleBuffered = true;
 
         if (existingCustomer != null)
         {
             _existingCustomerCode = existingCustomer.CustomerCode;
-            PopulateFields(existingCustomer);
-            Text = "Edit Customer Profile";
-            lblHeaderSubtitle.Text = $"Customer Code: {_existingCustomerCode}";
         }
-        else
+
+        ApplyFormBorderAndRegion();
+        BuildModernForm();
+
+        if (existingCustomer != null)
         {
-            Text = "New Customer Intake";
+            PopulateFields(existingCustomer);
         }
     }
 
-    private void InitializeUI()
+    private void ApplyFormBorderAndRegion()
     {
-        ClientSize = new Size(640, 690);
-        MinimumSize = new Size(640, 600);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
-        MaximizeBox = false;
-        MinimizeBox = false;
-        StartPosition = FormStartPosition.CenterParent;
-        BackColor = Color.White;
-        Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
+        Resize += (s, e) =>
+        {
+            using var path = CreateRoundedRectangle(new Rectangle(0, 0, Width, Height), 16);
+            Region = new Region(path);
+            Invalidate();
+        };
 
+        Paint += (s, e) =>
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            using var pen = new Pen(ColorFormBorder, 2f);
+            using var path = CreateRoundedRectangle(new Rectangle(1, 1, Width - 3, Height - 3), 16);
+            e.Graphics.DrawPath(pen, path);
+        };
+    }
+
+    private void BuildModernForm()
+    {
+        // 1. Header (Inset 2px so border is never clipped)
         var pnlHeader = new Panel
         {
-            Dock = DockStyle.Top,
-            Height = 75,
-            BackColor = ColorHeaderBg,
-            Padding = new Padding(28, 14, 28, 14)
+            Location = new Point(2, 2),
+            Size = new Size(Width - 4, 78),
+            BackColor = Color.White
+        };
+
+        pnlHeader.MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) _dragStartPoint = e.Location; };
+        pnlHeader.MouseMove += (s, e) =>
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                Left += e.X - _dragStartPoint.X;
+                Top += e.Y - _dragStartPoint.Y;
+            }
         };
 
         var lblTitle = new Label
         {
-            Text = _customerId.HasValue ? "Edit Customer Profile" : "Register New Customer",
-            Font = new Font("Segoe UI", 13.5f, FontStyle.Bold),
+            Text = _customerId.HasValue ? "Edit Client Profile" : "New Client Intake",
+            Font = new Font("Segoe UI", 15.5f, FontStyle.Bold),
             ForeColor = ColorEspresso,
-            Location = new Point(28, 14),
+            Location = new Point(28, 18),
             AutoSize = true
         };
 
-        lblHeaderSubtitle = new Label
+        var lblSubtitle = new Label
         {
-            Text = "",
-            Font = new Font("Segoe UI", 9f, FontStyle.Regular),
-            ForeColor = ColorMutedText,
-            Location = new Point(29, 43),
+            Text = _customerId.HasValue && !string.IsNullOrEmpty(_existingCustomerCode)
+                ? $"Client Code: {_existingCustomerCode}"
+                : "Client measurement & fit preference sheet",
+            Font = new Font("Segoe UI", 9f),
+            ForeColor = ColorSubtext,
+            Location = new Point(30, 48),
             AutoSize = true
         };
 
-        pnlHeader.Controls.AddRange(new Control[] { lblTitle, lblHeaderSubtitle });
+        btnClose = new Button
+        {
+            Text = "✕",
+            Font = new Font("Segoe UI", 9f),
+            ForeColor = ColorSubtext,
+            Size = new Size(32, 32),
+            Location = new Point(pnlHeader.Width - 48, 18),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = ColorCloseBtnBg,
+            Cursor = Cursors.Hand
+        };
+        btnClose.FlatAppearance.BorderSize = 0;
+        btnClose.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
 
+        pnlHeader.Paint += (s, e) =>
+        {
+            using var p = new Pen(ColorDivider, 1f);
+            e.Graphics.DrawLine(p, 28, 77, pnlHeader.Width - 28, 77);
+        };
+
+        pnlHeader.Controls.AddRange([lblTitle, lblSubtitle, btnClose]);
+        Controls.Add(pnlHeader);
+
+        // 2. Form Body
+        int y = 96;
+        int col1X = 28;
+        int col2X = 300;
+        int colWidth = 250;
+
+        AddSectionHeader("PERSONAL DETAILS", 28, ref y);
+        AddLabeledInput("First Name *", "e.g. Isabella", col1X, y, colWidth, out txtFirstName);
+        AddLabeledInput("Last Name *", "e.g. Rosario", col2X, y, colWidth, out txtLastName);
+        y += 66;
+
+        AddLabeledInput("Phone Number *", "+1 (212) 555-0000", col1X, y, colWidth, out txtPhone);
+        AddLabeledInput("Middle Name (Optional)", "e.g. Marie", col2X, y, colWidth, out txtMiddleName);
+        y += 66;
+
+        AddLabeledInput("Email Address", "name@email.com", col1X, y, colWidth, out txtEmail);
+        AddLabeledInput("City / Location", "New York, NY", col2X, y, colWidth, out txtAddress);
+        y += 76;
+
+        AddSectionHeader("MEASUREMENTS (INCHES)", 28, ref y);
+        int measWidth = 164;
+        int gap = 16;
+
+        AddLabeledNumericInput("Bust", 34.0m, col1X, y, measWidth, out numBust);
+        AddLabeledNumericInput("Waist", 26.0m, col1X + measWidth + gap, y, measWidth, out numWaist);
+        AddLabeledNumericInput("Hip", 36.0m, col1X + (measWidth + gap) * 2, y, measWidth, out numHips);
+        y += 84;
+
+        // 3. Footer
         var pnlFooter = new Panel
         {
-            Dock = DockStyle.Bottom,
-            Height = 65,
-            BackColor = ColorHeaderBg,
-            Padding = new Padding(28, 14, 28, 14)
+            Location = new Point(2, Height - 74),
+            Size = new Size(Width - 4, 72),
+            BackColor = Color.White
+        };
+
+        pnlFooter.Paint += (s, e) =>
+        {
+            using var p = new Pen(ColorDivider, 1f);
+            e.Graphics.DrawLine(p, 28, 0, pnlFooter.Width - 28, 0);
         };
 
         btnCancel = new Button
         {
             Text = "Cancel",
-            Size = new Size(100, 36),
-            Location = new Point(390, 14),
-            FlatStyle = FlatStyle.Flat,
+            Size = new Size(100, 38),
+            Location = new Point(pnlFooter.Width - 250, 16),
             BackColor = Color.White,
             ForeColor = ColorEspresso,
+            FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
             Cursor = Cursors.Hand
         };
-        btnCancel.FlatAppearance.BorderColor = ColorBorder;
-        btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
+        btnCancel.FlatAppearance.BorderColor = ColorInputBorder;
+        btnCancel.FlatAppearance.BorderSize = 1;
+        btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
 
         btnSave = new Button
         {
-            Text = _customerId.HasValue ? "Update Client" : "Save Profile",
-            Size = new Size(114, 36),
-            Location = new Point(500, 14),
-            FlatStyle = FlatStyle.Flat,
+            Text = _customerId.HasValue ? "Update Client" : "Create Client",
+            Size = new Size(130, 38),
+            Location = new Point(pnlFooter.Width - 140, 16),
             BackColor = ColorDustyRose,
             ForeColor = Color.White,
+            FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
             Cursor = Cursors.Hand
         };
@@ -138,129 +236,116 @@ public partial class CustomerDialogForm : Form
         btnSave.MouseLeave += (s, e) => btnSave.BackColor = ColorDustyRose;
         btnSave.Click += async (s, e) => await SaveCustomerAsync();
 
-        pnlFooter.Controls.AddRange(new Control[] { btnCancel, btnSave });
-
-        var pnlBody = new Panel
-        {
-            Dock = DockStyle.Fill,
-            AutoScroll = true,
-            Padding = new Padding(28, 15, 28, 15),
-            BackColor = Color.White
-        };
-
-        int currentY = 15;
-        AddSectionHeader("Personal & Contact Details", ref currentY, pnlBody);
-
-        txtFirstName = AddCompactField("First Name *", 28, currentY, 275, pnlBody);
-        txtMiddleName = AddCompactField("Middle Name (Optional)", 323, currentY, 275, pnlBody);
-        currentY += 58;
-
-        txtLastName = AddCompactField("Last Name *", 28, currentY, 275, pnlBody);
-        txtPhone = AddCompactField("Contact Number *", 323, currentY, 275, pnlBody);
-        currentY += 58;
-
-        txtEmail = AddCompactField("Email Address", 28, currentY, 570, pnlBody);
-        currentY += 58;
-
-        txtAddress = AddCompactField("Address / City", 28, currentY, 570, pnlBody);
-        currentY += 68;
-
-        AddSectionHeader("Body Measurements (Inches)", ref currentY, pnlBody);
-
-        var pnlMeasurements = new Panel
-        {
-            Location = new Point(28, currentY),
-            Size = new Size(570, 84),
-            BackColor = ColorCardBg,
-            BorderStyle = BorderStyle.FixedSingle
-        };
-
-        numBust = AddMeasurementSpinner("Bust", 25, 12, 34.0m, pnlMeasurements);
-        numWaist = AddMeasurementSpinner("Waist", 215, 12, 26.0m, pnlMeasurements);
-        numHips = AddMeasurementSpinner("Hips", 405, 12, 36.0m, pnlMeasurements);
-
-        pnlBody.Controls.Add(pnlMeasurements);
-
-        Controls.Add(pnlBody);
-        Controls.Add(pnlHeader);
+        pnlFooter.Controls.AddRange([btnCancel, btnSave]);
         Controls.Add(pnlFooter);
-
-        pnlBody.BringToFront();
     }
 
-    private void AddSectionHeader(string title, ref int y, Control parent)
+    private void AddSectionHeader(string text, int x, ref int y)
     {
         var lbl = new Label
         {
-            Text = title.ToUpperInvariant(),
-            Location = new Point(28, y),
-            AutoSize = true,
+            Text = text,
             Font = new Font("Segoe UI Semibold", 8.25f, FontStyle.Bold),
-            ForeColor = ColorDustyRose
+            ForeColor = ColorSectionTag,
+            Location = new Point(x, y),
+            AutoSize = true
         };
-        parent.Controls.Add(lbl);
+        Controls.Add(lbl);
         y += 24;
     }
 
-    private TextBox AddCompactField(string labelText, int x, int y, int width, Control parent)
+    private void AddLabeledInput(string labelText, string placeholder, int x, int y, int width, out TextBox textBox)
     {
         var lbl = new Label
         {
             Text = labelText,
+            Font = new Font("Segoe UI", 9f),
+            ForeColor = ColorSubtext,
             Location = new Point(x, y),
-            AutoSize = true,
-            ForeColor = ColorEspresso,
-            Font = new Font("Segoe UI", 9f, FontStyle.Regular)
+            AutoSize = true
         };
 
-        var txt = new TextBox
+        var container = new Panel
         {
             Location = new Point(x, y + 20),
-            Width = width,
-            BorderStyle = BorderStyle.FixedSingle,
-            Font = new Font("Segoe UI", 10f, FontStyle.Regular)
+            Size = new Size(width, 36),
+            BackColor = ColorInputBg
         };
 
-        parent.Controls.AddRange(new Control[] { lbl, txt });
-        return txt;
+        container.Paint += (s, e) =>
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            using var pen = new Pen(ColorInputBorder, 1.5f);
+            using var path = CreateRoundedRectangle(new Rectangle(0, 0, container.Width - 1, container.Height - 1), 6);
+            e.Graphics.DrawPath(pen, path);
+        };
+
+        textBox = new TextBox
+        {
+            BorderStyle = BorderStyle.None,
+            Font = new Font("Segoe UI", 9.5f),
+            ForeColor = ColorEspresso,
+            PlaceholderText = placeholder,
+            Location = new Point(10, 8),
+            Width = width - 20
+        };
+
+        container.Controls.Add(textBox);
+        Controls.AddRange([lbl, container]);
     }
 
-    private NumericUpDown AddMeasurementSpinner(string tag, int x, int y, decimal defaultVal, Control parent)
+    private void AddLabeledNumericInput(string labelText, decimal defaultValue, int x, int y, int width, out NumericUpDown num)
     {
         var lbl = new Label
         {
-            Text = $"{tag} (in)",
+            Text = labelText,
+            Font = new Font("Segoe UI", 9f),
+            ForeColor = ColorSubtext,
             Location = new Point(x, y),
-            AutoSize = true,
-            ForeColor = ColorEspresso,
-            Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold)
+            AutoSize = true
         };
 
-        var num = new NumericUpDown
+        var container = new Panel
         {
-            Location = new Point(x, y + 22),
-            Width = 135,
+            Location = new Point(x, y + 20),
+            Size = new Size(width, 36),
+            BackColor = ColorInputBg
+        };
+
+        container.Paint += (s, e) =>
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            using var pen = new Pen(ColorInputBorder, 1.5f);
+            using var path = CreateRoundedRectangle(new Rectangle(0, 0, container.Width - 1, container.Height - 1), 6);
+            e.Graphics.DrawPath(pen, path);
+        };
+
+        num = new NumericUpDown
+        {
+            BorderStyle = BorderStyle.None,
+            Font = new Font("Segoe UI", 9.5f),
+            ForeColor = ColorEspresso,
             DecimalPlaces = 1,
             Minimum = 0,
             Maximum = 120,
-            Value = defaultVal,
-            BorderStyle = BorderStyle.FixedSingle,
-            TextAlign = HorizontalAlignment.Center,
-            Font = new Font("Segoe UI", 10f, FontStyle.Regular)
+            Value = defaultValue,
+            TextAlign = HorizontalAlignment.Left,
+            Location = new Point(10, 8),
+            Width = width - 20
         };
 
-        parent.Controls.AddRange(new Control[] { lbl, num });
-        return num;
+        container.Controls.Add(num);
+        Controls.AddRange([lbl, container]);
     }
 
     private void PopulateFields(Customer c)
     {
-        txtFirstName.Text = c.FirstName;
-        txtMiddleName.Text = c.MiddleName;
-        txtLastName.Text = c.LastName;
-        txtPhone.Text = c.ContactNumber;
-        txtEmail.Text = c.EmailAddress;
-        txtAddress.Text = c.Address;
+        txtFirstName.Text = c.FirstName ?? string.Empty;
+        txtMiddleName.Text = c.MiddleName ?? string.Empty;
+        txtLastName.Text = c.LastName ?? string.Empty;
+        txtPhone.Text = c.ContactNumber ?? string.Empty;
+        txtEmail.Text = c.EmailAddress ?? string.Empty;
+        txtAddress.Text = c.Address ?? string.Empty;
 
         numBust.Value = Math.Clamp(c.BustSize, numBust.Minimum, numBust.Maximum);
         numWaist.Value = Math.Clamp(c.WaistSize, numWaist.Minimum, numWaist.Maximum);
@@ -275,14 +360,14 @@ public partial class CustomerDialogForm : Form
 
         if (string.IsNullOrWhiteSpace(fName) || string.IsNullOrWhiteSpace(lName) || string.IsNullOrWhiteSpace(phone))
         {
-            MessageBox.Show("Please fill in all required fields.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show("Please fill in all required fields marked with *.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
-        var cleanPhone = new string(txtPhone.Text.Where(char.IsDigit).ToArray());
-        if (cleanPhone.Length != 11)
+        var cleanPhone = new string(phone.Where(char.IsDigit).ToArray());
+        if (cleanPhone.Length < 7 || cleanPhone.Length > 15)
         {
-            MessageBox.Show("Please enter a valid phone number.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show("Please enter a valid contact phone number.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             txtPhone.Focus();
             return;
         }
@@ -352,5 +437,17 @@ public partial class CustomerDialogForm : Form
             MessageBox.Show($"Failed to save record: {ex.Message}", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             btnSave.Enabled = true;
         }
+    }
+
+    private static GraphicsPath CreateRoundedRectangle(Rectangle rect, int radius)
+    {
+        var path = new GraphicsPath();
+        int d = radius * 2;
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 }

@@ -19,7 +19,6 @@ public partial class RentalBookingsView : UserControl
     private List<BookingRowViewModel> _cachedRows = [];
     private RentalPipelineDto? _pipelineData;
 
-    // Filter strip controls
     private FlowLayoutPanel pnlFilterTabs = null!;
     private TextBox txtSearch = null!;
 

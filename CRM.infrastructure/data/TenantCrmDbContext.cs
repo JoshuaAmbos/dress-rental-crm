@@ -16,6 +16,7 @@ public class TenantCrmDbContext : DbContext
     public DbSet<RentalBooking> RentalBookings => Set<RentalBooking>();
     public DbSet<BookingDetail> BookingDetails => Set<BookingDetail>();
     public DbSet<ServiceIncident> ServiceIncidents => Set<ServiceIncident>();
+    public DbSet<Inquiry> Inquiries => Set<Inquiry>();
     public DbSet<LoyaltyAward> LoyaltyAwards => Set<LoyaltyAward>();
     public DbSet<Garment> Garments { get; set; } = null!;
     public DbSet<SystemConfiguration> SystemConfigurations => Set<SystemConfiguration>();
@@ -120,6 +121,18 @@ public class TenantCrmDbContext : DbContext
                   .WithMany(x => x.ServiceIncidents)
                   .HasForeignKey(x => x.RentalBookingId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Inquiry
+        builder.Entity<Inquiry>(entity =>
+        {
+            entity.HasKey(e => e.InquiryId);
+            entity.Property(e => e.InquiryCode).HasMaxLength(50);
+            entity.Property(e => e.ClientName).HasMaxLength(150).IsRequired();
+            entity.Property(e => e.ClientEmail).HasMaxLength(150);
+            entity.Property(e => e.ClientPhone).HasMaxLength(50);
+            entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("New");
+            entity.Property(e => e.Priority).HasMaxLength(50).HasDefaultValue("Medium");
         });
 
         // LoyaltyAward

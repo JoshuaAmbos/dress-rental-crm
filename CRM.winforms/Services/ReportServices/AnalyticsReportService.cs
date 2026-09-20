@@ -4,10 +4,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CRM.winforms.Services;
 
-// pulls the tenant's bookings and computes the KPI metrics,
-// 6-month revenue progression, stage distributions,
-// and top-leased gowns in memory
-
 public class AnalyticsReportService
 {
     private readonly Func<TenantCrmDbContext> _contextFactory;
@@ -17,30 +13,52 @@ public class AnalyticsReportService
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
     }
 
-    public async Task<AnalyticsDashboardDto> GetAnalyticsOverviewAsync(int companyId, int monthsLookback = 6)
+    public async Task<AnalyticsDashboardDto> GetAnalyticsOverviewAsync(int companyId, DateTime? startDate = null, DateTime? endDate = null)
     {
         await using var db = _contextFactory();
         var today = DateTime.Today;
-        var lookbackStart = new DateTime(today.Year, today.Month, 1).AddMonths(-(monthsLookback - 1));
 
-        // 1. Fetch bookings in scope
-        var bookings = await db.RentalBookings
+        // 1. Fetch total wardrobe fleet for utilization metric
+        var allGarments = await db.Garments
             .AsNoTracking()
-            .Include(b => b.BookingDetails)
-                .ThenInclude(d => d.Garment)
-            .Where(b => b.CompanyId == companyId)
+            .Where(g => g.CompanyId == companyId && g.IsActive)
             .ToListAsync();
 
-        // Helper to test if a stage is "Returned"
+        int totalActiveFleet = allGarments.Count;
+        int currentlyRentedCount = allGarments.Count(g => string.Equals(g.Status, "Rented", StringComparison.OrdinalIgnoreCase));
+        double fleetUtilization = totalActiveFleet > 0
+            ? Math.Round((double)currentlyRentedCount / totalActiveFleet * 100.0, 1)
+            : 0.0;
+
+        // 2. Fetch bookings query
+        var query = db.RentalBookings
+            .AsNoTracking()
+            .Include(b => b.Customer)
+            .Include(b => b.BookingDetails)
+                .ThenInclude(d => d.Garment)
+            .Where(b => b.CompanyId == companyId);
+
+        if (startDate.HasValue)
+        {
+            var start = startDate.Value.Date;
+            query = query.Where(b => b.RentalStartDate >= start);
+        }
+
+        if (endDate.HasValue)
+        {
+            var end = endDate.Value.Date.AddDays(1).AddTicks(-1);
+            query = query.Where(b => b.RentalStartDate <= end);
+        }
+
+        var bookings = await query.ToListAsync();
+
         static bool IsReturned(string? stage) =>
             string.Equals(stage?.Trim(), "Returned", StringComparison.OrdinalIgnoreCase);
 
-        // Helper to test if a stage is "Cancelled"
         static bool IsCancelled(string? stage) =>
             string.Equals(stage?.Trim(), "Cancelled", StringComparison.OrdinalIgnoreCase);
 
-        // 2. High-Level KPIs
-        // Active circulation includes ONLY bookings that are not returned and not cancelled
+        // 3. High-Level KPIs
         var activeCirculationBookings = bookings
             .Where(b => !IsReturned(b.BookingStage) && !IsCancelled(b.BookingStage))
             .ToList();
@@ -53,15 +71,17 @@ public class AnalyticsReportService
             .Where(b => !IsCancelled(b.BookingStage))
             .Sum(b => b.RentalFee);
 
-        // Security deposits held only apply to items genuinely still out in circulation
         decimal activeDepositsHeld = activeCirculationBookings.Sum(b => b.SecurityDeposit);
 
         int totalCompleted = completedBookings.Count;
         int onTimeReturns = completedBookings.Count(b => b.RentalEndDate.Date >= b.CreatedAt.Date);
         double returnRate = totalCompleted > 0 ? (double)onTimeReturns / totalCompleted * 100.0 : 100.0;
 
-        // 3. Monthly Revenue Trend (Last N Months)
+        // 4. Monthly Trend
         var monthlyTrend = new List<MonthlyRevenueMetric>();
+        int monthsLookback = 6;
+        var lookbackStart = new DateTime(today.Year, today.Month, 1).AddMonths(-(monthsLookback - 1));
+
         for (int i = 0; i < monthsLookback; i++)
         {
             var targetMonth = lookbackStart.AddMonths(i);
@@ -78,22 +98,13 @@ public class AnalyticsReportService
             });
         }
 
-        // 4. Stage Breakdown Distribution
+        // 5. Stage Breakdown Distribution
         var stageGroups = bookings
             .Where(b => !string.IsNullOrWhiteSpace(b.BookingStage) && !IsCancelled(b.BookingStage))
             .GroupBy(b =>
             {
-                // CRITICAL: If already returned, it CANNOT be overdue
-                if (IsReturned(b.BookingStage))
-                {
-                    return "Returned";
-                }
-
-                // If not returned and end date passed, it's overdue
-                if (b.RentalEndDate.Date < today)
-                {
-                    return "Overdue";
-                }
+                if (IsReturned(b.BookingStage)) return "Returned";
+                if (b.RentalEndDate.Date < today) return "Overdue";
 
                 string raw = b.BookingStage.Trim();
                 return char.ToUpper(raw[0]) + raw.Substring(1).ToLower();
@@ -109,8 +120,8 @@ public class AnalyticsReportService
             Percentage = totalRelevantBookings > 0 ? Math.Round((double)sg.Count / totalRelevantBookings * 100.0, 1) : 0
         }).OrderByDescending(s => s.Count).ToList();
 
-        // 5. Top Leased Garments Leaderboard
-        var garmentDetails = bookings
+        // 6. Top Leased Garments Leaderboard
+        var topGarments = bookings
             .Where(b => !IsCancelled(b.BookingStage))
             .SelectMany(b => b.BookingDetails)
             .Where(d => d.Garment != null)
@@ -129,15 +140,39 @@ public class AnalyticsReportService
             .Take(5)
             .ToList();
 
+        // 7. Audit Ledger Table Rows
+        var auditLedger = bookings
+            .OrderByDescending(b => b.RentalStartDate)
+            .Select(b => new RentalLedgerRowDto
+            {
+                BookingId = b.RentalBookingId,
+                BookingCode = $"BKG-{b.RentalBookingId:D4}",
+                ClientName = b.Customer != null ? $"{b.Customer.FirstName} {b.Customer.LastName}".Trim() : "Client Profile",
+                GarmentSummary = b.BookingDetails.Count > 0
+                    ? string.Join(", ", b.BookingDetails.Select(d => d.Garment != null ? d.Garment.StyleName : $"Garment #{d.GarmentId}"))
+                    : "Unassigned",
+                RentalStartDate = b.RentalStartDate,
+                RentalEndDate = b.RentalEndDate,
+                RentalFee = b.RentalFee,
+                SecurityDeposit = b.SecurityDeposit,
+                Stage = b.BookingStage,
+                PaymentMethod = string.IsNullOrWhiteSpace(b.PaymentMethod) ? "Standard" : b.PaymentMethod
+            })
+            .ToList();
+
         return new AnalyticsDashboardDto
         {
             TotalLeaseRevenue = totalLeaseRevenue,
             ActiveDepositsHeld = activeDepositsHeld,
             TotalBookingsCompleted = totalCompleted,
             OnTimeReturnRate = Math.Round(returnRate, 1),
+            FleetUtilizationRate = fleetUtilization,
+            TotalActiveGarments = totalActiveFleet,
+            CurrentlyRentedGarments = currentlyRentedCount,
             MonthlyRevenueTrend = monthlyTrend,
             StageDistribution = stageDistribution,
-            TopPerformingGarments = garmentDetails
+            TopPerformingGarments = topGarments,
+            AuditLedger = auditLedger
         };
     }
 }

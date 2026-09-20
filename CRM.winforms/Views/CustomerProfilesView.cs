@@ -17,6 +17,11 @@ public partial class CustomerProfilesView : UserControl
     private readonly CustomerProfileService _customerService;
     private readonly Func<int> _getCompanyId;
 
+    // Atelier Palette Consistency
+    private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
+    private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
+    private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
+
     public CustomerProfilesView() : this(() => 1)
     {
     }
@@ -35,7 +40,18 @@ public partial class CustomerProfilesView : UserControl
 
         InitializeComponent();
 
-        searchBar1.SetCueBanner("Search by customer name, conta...");
+        BackColor = ColorViewBg;
+        Padding = new Padding(32, 24, 32, 24);
+
+        if (label1 != null)
+        {
+            label1.Text = "Customer Profiles";
+            label1.UseMnemonic = false;
+            label1.Font = new Font("Segoe UI", 18f, FontStyle.Bold);
+            label1.ForeColor = ColorEspresso;
+        }
+
+        searchBar1.SetCueBanner("Search by customer name, contact...");
 
         if (!DesignMode)
         {
@@ -77,7 +93,8 @@ public partial class CustomerProfilesView : UserControl
             DataPropertyName = nameof(CustomerRowViewModel.Code),
             HeaderText = "CODE",
             FillWeight = 85,
-            MinimumWidth = 80
+            MinimumWidth = 80,
+            SortMode = DataGridViewColumnSortMode.NotSortable
         });
 
         dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
@@ -85,7 +102,8 @@ public partial class CustomerProfilesView : UserControl
             DataPropertyName = nameof(CustomerRowViewModel.Name),
             HeaderText = "NAME",
             FillWeight = 125,
-            MinimumWidth = 110
+            MinimumWidth = 110,
+            SortMode = DataGridViewColumnSortMode.NotSortable
         });
 
         dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
@@ -93,7 +111,8 @@ public partial class CustomerProfilesView : UserControl
             DataPropertyName = nameof(CustomerRowViewModel.Phone),
             HeaderText = "PHONE",
             FillWeight = 95,
-            MinimumWidth = 90
+            MinimumWidth = 90,
+            SortMode = DataGridViewColumnSortMode.NotSortable
         });
 
         dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
@@ -101,7 +120,8 @@ public partial class CustomerProfilesView : UserControl
             DataPropertyName = nameof(CustomerRowViewModel.Email),
             HeaderText = "EMAIL ADDRESS",
             FillWeight = 135,
-            MinimumWidth = 120
+            MinimumWidth = 120,
+            SortMode = DataGridViewColumnSortMode.NotSortable
         });
 
         dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
@@ -109,7 +129,8 @@ public partial class CustomerProfilesView : UserControl
             DataPropertyName = nameof(CustomerRowViewModel.Address),
             HeaderText = "CITY / ADDRESS",
             FillWeight = 110,
-            MinimumWidth = 100
+            MinimumWidth = 100,
+            SortMode = DataGridViewColumnSortMode.NotSortable
         });
 
         dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
@@ -117,7 +138,8 @@ public partial class CustomerProfilesView : UserControl
             DataPropertyName = nameof(CustomerRowViewModel.BustSize),
             HeaderText = "BUST SIZE",
             FillWeight = 75,
-            MinimumWidth = 70
+            MinimumWidth = 70,
+            SortMode = DataGridViewColumnSortMode.NotSortable
         });
 
         dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
@@ -125,7 +147,8 @@ public partial class CustomerProfilesView : UserControl
             DataPropertyName = nameof(CustomerRowViewModel.WaistSize),
             HeaderText = "WAIST SIZE",
             FillWeight = 75,
-            MinimumWidth = 70
+            MinimumWidth = 70,
+            SortMode = DataGridViewColumnSortMode.NotSortable
         });
 
         dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
@@ -133,7 +156,8 @@ public partial class CustomerProfilesView : UserControl
             DataPropertyName = nameof(CustomerRowViewModel.HipSize),
             HeaderText = "HIP SIZE",
             FillWeight = 75,
-            MinimumWidth = 70
+            MinimumWidth = 70,
+            SortMode = DataGridViewColumnSortMode.NotSortable
         });
 
         var colEdit = new DataGridViewButtonColumn
@@ -162,6 +186,15 @@ public partial class CustomerProfilesView : UserControl
 
         dgvCustomers.Columns.Add(colEdit);
         dgvCustomers.Columns.Add(colArchive);
+
+        // Header Style consistency fix
+        dgvCustomers.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
+        dgvCustomers.EnableHeadersVisualStyles = false;
+        dgvCustomers.ColumnHeadersDefaultCellStyle.BackColor = Color.White;
+        dgvCustomers.ColumnHeadersDefaultCellStyle.ForeColor = ColorSubtext;
+        dgvCustomers.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.White;
+        dgvCustomers.ColumnHeadersDefaultCellStyle.SelectionForeColor = ColorSubtext;
+        dgvCustomers.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold);
     }
 
     private void UpdateActionColumnMode(bool showingArchived)
@@ -278,6 +311,7 @@ public partial class CustomerProfilesView : UserControl
             if (dgvCustomers != null)
             {
                 dgvCustomers.DataSource = displayList;
+                dgvCustomers.ClearSelection();
             }
         }
         catch (Exception ex)
