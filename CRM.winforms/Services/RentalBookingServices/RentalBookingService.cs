@@ -157,6 +157,57 @@ public class RentalBookingService
         return booking.RentalBookingId;
     }
 
+    public async Task UpdateBookingStageAsync(int bookingId, string newStage)
+    {
+        await using var db = _contextFactory();
+
+        var booking = await db.RentalBookings
+            .Include(b => b.BookingDetails)
+                .ThenInclude(d => d.Garment)
+            .FirstOrDefaultAsync(b => b.RentalBookingId == bookingId);
+
+        if (booking == null)
+            throw new InvalidOperationException($"Booking with ID {bookingId} not found.");
+
+        booking.BookingStage = newStage;
+
+        foreach (var detail in booking.BookingDetails)
+        {
+            if (detail.Garment == null) continue;
+
+            switch (newStage)
+            {
+                case "Active":
+                    detail.Garment.Status = "Rented";
+                    break;
+                case "Returned":
+                    detail.Garment.Status = "In Cleaning";
+                    break;
+                case "Reserved":
+                case "Fitting":
+                    detail.Garment.Status = "Reserved";
+                    break;
+                case "Cancelled":
+                    detail.Garment.Status = "Available";
+                    break;
+            }
+        }
+
+        await db.SaveChangesAsync();
+    }
+
+    public async Task<RentalBooking?> GetBookingDetailsAsync(int bookingId)
+    {
+        await using var db = _contextFactory();
+
+        return await db.RentalBookings
+            .AsNoTracking()
+            .Include(b => b.Customer)
+            .Include(b => b.BookingDetails)
+                .ThenInclude(d => d.Garment)
+            .FirstOrDefaultAsync(b => b.RentalBookingId == bookingId);
+    }
+
     public async Task ProcessReturnAsync(int bookingId)
     {
         await using var db = _contextFactory();
@@ -168,6 +219,7 @@ public class RentalBookingService
         if (booking == null) return;
 
         booking.BookingStage = "Returned";
+
         foreach (var detail in booking.BookingDetails)
         {
             if (detail.Garment != null)

@@ -136,7 +136,6 @@ partial class Step2GarmentDatesView
     #endregion
 
     private Label lblTitle;
-    private Label lblSubtitle;
     private Label lblStartDate;
     private DateTimePicker dtpStartDate;
     private Label lblEndDate;

@@ -74,11 +74,6 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             lblTitle.AutoSize = true;
         }
 
-        if (lblSubtitle != null)
-        {
-            lblSubtitle.Visible = false;
-        }
-
         lblSelectedCustomer = new Label
         {
             Anchor = AnchorStyles.Top | AnchorStyles.Right,

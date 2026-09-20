@@ -2,22 +2,26 @@
 using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
+using CRM.infrastructure.data;
 using CRM.winforms.Models;
 using CRM.winforms.Views;
+using Microsoft.EntityFrameworkCore;
 
 namespace CRM.winforms.Forms;
 
 public partial class MainForm : Form
 {
     private readonly LoginResult _user;
+    private readonly Func<TenantCrmDbContext> _contextFactory;
+    private readonly int _currentCompanyId = 1;
+
     private UserControl? _activeView;
-    private DashboardView? _dashboardView;
+    private AnalyticsAndReportsView? _reportsView;
     private CustomerProfilesView? _customerProfilesView;
     private RentalBookingsView? _bookingsView;
     private CatalogView? _catalogView;
 
-
-    // colors
+    // Colors
     public static readonly Color ColorSidebar = Color.FromArgb(52, 30, 33);
     public static readonly Color ColorSidebarActive = Color.FromArgb(190, 110, 120);
 
@@ -28,6 +32,16 @@ public partial class MainForm : Form
     public MainForm(LoginResult authenticatedUser)
     {
         _user = authenticatedUser ?? throw new ArgumentNullException(nameof(authenticatedUser));
+
+        // DbContext factory matching the connection used across the application
+        _contextFactory = () =>
+        {
+            var options = new DbContextOptionsBuilder<TenantCrmDbContext>()
+                .UseSqlServer("Server=10.0.2.2,1433;Database=DB_TenantCRM;User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;")
+                .Options;
+            return new TenantCrmDbContext(options);
+        };
+
         InitializeComponent();
     }
 
@@ -53,13 +67,14 @@ public partial class MainForm : Form
         _activeView = view;
     }
 
-    // main views
+    // Main views
     public void ShowDashboardView()
     {
-        _dashboardView ??= new DashboardView();
-        SwitchView(_dashboardView);
-    }
+        _reportsView ??= new AnalyticsAndReportsView(_contextFactory, () => _currentCompanyId);
+        SwitchView(_reportsView);
 
+        _ = _reportsView.LoadDashboardDataAsync();
+    }
     public void ShowCustomerProfiles()
     {
         _customerProfilesView ??= new CustomerProfilesView();
@@ -68,11 +83,8 @@ public partial class MainForm : Form
 
     public void ShowRentalBookingsView()
     {
-        //if (buttonRentals != null) SetActiveButton(buttonRentals);
-        //_bookingsView ??= new RentalBookingsView(GetActiveCompanyId);
-        _bookingsView ??= new RentalBookingsView();
+        _bookingsView ??= new RentalBookingsView(_contextFactory, () => _currentCompanyId);
         SwitchView(_bookingsView);
-        //_ = _bookingsView.LoadPipelineDataAsync();
     }
 
     public void ShowCatalogView()
@@ -81,8 +93,8 @@ public partial class MainForm : Form
         SwitchView(_catalogView);
     }
 
-    // button click handlers
-    private void ButtonDashboard_Click(object sender, EventArgs e)
+    // Button click handlers
+    private void ButtonDashboard_Click(object? sender, EventArgs e)
     {
         ShowDashboardView();
     }
@@ -101,8 +113,6 @@ public partial class MainForm : Form
     {
         ShowCatalogView();
     }
-
-
 
     private void Panel1_Paint(object sender, PaintEventArgs e) { }
     private void Logo_Click(object sender, EventArgs e) { }

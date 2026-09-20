@@ -1,6 +1,6 @@
-﻿namespace CRM.winforms.Views;
+﻿namespace CRM.winforms.Forms;
 
-partial class Step1ClientSelectionView
+partial class BookingDetailsDialog
 {
     /// <summary> 
     /// Required designer variable.
@@ -28,17 +28,8 @@ partial class Step1ClientSelectionView
     /// </summary>
     private void InitializeComponent()
     {
-        SuspendLayout();
-        // 
-        // Step1ClientSelectionView
-        // 
-        AutoScaleDimensions = new SizeF(7F, 15F);
-        AutoScaleMode = AutoScaleMode.Font;
-        BackColor = Color.FromArgb(249, 241, 241);
-        Name = "Step1ClientSelectionView";
-        Padding = new Padding(30);
-        Size = new Size(1712, 955);
-        ResumeLayout(false);
+        components = new System.ComponentModel.Container();
+        this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
     }
 
     #endregion

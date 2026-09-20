@@ -7,7 +7,7 @@ namespace CRM.winforms.Views;
 public partial class Step4PaymentDepositView : UserControl, IBookingWizardStep
 {
     private BookingDraftModel? _draft;
-    private string _selectedPaymentMethod = "Credit Card – Visa ••••4832";
+    private string _selectedPaymentMethod = "Gcash";
 
     private readonly List<string> _paymentMethods = new()
     {
