@@ -19,5 +19,11 @@ public class RentalPipelineDto
     public int ActiveCount { get; set; }
     public int OverdueCount { get; set; }
     public int UpcomingCount { get; set; }
+
+    public int TotalCount { get; set; }
+    public int ReservedCount { get; set; }
+    public int FittingCount { get; set; }
+    public int ReturnedCount { get; set; }
+
     public List<BookingRowViewModel> Rows { get; set; } = new();
 }

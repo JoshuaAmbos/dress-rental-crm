@@ -104,10 +104,29 @@ public partial class RentalBookingsView : UserControl
         {
             var pipeline = await _bookingService.GetPipelineAsync(_getCompanyId(), _currentStageFilter, _currentSearchTerm);
 
-            // Populate KPI Cards
-            SetKpiCard(kpiCardControlActiveLeases, "ACTIVE LEASES", pipeline.ActiveCount.ToString(), "Currently booked or out");
-            SetKpiCard(kpiCardControlOverdue, "OVERDUE RETURNS", pipeline.OverdueCount.ToString(), "Action required immediately");
-            SetKpiCard(kpiCardControlUpcomingReturns, "UPCOMING RETURNS", pipeline.UpcomingCount.ToString(), "Due in the next 3 days");
+            kpiCardControlActiveLeases?.SetData(
+                "ACTIVE LEASES",
+                pipeline.ActiveCount.ToString(),
+                "In circulation",
+                Color.FromArgb(37, 99, 235),
+                Color.FromArgb(239, 246, 255),
+                Color.FromArgb(29, 78, 216));
+
+            kpiCardControlOverdue?.SetData(
+                "OVERDUE RETURNS",
+                pipeline.OverdueCount.ToString(),
+                "Requires action",
+                Color.FromArgb(220, 38, 38),
+                Color.FromArgb(254, 242, 242),
+                Color.FromArgb(185, 28, 28));
+
+            kpiCardControlUpcomingReturns?.SetData(
+                "UPCOMING RETURNS (7 DAYS)",
+                pipeline.UpcomingCount.ToString(),
+                "Due this week",
+                Color.FromArgb(186, 105, 115),
+                Color.FromArgb(255, 241, 242),
+                Color.FromArgb(186, 105, 115));
 
             _cachedRows = pipeline.Rows;
             dgvBookings.DataSource = _cachedRows;

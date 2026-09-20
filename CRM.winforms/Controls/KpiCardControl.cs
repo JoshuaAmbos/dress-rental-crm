@@ -1,128 +1,149 @@
-﻿using System;
-using System.Drawing;
+﻿using System.ComponentModel;
 using System.Drawing.Drawing2D;
-using System.Windows.Forms;
+using System.Drawing.Text;
 
 namespace CRM.winforms.Controls;
 
-public class KpiCardControl : UserControl
+public class KpiCardControl : Control
 {
-    private readonly Label _lblTitle;
-    private readonly Label _lblValue;
-    private readonly Label _lblBadge;
-    private readonly PictureBox _picIcon;
+    private string _title = "METRIC";
+    private string _value = "0";
+    private string _badgeText = "Status";
+    private Color _accentColor = Color.FromArgb(37, 99, 235);
+    private Color _badgeBgColor = Color.FromArgb(239, 246, 255);
+    private Color _badgeTextColor = Color.FromArgb(29, 78, 216);
 
-    private const int CornerRadius = 14;
-    private static readonly Color ColorBorder = Color.FromArgb(232, 226, 226);
-    private static readonly Color ColorTitle = Color.FromArgb(120, 110, 115);
-    private static readonly Color ColorValue = Color.FromArgb(38, 22, 24);
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public string Title
+    {
+        get => _title;
+        set { _title = value; Invalidate(); }
+    }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public string Value
+    {
+        get => _value;
+        set { _value = value; Invalidate(); }
+    }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public string BadgeText
+    {
+        get => _badgeText;
+        set { _badgeText = value; Invalidate(); }
+    }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public Color AccentColor
+    {
+        get => _accentColor;
+        set { _accentColor = value; Invalidate(); }
+    }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public Color BadgeBgColor
+    {
+        get => _badgeBgColor;
+        set { _badgeBgColor = value; Invalidate(); }
+    }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public Color BadgeTextColor
+    {
+        get => _badgeTextColor;
+        set { _badgeTextColor = value; Invalidate(); }
+    }
+
+    // Atelier Palette
+    private static readonly Color ColorCardBg = Color.White;
+    private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);
+    private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
+    private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
 
     public KpiCardControl()
     {
-        this.DoubleBuffered = true;
-        this.SetStyle(ControlStyles.AllPaintingInWmPaint |
-                      ControlStyles.UserPaint |
-                      ControlStyles.OptimizedDoubleBuffer |
-                      ControlStyles.ResizeRedraw, true);
+        DoubleBuffered = true;
+        SetStyle(ControlStyles.UserPaint |
+                 ControlStyles.AllPaintingInWmPaint |
+                 ControlStyles.OptimizedDoubleBuffer |
+                 ControlStyles.SupportsTransparentBackColor, true);
 
-        this.BackColor = Color.Transparent;
-        this.Size = new Size(220, 100);
-        this.Padding = new Padding(14);
-
-        _picIcon = new PictureBox
-        {
-            Location = new Point(14, 14),
-            Size = new Size(18, 18),
-            SizeMode = PictureBoxSizeMode.Zoom,
-            BackColor = Color.Transparent
-        };
-
-        _lblTitle = new Label
-        {
-            Location = new Point(36, 14),
-            AutoSize = true,
-            Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
-            ForeColor = ColorTitle,
-            BackColor = Color.Transparent
-        };
-
-        _lblValue = new Label
-        {
-            Location = new Point(12, 44),
-            AutoSize = true,
-            Font = new Font("Segoe UI", 20f, FontStyle.Bold),
-            ForeColor = ColorValue,
-            BackColor = Color.Transparent
-        };
-
-        _lblBadge = new Label
-        {
-            Location = new Point(80, 54),
-            AutoSize = true,
-            Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold),
-            Padding = new Padding(5, 2, 5, 2)
-        };
-
-        this.Controls.AddRange(new Control[] { _picIcon, _lblTitle, _lblValue, _lblBadge });
+        Size = new Size(280, 130);
     }
 
-    public void SetData(string title, string value, string trendText, bool isPositive, Image? icon = null)
+    public void SetData(string title, string value, string badgeText, Color accentColor, Color badgeBg, Color badgeFg)
     {
-        _lblTitle.Text = title;
-        _lblValue.Text = value;
-        _picIcon.Image = icon;
-
-        _lblBadge.Text = trendText;
-        _lblBadge.Location = new Point(_lblValue.Right + 8, 54);
-
-        if (isPositive)
-        {
-            _lblBadge.BackColor = Color.FromArgb(232, 247, 238);
-            _lblBadge.ForeColor = Color.FromArgb(35, 120, 68);
-        }
-        else
-        {
-            _lblBadge.BackColor = Color.FromArgb(253, 236, 238);
-            _lblBadge.ForeColor = Color.FromArgb(185, 45, 55);
-        }
-    }
-
-    protected override void OnResize(EventArgs e)
-    {
-        base.OnResize(e);
-
-        if (this.Width > 0 && this.Height > 0)
-        {
-            // Clip OS region to eliminate rectangular corner artifacts
-            using var path = CreateRoundedRect(new Rectangle(0, 0, this.Width, this.Height), CornerRadius);
-            this.Region = new Region(path);
-        }
+        _title = title;
+        _value = value;
+        _badgeText = badgeText;
+        _accentColor = accentColor;
+        _badgeBgColor = badgeBg;
+        _badgeTextColor = badgeFg;
+        Invalidate();
     }
 
     protected override void OnPaint(PaintEventArgs e)
     {
-        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-        e.Graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+        base.OnPaint(e);
+        var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
-        var rect = new Rectangle(0, 0, this.Width - 1, this.Height - 1);
+        var rect = new Rectangle(0, 0, Width - 1, Height - 1);
 
-        using var path = CreateRoundedRect(rect, CornerRadius);
-        using var fillBrush = new SolidBrush(Color.White);
-        using var borderPen = new Pen(ColorBorder, 1.2f);
+        // Card background & rounded border
+        using (var path = CreateRoundedRectangle(rect, 8))
+        {
+            using var fillBrush = new SolidBrush(ColorCardBg);
+            g.FillPath(fillBrush, path);
 
-        // Draw solid card face and smooth outline
-        e.Graphics.FillPath(fillBrush, path);
-        e.Graphics.DrawPath(borderPen, path);
+            using var borderPen = new Pen(ColorBorder, 1.25f);
+            g.DrawPath(borderPen, path);
+        }
+
+
+        // Category title
+        using (var titleFont = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold))
+        {
+            TextRenderer.DrawText(g, _title.ToUpperInvariant(), titleFont, new Point(22, 16), ColorSubtext);
+        }
+
+        // Values
+        using (var valFont = new Font("Segoe UI", 26f, FontStyle.Bold))
+        {
+            TextRenderer.DrawText(g, _value, valFont, new Point(18, 36), ColorEspresso);
+        }
+
+        // Pill badge
+        using (var badgeFont = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold))
+        {
+            var sz = TextRenderer.MeasureText(g, _badgeText, badgeFont);
+            int pillWidth = sz.Width + 16;
+            int pillHeight = 22;
+            var pillRect = new Rectangle(22, 92, pillWidth, pillHeight);
+
+            using var pillPath = CreateRoundedRectangle(pillRect, pillHeight / 2);
+            using (var bgBrush = new SolidBrush(_badgeBgColor))
+            {
+                g.FillPath(bgBrush, pillPath);
+            }
+
+            TextRenderer.DrawText(g, _badgeText, badgeFont,
+                new Rectangle(pillRect.Left, pillRect.Top + 1, pillRect.Width, pillRect.Height),
+                _badgeTextColor,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+        }
     }
 
-    private static GraphicsPath CreateRoundedRect(Rectangle r, int radius)
+    private static GraphicsPath CreateRoundedRectangle(Rectangle rect, int radius)
     {
         var path = new GraphicsPath();
         int d = radius * 2;
-        path.AddArc(r.X, r.Y, d, d, 180, 90);
-        path.AddArc(r.Right - d, r.Y, d, d, 270, 90);
-        path.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
-        path.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
         path.CloseFigure();
         return path;
     }

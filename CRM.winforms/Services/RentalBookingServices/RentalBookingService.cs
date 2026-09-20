@@ -19,6 +19,7 @@ public class RentalBookingService
     {
         await using var db = _contextFactory();
         var today = DateTime.Today;
+        var sevenDaysAhead = today.AddDays(7);
 
         var query = db.RentalBookings
             .AsNoTracking()
@@ -27,11 +28,6 @@ public class RentalBookingService
                 .ThenInclude(d => d.Garment)
             .Where(b => b.CompanyId == companyId);
 
-        if (!string.Equals(stageFilter, "All", StringComparison.OrdinalIgnoreCase))
-        {
-            query = query.Where(b => b.BookingStage == stageFilter);
-        }
-
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             string term = searchTerm.Trim().ToLower();
@@ -39,7 +35,7 @@ public class RentalBookingService
                 (b.Customer != null && (
                     b.Customer.FirstName.ToLower().Contains(term) ||
                     b.Customer.LastName.ToLower().Contains(term) ||
-                    b.Customer.ContactNumber.Contains(term))) ||
+                    (b.Customer.ContactNumber != null && b.Customer.ContactNumber.Contains(term)))) ||
                 b.BookingDetails.Any(d => d.Garment != null && (
                     d.Garment.StyleName.ToLower().Contains(term) ||
                     d.Garment.ItemCode.ToLower().Contains(term))));
@@ -49,16 +45,16 @@ public class RentalBookingService
             .OrderByDescending(b => b.RentalStartDate)
             .ToListAsync();
 
-        return new RentalPipelineDto
+        var allRows = bookings.Select(b =>
         {
-            ActiveCount = bookings.Count(b => b.BookingStage is "Active" or "Reserved"),
-            OverdueCount = bookings.Count(b => b.RentalEndDate.Date < today && b.BookingStage != "Returned"),
-            UpcomingCount = bookings.Count(b => b.RentalEndDate.Date >= today && b.RentalEndDate.Date <= today.AddDays(3) && b.BookingStage != "Returned"),
-            Rows = bookings.Select(b => new BookingRowViewModel
+            bool isOverdue = b.RentalEndDate.Date < today && b.BookingStage != "Returned";
+            string effectiveStage = isOverdue ? "Overdue" : b.BookingStage;
+
+            return new BookingRowViewModel
             {
                 BookingId = b.RentalBookingId,
                 BookingCode = $"BKG-{b.RentalBookingId:D4}",
-                ClientName = b.Customer != null ? $"{b.Customer.FirstName} {b.Customer.LastName}" : "Unknown Client",
+                ClientName = b.Customer != null ? $"{b.Customer.FirstName} {b.Customer.LastName}".Trim() : "Unknown Client",
                 GarmentSummary = b.BookingDetails.Count > 0
                     ? string.Join(", ", b.BookingDetails.Select(d => d.Garment != null ? d.Garment.StyleName : $"Garment #{d.GarmentId}"))
                     : "No garments assigned",
@@ -66,9 +62,31 @@ public class RentalBookingService
                 EndDate = b.RentalEndDate,
                 RentalFee = b.RentalFee,
                 SecurityDeposit = b.SecurityDeposit,
-                Stage = b.BookingStage,
-                IsOverdue = b.RentalEndDate.Date < today && b.BookingStage != "Returned"
-            }).ToList()
+                Stage = effectiveStage,
+                IsOverdue = isOverdue
+            };
+        }).ToList();
+
+        var filteredRows = stageFilter switch
+        {
+            "Reserved" => allRows.Where(r => r.Stage == "Reserved").ToList(),
+            "Fitting" => allRows.Where(r => r.Stage == "Fitting").ToList(),
+            "Active" => allRows.Where(r => r.Stage == "Active").ToList(),
+            "Overdue" => allRows.Where(r => r.IsOverdue).ToList(),
+            "Returned" => allRows.Where(r => r.Stage == "Returned").ToList(),
+            _ => allRows
+        };
+
+        return new RentalPipelineDto
+        {
+            TotalCount = allRows.Count,
+            ActiveCount = allRows.Count(r => r.Stage == "Active"),
+            OverdueCount = allRows.Count(r => r.IsOverdue),
+            UpcomingCount = allRows.Count(r => r.EndDate.Date >= today && r.EndDate.Date <= sevenDaysAhead && r.Stage != "Returned"),
+            ReservedCount = allRows.Count(r => r.Stage == "Reserved"),
+            FittingCount = allRows.Count(r => r.Stage == "Fitting"),
+            ReturnedCount = allRows.Count(r => r.Stage == "Returned"),
+            Rows = filteredRows
         };
     }
 
