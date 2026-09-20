@@ -1,6 +1,6 @@
 ﻿using CRM.infrastructure.data;
+using CRM.winforms.Controllers;
 using CRM.winforms.Controls;
-using CRM.winforms.Services;
 using System.Drawing.Drawing2D;
 
 namespace CRM.winforms.Views;
@@ -9,7 +9,7 @@ public partial class AnalyticsAndReportsView : UserControl
 {
     private readonly Func<TenantCrmDbContext> _contextFactory;
     private readonly Func<int> _getCompanyId;
-    private readonly AnalyticsReportService _reportService;
+    private readonly AnalyticsReportController _controller;
 
     // KPI Cards
     private KpiCardControl kpiRevenue = null!;
@@ -35,7 +35,9 @@ public partial class AnalyticsAndReportsView : UserControl
     {
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         _getCompanyId = getCompanyId ?? throw new ArgumentNullException(nameof(getCompanyId));
-        _reportService = new AnalyticsReportService(_contextFactory);
+
+        // Instantiate the MVC Controller
+        _controller = new AnalyticsReportController(_contextFactory);
 
         InitializeLayout();
         _ = LoadDashboardDataAsync();
@@ -223,13 +225,13 @@ public partial class AnalyticsAndReportsView : UserControl
             SortMode = DataGridViewColumnSortMode.NotSortable,
             HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } },
             DefaultCellStyle =
-        {
-            Alignment = DataGridViewContentAlignment.MiddleRight,
-            Format = "$#,##0",
-            Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
-            ForeColor = ColorDustyRose,
-            SelectionForeColor = ColorDustyRose
-        }
+            {
+                Alignment = DataGridViewContentAlignment.MiddleRight,
+                Format = "$#,##0",
+                Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
+                ForeColor = ColorDustyRose,
+                SelectionForeColor = ColorDustyRose
+            }
         };
 
         dgvTopGarments.Columns.AddRange(new DataGridViewColumn[] { colCode, colStyle, colSize, colLeases, colRev });
@@ -289,7 +291,8 @@ public partial class AnalyticsAndReportsView : UserControl
     {
         try
         {
-            var data = await _reportService.GetAnalyticsOverviewAsync(_getCompanyId());
+            // Call through the MVC Controller layer
+            var data = await _controller.LoadDashboardMetricsAsync(_getCompanyId());
 
             // 1. KPI Cards
             kpiRevenue.SetData("TOTAL LEASE REVENUE", $"${data.TotalLeaseRevenue:N0}", "Flat Lease Basis", ColorDustyRose, Color.FromArgb(254, 242, 243), ColorDustyRose);

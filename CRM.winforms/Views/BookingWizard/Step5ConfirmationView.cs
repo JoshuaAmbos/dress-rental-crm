@@ -1,4 +1,8 @@
-﻿using System.Drawing.Drawing2D;
+﻿using System;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Linq;
+using System.Windows.Forms;
 using CRM.winforms.Models;
 
 namespace CRM.winforms.Views;
@@ -18,7 +22,10 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
     private Label lblTotalVal = null!;
     private Label lblPaymentMethodVal = null!;
 
-    // 3. Atelier Palette
+    // 3. Terms Agreement Checkbox
+    private CheckBox chkAgreeTerms = null!;
+
+    // 4. Atelier Palette
     private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
     private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
     private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
@@ -28,10 +35,10 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
     private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
 
     private const string CurrencySymbol = "$";
-    private const int RowHeight = 50;
+    private const int RowHeight = 48; // Slightly compact to fit the checkbox comfortably
     private const int TotalRows = 8;
 
-    // 4. Wizard Step Title
+    // 5. Wizard Step Title
     public string StepTitle => "Review & Confirm";
 
     public Step5ConfirmationView()
@@ -57,6 +64,7 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
         var lblTitle = new Label
         {
             Text = "Review & Confirm",
+            UseMnemonic = false,
             Font = new Font("Segoe UI Semibold", 15.5f, FontStyle.Bold),
             ForeColor = ColorEspresso,
             Location = new Point(0, 0),
@@ -64,12 +72,36 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
         };
         pnlHeader.Controls.Add(lblTitle);
 
-        var pnlHeaderSpacer = new Panel { Dock = DockStyle.Top, Height = 14, BackColor = Color.Transparent };
+        var pnlHeaderSpacer = new Panel { Dock = DockStyle.Top, Height = 10, BackColor = Color.Transparent };
+
+        // 3. Terms & Conditions Checkbox (Docked at Bottom above wizard buttons)
+        var pnlTerms = new Panel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 40,
+            BackColor = Color.Transparent,
+            Padding = new Padding(4, 0, 0, 0)
+        };
+
+        chkAgreeTerms = new CheckBox
+        {
+            Text = "Client agrees to rental terms, return deadlines, and security deposit policies.",
+            UseMnemonic = false,
+            Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
+            ForeColor = ColorEspresso,
+            Dock = DockStyle.Fill,
+            Cursor = Cursors.Hand
+        };
+        pnlTerms.Controls.Add(chkAgreeTerms);
+
+        var pnlTermsSpacer = new Panel { Dock = DockStyle.Bottom, Height = 10, BackColor = Color.Transparent };
 
         // 2. Main Confirmation Card
         var pnlCard = BuildReviewCard();
 
-        // Assembly
+        // Assembly (Order matters for Docking)
+        Controls.Add(pnlTermsSpacer);
+        Controls.Add(pnlTerms);
         Controls.Add(pnlCard);
         Controls.Add(pnlHeaderSpacer);
         Controls.Add(pnlHeader);
@@ -77,12 +109,11 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
 
     private Panel BuildReviewCard()
     {
-        int cardHeight = (RowHeight * TotalRows) + 4;
+        //int cardHeight = (RowHeight * TotalRows) + 4;
 
         var card = new Panel
         {
-            Dock = DockStyle.Top,
-            Height = cardHeight,
+            Dock = DockStyle.Fill,
             BackColor = ColorCardBg,
             Padding = new Padding(24, 0, 24, 0)
         };
@@ -131,9 +162,10 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
         var lblTag = new Label
         {
             Text = labelText,
-            Font = new Font("Segoe UI", 9.75f, FontStyle.Regular),
+            UseMnemonic = false,
+            Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
             ForeColor = ColorSubtext,
-            Location = new Point(24, y + 14),
+            Location = new Point(24, y + 13),
             AutoSize = true
         };
 
@@ -141,10 +173,11 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
         valLabel = new Label
         {
             Text = "—",
-            Font = new Font("Segoe UI Semibold", 10.25f, FontStyle.Bold),
+            UseMnemonic = false,
+            Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold),
             ForeColor = ColorEspresso,
             Anchor = AnchorStyles.Top | AnchorStyles.Right,
-            Location = new Point(container.Width - 524, y + 14),
+            Location = new Point(container.Width - 524, y + 13),
             Size = new Size(500, 24),
             TextAlign = ContentAlignment.MiddleRight
         };
@@ -203,15 +236,25 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
         lblPaymentMethodVal.Text = string.IsNullOrWhiteSpace(_draft.SelectedPaymentMethod)
             ? "Not specified"
             : _draft.SelectedPaymentMethod;
+
+        // Restore agreement checkbox state if returning back/forth
+        chkAgreeTerms.Checked = _draft.AgreedToTerms;
     }
 
     public void OnStepLeave(BookingDraftModel draft)
     {
-        // Data is already finalized in the draft
+        // Save checkbox state to draft model before proceeding to submit
+        draft.AgreedToTerms = chkAgreeTerms.Checked;
     }
 
     public bool ValidateStep(out string errorMessage)
     {
+        if (!chkAgreeTerms.Checked)
+        {
+            errorMessage = "The client must agree to the terms and conditions before confirming the booking.";
+            return false;
+        }
+
         errorMessage = string.Empty;
         return true;
     }

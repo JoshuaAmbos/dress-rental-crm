@@ -1,16 +1,16 @@
-﻿using System.ComponentModel;
-using CRM.infrastructure.data;
+﻿using CRM.infrastructure.data;
+using CRM.winforms.Controllers;
 using CRM.winforms.Controls.RentalReturnControls;
 using CRM.winforms.Forms;
 using CRM.winforms.Models.RentalBookingModels;
-using CRM.winforms.Services.RentalBookingServices;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel;
 
 namespace CRM.winforms.Views;
 
 public partial class RentalBookingsView : UserControl
 {
-    private readonly RentalBookingService _bookingService;
+    private readonly RentalBookingController _controller;
     private readonly Func<TenantCrmDbContext> _contextFactory;
     private readonly Func<int> _getCompanyId;
 
@@ -43,7 +43,7 @@ public partial class RentalBookingsView : UserControl
             return new TenantCrmDbContext(options);
         };
         _getCompanyId = () => 1;
-        _bookingService = new RentalBookingService(_contextFactory);
+        _controller = new RentalBookingController(_contextFactory);
 
         SetupFilterBar();
         WireGridEvents();
@@ -55,7 +55,7 @@ public partial class RentalBookingsView : UserControl
 
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         _getCompanyId = getCompanyId ?? throw new ArgumentNullException(nameof(getCompanyId));
-        _bookingService = new RentalBookingService(_contextFactory);
+        _controller = new RentalBookingController(_contextFactory);
 
         SetupFilterBar();
         WireGridEvents();
@@ -63,14 +63,12 @@ public partial class RentalBookingsView : UserControl
 
     private void SetupFilterBar()
     {
-        // 1. Reposition DataGridView slightly downward to make room for filters
         int filterY = 286;
         int filterHeight = 38;
 
         dgvBookings.Location = new Point(33, filterY + filterHeight + 10);
         dgvBookings.Height = ClientSize.Height - dgvBookings.Top - 30;
 
-        // 2. Container Panel for Filter Strip
         var pnlFilterStrip = new Panel
         {
             Location = new Point(33, filterY),
@@ -79,7 +77,6 @@ public partial class RentalBookingsView : UserControl
             BackColor = Color.Transparent
         };
 
-        // 3. Search Box (Right side)
         var pnlSearch = new Panel
         {
             Dock = DockStyle.Right,
@@ -109,7 +106,6 @@ public partial class RentalBookingsView : UserControl
         };
         pnlSearch.Controls.Add(txtSearch);
 
-        // 4. FlowLayoutPanel for Pill Tabs (Left side)
         pnlFilterTabs = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -144,9 +140,9 @@ public partial class RentalBookingsView : UserControl
     {
         try
         {
-            _pipelineData = await _bookingService.GetPipelineAsync(_getCompanyId(), _currentStageFilter, _currentSearchTerm);
+            // Call through the MVC Controller layer instead of service directly
+            _pipelineData = await _controller.LoadPipelineAsync(_getCompanyId(), _currentStageFilter, _currentSearchTerm);
 
-            // 1. Populate KPI Cards
             kpiCardControlActiveLeases?.SetData(
                 "ACTIVE LEASES",
                 _pipelineData.ActiveCount.ToString(),
@@ -171,10 +167,8 @@ public partial class RentalBookingsView : UserControl
                 Color.FromArgb(255, 241, 242),
                 Color.FromArgb(186, 105, 115));
 
-            // 2. Render Stage Filter Tabs with counts
             RenderFilterTabs();
 
-            // 3. Bind Grid Rows
             _cachedRows = _pipelineData.Rows;
             dgvBookings.DataSource = null;
             dgvBookings.DataSource = _cachedRows;
@@ -253,7 +247,6 @@ public partial class RentalBookingsView : UserControl
         {
             var item = _cachedRows[e.RowIndex];
 
-            // Direct return processing for active or overdue leases
             if (item.Stage is "Active" or "Overdue")
             {
                 var confirm = MessageBox.Show(
@@ -264,13 +257,13 @@ public partial class RentalBookingsView : UserControl
 
                 if (confirm == DialogResult.Yes)
                 {
-                    await _bookingService.ProcessReturnAsync(item.BookingId);
+                    // Call controller method instead of service directly
+                    await _controller.ProcessReturnAsync(item.BookingId);
                     await LoadBookingsAsync();
                 }
             }
             else
             {
-                // Open status update dialog for Fitting, Reserved, or Returned
                 OpenBookingDetailsDialog(item.BookingId);
             }
         }
@@ -289,7 +282,6 @@ public partial class RentalBookingsView : UserControl
         using var dialog = new BookingDetailsDialog(bookingId, _contextFactory);
         if (dialog.ShowDialog(this) == DialogResult.OK)
         {
-            // Refresh cards and table rows with the updated stage
             await LoadBookingsAsync();
         }
     }
