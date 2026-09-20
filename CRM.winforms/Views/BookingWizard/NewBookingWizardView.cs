@@ -49,19 +49,18 @@ public partial class NewBookingWizardView : UserControl
         // Step 1
         _steps.Add(new Step1ClientSelectionView(_contextFactory, _getCompanyId));
 
-        // Step 2: (Add Step2GarmentDatesView if created; fallback to placeholder if not ready)
+        // Step 2
         try
         {
             _steps.Add(new Step2GarmentDatesView(_contextFactory, _getCompanyId));
         }
         catch
         {
-            // Placeholder step so the wizard knows there is a next step
             _steps.Add(new PlaceholderStepView("Step 2: Garment & Dates"));
         }
 
-        // Placeholders for remaining steps
-        _steps.Add(new PlaceholderStepView("Step 3: Fittings & Notes"));
+        // Step 3
+        _steps.Add(new Step3MeasurementsNotesView()); 
         _steps.Add(new PlaceholderStepView("Step 4: Payment"));
         _steps.Add(new PlaceholderStepView("Step 5: Confirmation"));
 
