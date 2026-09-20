@@ -1,5 +1,6 @@
 ﻿using CRM.infrastructure.data;
 using CRM.winforms.Models;
+using CRM.winforms.Services.RentalBookingServices;
 
 namespace CRM.winforms.Views;
 
@@ -61,7 +62,7 @@ public partial class NewBookingWizardView : UserControl
 
         _steps.Add(new Step4PaymentDepositView());
 
-        _steps.Add(new PlaceholderStepView("Step 5: Confirmation"));
+        _steps.Add(new Step5ConfirmationView());
 
         ShowStep(0);
     }
@@ -83,66 +84,98 @@ public partial class NewBookingWizardView : UserControl
         _steps[_currentStepIndex].OnStepEnter(_draft);
         panelContentHost.ResumeLayout();
 
-        // Ensure buttons stay above the loaded view
         btnNext.BringToFront();
         btnCancel.BringToFront();
 
-        // Button labels
         btnCancel.Text = (_currentStepIndex == 0) ? "← Cancel" : "← Back";
         btnNext.Text = (_currentStepIndex == _steps.Count - 1) ? "Confirm Booking" : "Continue →";
     }
 
-    private void BtnNext_Click(object? sender, EventArgs e)
+    private async void BtnNext_Click(object? sender, EventArgs e)
     {
         if (_steps.Count == 0) return;
 
-        var currentStep = _steps[_currentStepIndex];
+        var step = _steps[_currentStepIndex];
 
-        // 1. Validate current step
-        if (!currentStep.ValidateStep(out string error))
+        if (!step.ValidateStep(out string error))
         {
-            MessageBox.Show(error, "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(error, "Validation Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
-        // 2. Save step data to draft
-        currentStep.OnStepLeave(_draft);
+        step.OnStepLeave(_draft);
 
-        // 3. Advance to the next step
         if (_currentStepIndex < _steps.Count - 1)
         {
             ShowStep(_currentStepIndex + 1);
         }
         else
         {
-            MessageBox.Show("Booking ready for submission!", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            try
+            {
+                btnNext.Enabled = false;
+                btnCancel.Enabled = false;
+                btnNext.Text = "Saving...";
+
+                var bookingService = new RentalBookingService(_contextFactory!);
+                int bookingId = await bookingService.CreateBookingFromDraftAsync(_getCompanyId!(), _draft);
+                string bookingCode = $"BKG-{bookingId:D4}";
+
+                ShowSuccessScreen(bookingCode);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Failed to save rental booking: {ex.GetBaseException().Message}",
+                    "Database Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+
+                btnNext.Enabled = true;
+                btnCancel.Enabled = true;
+                btnNext.Text = "Confirm Booking";
+            }
         }
+    }
+
+    private void ShowSuccessScreen(string bookingCode)
+    {
+        btnNext.Visible = false;
+        btnCancel.Visible = false;
+        wizardStepperControl.Visible = false;
+
+        panelContentHost.SuspendLayout();
+        panelContentHost.Controls.Clear();
+
+        var successView = new BookingSuccessView(bookingCode, () => _onCloseWizard?.Invoke())
+        {
+            Dock = DockStyle.Fill
+        };
+
+        panelContentHost.Controls.Add(successView);
+        panelContentHost.ResumeLayout();
     }
 
     private void BtnCancel_Click(object? sender, EventArgs e)
     {
         if (_currentStepIndex > 0)
         {
-            // If on Step 2 or later, act as "Back"
             ShowStep(_currentStepIndex - 1);
         }
         else
         {
-            // If on Step 1, exit wizard
             if (_onCloseWizard != null)
             {
                 _onCloseWizard.Invoke();
             }
             else if (Parent != null)
             {
-                // Fallback: Remove this view from parent container if callback was null
                 Parent.Controls.Remove(this);
                 Dispose();
             }
         }
     }
 
-    // Temporary step placeholder to prevent wizard truncation
     private class PlaceholderStepView : UserControl, IBookingWizardStep
     {
         public string StepTitle { get; }
