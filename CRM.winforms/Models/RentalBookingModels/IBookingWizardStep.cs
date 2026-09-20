@@ -1,4 +1,6 @@
-﻿namespace CRM.winforms.models;
+﻿using CRM.winforms.Models;
+
+namespace CRM.winforms.Views;
 
 public interface IBookingWizardStep
 {

@@ -1,6 +1,6 @@
-﻿using CRM.winforms.models;
-using System.Drawing.Drawing2D;
+﻿using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
+using CRM.winforms.Models;
 
 namespace CRM.winforms.Views;
 

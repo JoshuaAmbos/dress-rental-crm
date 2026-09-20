@@ -1,5 +1,5 @@
 ﻿using CRM.infrastructure.data;
-using CRM.winforms.models;
+using CRM.winforms.Models;
 
 namespace CRM.winforms.Views;
 
@@ -46,10 +46,8 @@ public partial class NewBookingWizardView : UserControl
 
         _steps.Clear();
 
-        // Step 1
         _steps.Add(new Step1ClientSelectionView(_contextFactory, _getCompanyId));
 
-        // Step 2
         try
         {
             _steps.Add(new Step2GarmentDatesView(_contextFactory, _getCompanyId));
@@ -59,9 +57,10 @@ public partial class NewBookingWizardView : UserControl
             _steps.Add(new PlaceholderStepView("Step 2: Garment & Dates"));
         }
 
-        // Step 3
-        _steps.Add(new Step3MeasurementsNotesView()); 
-        _steps.Add(new PlaceholderStepView("Step 4: Payment"));
+        _steps.Add(new Step3MeasurementsNotesView());
+
+        _steps.Add(new Step4PaymentDepositView());
+
         _steps.Add(new PlaceholderStepView("Step 5: Confirmation"));
 
         ShowStep(0);

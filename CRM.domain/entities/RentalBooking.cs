@@ -11,12 +11,15 @@ public class RentalBooking
     public decimal RentalFee { get; set; }
     public decimal SecurityDeposit { get; set; }
     public string? AlterationNotes { get; set; }
+    public decimal TotalAmount { get; set; }
+    public string? PaymentMethod { get; set; }
     public string BookingStage { get; set; } = "Fitting";
     public bool AgreedToTerms { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    // nav properties
+    // Navigation properties
     public Customer Customer { get; set; } = null!;
+
     public ICollection<BookingDetail> BookingDetails { get; set; } = [];
     public ICollection<ServiceIncident> ServiceIncidents { get; set; } = [];
 }

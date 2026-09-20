@@ -1,4 +1,5 @@
-﻿using CRM.infrastructure.data;
+﻿using CRM.domain.entities;
+using CRM.infrastructure.data;
 using CRM.winforms.Models;
 using CRM.winforms.Models.RentalBookingModels;
 using Microsoft.EntityFrameworkCore;
@@ -91,6 +92,51 @@ public class RentalBookingService
             RentalRate = g.RentalRate,
             SecurityDeposit = g.SecurityDeposit
         }).ToList();
+    }
+
+    public async Task<int> CreateBookingFromDraftAsync(int companyId, BookingDraftModel draft)
+    {
+        if (draft.SelectedCustomer == null)
+            throw new InvalidOperationException("Cannot create a booking without a selected customer.");
+
+        if (draft.SelectedGarments == null || draft.SelectedGarments.Count == 0)
+            throw new InvalidOperationException("Cannot create a booking without at least one selected garment.");
+
+        await using var db = _contextFactory();
+
+        // 1. Instantiate the RentalBooking parent entity
+        var booking = new RentalBooking
+        {
+            CompanyId = companyId,
+            CustomerId = draft.SelectedCustomer.CustomerId,
+            RentalStartDate = draft.RentalStartDate.Date,
+            RentalEndDate = draft.RentalEndDate.Date,
+            RentalFee = draft.TotalRentalFee,
+            SecurityDeposit = draft.TotalSecurityDeposit,
+            TotalAmount = draft.TotalDue,
+            PaymentMethod = draft.SelectedPaymentMethod,
+            AlterationNotes = draft.AlterationNotes,
+            BookingStage = "Fitting",
+            AgreedToTerms = draft.AgreedToTerms,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        // 2. Map selected garments into BookingDetail line items
+        foreach (var garment in draft.SelectedGarments)
+        {
+            booking.BookingDetails.Add(new BookingDetail
+            {
+                GarmentId = garment.GarmentId,
+                UnitPrice = garment.RentalRate,
+                AlterationNotes = draft.AlterationNotes
+            });
+        }
+
+        // 3. Save entity graph atomically
+        db.RentalBookings.Add(booking);
+        await db.SaveChangesAsync();
+
+        return booking.RentalBookingId;
     }
 
     public async Task ProcessReturnAsync(int bookingId)

@@ -1,16 +1,16 @@
-﻿using CRM.domain.entities;
-using CRM.infrastructure.data;
-using CRM.winforms.models;
-using CRM.winforms.Models;
-using CRM.winforms.Services.RentalBookingServices;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using CRM.domain.entities;
+using CRM.infrastructure.data;
+using CRM.winforms.Models;
+using CRM.winforms.Services.RentalBookingServices;
 
 namespace CRM.winforms.Views;
 
@@ -22,7 +22,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
 
     private BookingDraftModel? _draft;
     private List<GarmentPickerRowViewModel> _garments = new();
-    private GarmentPickerRowViewModel? _selectedGarment;
+    private readonly HashSet<int> _selectedGarmentIds = new();
 
     private Label lblSelectedCustomer = null!;
 
@@ -31,10 +31,11 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
     private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
     private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
     private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);
-    private static readonly Color ColorDivider = Color.FromArgb(242, 235, 235);
     private static readonly Color ColorCardBg = Color.White;
     private static readonly Color ColorSelectedBg = Color.FromArgb(254, 250, 250);
     private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
+
+    private const string CurrencySymbol = "$";
 
     public string StepTitle => "Select Garment & Dates";
 
@@ -78,7 +79,6 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             lblSubtitle.Visible = false;
         }
 
-        // Selected customer label
         lblSelectedCustomer = new Label
         {
             Anchor = AnchorStyles.Top | AnchorStyles.Right,
@@ -138,7 +138,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             lblAvailableGarments.AutoSize = true;
         }
 
-        // Garment ListBox
+        // Garment listBox
         if (listBoxGarments != null)
         {
             listBoxGarments.Location = new Point(32, 158);
@@ -159,8 +159,8 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             listBoxGarments.DrawItem -= ListBoxGarments_DrawItem;
             listBoxGarments.DrawItem += ListBoxGarments_DrawItem;
 
-            listBoxGarments.SelectedIndexChanged -= ListBoxGarments_SelectedIndexChanged;
-            listBoxGarments.SelectedIndexChanged += ListBoxGarments_SelectedIndexChanged;
+            listBoxGarments.MouseClick -= ListBoxGarments_MouseClick;
+            listBoxGarments.MouseClick += ListBoxGarments_MouseClick;
         }
 
         if (dtpStartDate != null)
@@ -196,24 +196,13 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             listBoxGarments.BeginUpdate();
             listBoxGarments.Items.Clear();
 
-            int restoreIdx = -1;
-            for (int i = 0; i < _garments.Count; i++)
+            foreach (var item in _garments)
             {
-                var item = _garments[i];
                 listBoxGarments.Items.Add(item);
-
-                if (_selectedGarment != null && item.GarmentId == _selectedGarment.GarmentId)
-                {
-                    restoreIdx = i;
-                }
-            }
-
-            if (restoreIdx >= 0)
-            {
-                listBoxGarments.SelectedIndex = restoreIdx;
             }
 
             listBoxGarments.EndUpdate();
+            UpdateSectionHeader();
         }
         catch (Exception ex)
         {
@@ -233,14 +222,16 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
-        bool isSelected = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
+        bool isSelected = _selectedGarmentIds.Contains(item.GarmentId);
         var bounds = e.Bounds;
 
+        // Gap Fill
         using (var bgBrush = new SolidBrush(ColorViewBg))
         {
             g.FillRectangle(bgBrush, bounds);
         }
 
+        // Floating Card
         var cardRect = new Rectangle(bounds.Left + 1, bounds.Top + 3, bounds.Width - 4, bounds.Height - 7);
 
         using (var cardPath = CreateRoundedRectangle(cardRect, 8))
@@ -256,26 +247,35 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             }
         }
 
-        int radioDiameter = 14;
-        int radioX = cardRect.Left + 18;
-        int radioY = cardRect.Top + (cardRect.Height - radioDiameter) / 2;
-        var radioRect = new Rectangle(radioX, radioY, radioDiameter, radioDiameter);
+        // Multi-Select checkbox
+        int boxSize = 16;
+        int boxX = cardRect.Left + 18;
+        int boxY = cardRect.Top + (cardRect.Height - boxSize) / 2;
+        var boxRect = new Rectangle(boxX, boxY, boxSize, boxSize);
 
-        using (var radioPen = new Pen(isSelected ? ColorDustyRose : ColorBorder, 1.5f))
+        using (var boxPath = CreateRoundedRectangle(boxRect, 4))
         {
-            g.DrawEllipse(radioPen, radioRect);
+            if (isSelected)
+            {
+                using var fillBrush = new SolidBrush(ColorDustyRose);
+                g.FillPath(fillBrush, boxPath);
+
+                using var checkPen = new Pen(Color.White, 1.75f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+                g.DrawLines(checkPen, new[]
+                {
+                    new Point(boxRect.Left + 3, boxRect.Top + 8),
+                    new Point(boxRect.Left + 7, boxRect.Top + 12),
+                    new Point(boxRect.Left + 13, boxRect.Top + 4)
+                });
+            }
+            else
+            {
+                using var borderPen = new Pen(ColorBorder, 1.5f);
+                g.DrawPath(borderPen, boxPath);
+            }
         }
 
-        if (isSelected)
-        {
-            int dotDiameter = 6;
-            int dotX = radioX + (radioDiameter - dotDiameter) / 2;
-            int dotY = radioY + (radioDiameter - dotDiameter) / 2;
-            using var dotBrush = new SolidBrush(ColorDustyRose);
-            g.FillEllipse(dotBrush, new Rectangle(dotX, dotY, dotDiameter, dotDiameter));
-        }
-
-        int textLeft = radioX + radioDiameter + 18;
+        int textLeft = boxX + boxSize + 18;
         int topY = cardRect.Top + 13;
 
         using (var titleFont = new Font("Segoe UI Semibold", 10.25f, FontStyle.Bold))
@@ -289,8 +289,8 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
         using (var priceFont = new Font("Segoe UI Semibold", 10.5f, FontStyle.Bold))
         using (var depFont = new Font("Segoe UI", 8.5f, FontStyle.Regular))
         {
-            string priceText = $"${item.RentalRate:N0}/day";
-            string depText = $"dep. ${item.SecurityDeposit:N0}";
+            string priceText = $"{CurrencySymbol}{item.RentalRate:N0}/lease";
+            string depText = $"dep. {CurrencySymbol}{item.SecurityDeposit:N0}";
 
             var priceSize = TextRenderer.MeasureText(g, priceText, priceFont);
             var depSize = TextRenderer.MeasureText(g, depText, depFont);
@@ -301,12 +301,32 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
         }
     }
 
-    private void ListBoxGarments_SelectedIndexChanged(object? sender, EventArgs e)
+    private void ListBoxGarments_MouseClick(object? sender, MouseEventArgs e)
     {
-        if (listBoxGarments.SelectedItem is GarmentPickerRowViewModel selected)
+        int index = listBoxGarments.IndexFromPoint(e.Location);
+        if (index >= 0 && index < listBoxGarments.Items.Count)
         {
-            _selectedGarment = selected;
+            if (listBoxGarments.Items[index] is GarmentPickerRowViewModel item)
+            {
+                if (_selectedGarmentIds.Contains(item.GarmentId))
+                    _selectedGarmentIds.Remove(item.GarmentId);
+                else
+                    _selectedGarmentIds.Add(item.GarmentId);
+
+                listBoxGarments.Invalidate();
+                UpdateSectionHeader();
+            }
         }
+    }
+
+    private void UpdateSectionHeader()
+    {
+        if (lblAvailableGarments == null) return;
+
+        int count = _selectedGarmentIds.Count;
+        lblAvailableGarments.Text = count > 0
+            ? $"AVAILABLE GARMENTS ({count} selected)"
+            : "AVAILABLE GARMENTS";
     }
 
     public void OnStepEnter(BookingDraftModel draft)
@@ -318,14 +338,11 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
         if (dtpStartDate != null) dtpStartDate.Value = _draft.RentalStartDate;
         if (dtpEndDate != null) dtpEndDate.Value = _draft.RentalEndDate;
 
-        if (_draft.SelectedGarments.Count > 0)
+        // Restore previously selected garments
+        _selectedGarmentIds.Clear();
+        foreach (var g in _draft.SelectedGarments)
         {
-            var first = _draft.SelectedGarments[0];
-            _selectedGarment = new GarmentPickerRowViewModel
-            {
-                GarmentEntity = first,
-                GarmentId = first.GarmentId
-            };
+            _selectedGarmentIds.Add(g.GarmentId);
         }
 
         _ = LoadAvailableGarmentsAsync();
@@ -336,10 +353,10 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
         if (dtpStartDate != null) draft.RentalStartDate = dtpStartDate.Value.Date;
         if (dtpEndDate != null) draft.RentalEndDate = dtpEndDate.Value.Date;
 
-        if (_selectedGarment != null)
-        {
-            draft.SelectedGarments = new List<Garment> { _selectedGarment.GarmentEntity };
-        }
+        draft.SelectedGarments = _garments
+            .Where(g => _selectedGarmentIds.Contains(g.GarmentId))
+            .Select(g => g.GarmentEntity)
+            .ToList();
     }
 
     public bool ValidateStep(out string errorMessage)
@@ -350,9 +367,9 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             return false;
         }
 
-        if (_selectedGarment == null)
+        if (_selectedGarmentIds.Count == 0)
         {
-            errorMessage = "Please choose an available garment to continue.";
+            errorMessage = "Please choose at least one available garment to continue.";
             return false;
         }
 

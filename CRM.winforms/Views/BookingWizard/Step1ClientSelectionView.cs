@@ -2,7 +2,6 @@
 using CRM.infrastructure.data;
 using CRM.winforms.Controls;
 using CRM.winforms.Forms;
-using CRM.winforms.models;
 using CRM.winforms.Models;
 using CRM.winforms.Services;
 using System.ComponentModel;
