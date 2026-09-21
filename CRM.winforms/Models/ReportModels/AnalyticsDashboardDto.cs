@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace CRM.winforms.Models;
+﻿namespace CRM.winforms.Models;
 
 public class AnalyticsDashboardDto
 {
@@ -16,6 +13,7 @@ public class AnalyticsDashboardDto
     public List<MonthlyRevenueMetric> MonthlyRevenueTrend { get; set; } = new();
     public List<StageDistributionMetric> StageDistribution { get; set; } = new();
     public List<TopGarmentReportRow> TopPerformingGarments { get; set; } = new();
+    public List<TopCustomerReportRow> TopValuedCustomers { get; set; } = new();
     public List<RentalLedgerRowDto> AuditLedger { get; set; } = new();
 }
 
@@ -41,6 +39,16 @@ public class TopGarmentReportRow
     public string Size { get; set; } = string.Empty;
     public int TotalRentals { get; set; }
     public decimal TotalRevenueGenerated { get; set; }
+}
+
+public class TopCustomerReportRow
+{
+    public int CustomerId { get; set; }
+    public string ClientName { get; set; } = string.Empty;
+    public string ContactNumber { get; set; } = string.Empty;
+    public int TotalBookings { get; set; }
+    public decimal TotalSpent { get; set; }
+    public string ClientTier { get; set; } = "Standard";
 }
 
 public class RentalLedgerRowDto

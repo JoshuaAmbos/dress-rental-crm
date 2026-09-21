@@ -34,6 +34,7 @@ public partial class AnalyticsAndReportsView : UserControl
 
     // Grids
     private DataGridView dgvTopGarments = null!;
+    private DataGridView dgvTopCustomers = null!;
     private DataGridView dgvAuditLedger = null!;
 
     // Cached state
@@ -42,7 +43,6 @@ public partial class AnalyticsAndReportsView : UserControl
     // Atelier Palette
     private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
     private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorDustyRoseHover = Color.FromArgb(171, 99, 108);
     private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
     private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);
     private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
@@ -63,7 +63,7 @@ public partial class AnalyticsAndReportsView : UserControl
         Dock = DockStyle.Fill;
         BackColor = ColorViewBg;
         AutoScroll = true;
-        Padding = new Padding(32, 24, 32, 28);
+        Padding = new Padding(32, 24, 32, 32);
         Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
         // 1. Header
@@ -78,15 +78,15 @@ public partial class AnalyticsAndReportsView : UserControl
         // 4. Visual Charts Row (Bar + Donut)
         var pnlChartsRow = BuildChartsRow();
 
-        // 5. Top Garments Section
-        var pnlLeaderboard = BuildLeaderboardSection();
+        // 5. Dual Leaderboards Row (Top Garments + Top Customers side-by-side)
+        var pnlLeaderboardRow = BuildLeaderboardsSection();
 
         // 6. Detailed Audit Ledger Section
         var pnlLedgerSection = BuildAuditLedgerSection();
 
         // Adding top-down docking hierarchy in reverse order
         Controls.Add(pnlLedgerSection);
-        Controls.Add(pnlLeaderboard);
+        Controls.Add(pnlLeaderboardRow);
         Controls.Add(pnlChartsRow);
         Controls.Add(pnlKpiRow);
         Controls.Add(pnlFilterBar);
@@ -108,7 +108,7 @@ public partial class AnalyticsAndReportsView : UserControl
 
         var lblSub = new Label
         {
-            Text = "Executive lease revenue metrics, fleet utilization, and transaction compliance.",
+            Text = "Executive lease revenue metrics, fleet utilization, and customer performance.",
             UseMnemonic = false,
             Font = new Font("Segoe UI", 9.75f),
             ForeColor = ColorSubtext,
@@ -233,7 +233,6 @@ public partial class AnalyticsAndReportsView : UserControl
         };
 
         pnlDatePickers.Controls.AddRange(new Control[] { lblFrom, dtpStart, lblTo, dtpEnd, btnApplyFilter });
-
         pnl.Controls.AddRange(new Control[] { pnlPresets, pnlDatePickers });
         return pnl;
     }
@@ -323,26 +322,46 @@ public partial class AnalyticsAndReportsView : UserControl
         return pnl;
     }
 
-    private Panel BuildLeaderboardSection()
+    private Panel BuildLeaderboardsSection()
     {
-        var pnl = new Panel { Dock = DockStyle.Top, Height = 260, Padding = new Padding(0, 6, 0, 14), BackColor = Color.Transparent };
-        var card = CreateCardContainer("TOP PERFORMING WARDROBE ASSETS", out var body);
+        var pnl = new Panel { Dock = DockStyle.Top, Height = 280, Padding = new Padding(0, 6, 0, 14), BackColor = Color.Transparent };
+        var table = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1 };
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+
+        // 1. Left: Top Garments Leaderboard
+        var cardGarments = CreateCardContainer("TOP PERFORMING WARDROBE ASSETS", out var bodyGarments);
+        cardGarments.Margin = new Padding(0, 0, 8, 0);
 
         dgvTopGarments = CreateBaseDataGrid();
-        dgvTopGarments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "ItemCode", HeaderText = "CODE", Width = 110, SortMode = DataGridViewColumnSortMode.NotSortable, DefaultCellStyle = { Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold) } });
+        dgvTopGarments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "ItemCode", HeaderText = "CODE", Width = 95, SortMode = DataGridViewColumnSortMode.NotSortable, DefaultCellStyle = { Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold) } });
         dgvTopGarments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "StyleName", HeaderText = "GARMENT STYLE", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, SortMode = DataGridViewColumnSortMode.NotSortable });
-        dgvTopGarments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "Size", HeaderText = "SIZE", Width = 80, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleCenter } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleCenter } });
-        dgvTopGarments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalRentals", HeaderText = "TOTAL LEASES", Width = 120, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight } });
-        dgvTopGarments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalRevenueGenerated", HeaderText = "TOTAL REVENUE", Width = 140, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "₱#,##0.00", Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold), ForeColor = ColorDustyRose } });
+        dgvTopGarments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "Size", HeaderText = "SIZE", Width = 65, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleCenter } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleCenter } });
+        dgvTopGarments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalRentals", HeaderText = "LEASES", Width = 75, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight } });
+        dgvTopGarments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalRevenueGenerated", HeaderText = "REVENUE", Width = 110, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "₱#,##0.00", Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold), ForeColor = ColorDustyRose } });
+        bodyGarments.Controls.Add(dgvTopGarments);
 
-        body.Controls.Add(dgvTopGarments);
-        pnl.Controls.Add(card);
+        // 2. Right: Top Valued Clients Leaderboard
+        var cardCustomers = CreateCardContainer("TOP VALUED CLIENTS (VIP LEADERBOARD)", out var bodyCustomers);
+        cardCustomers.Margin = new Padding(8, 0, 0, 0);
+
+        dgvTopCustomers = CreateBaseDataGrid();
+        dgvTopCustomers.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "ClientName", HeaderText = "CLIENT NAME", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, SortMode = DataGridViewColumnSortMode.NotSortable, DefaultCellStyle = { Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold) } });
+        dgvTopCustomers.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "ClientTier", HeaderText = "TIER", Width = 80, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleCenter } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleCenter, Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold), ForeColor = ColorDustyRose } });
+        dgvTopCustomers.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalBookings", HeaderText = "BOOKINGS", Width = 90, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight } });
+        dgvTopCustomers.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalSpent", HeaderText = "TOTAL SPENT", Width = 120, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "₱#,##0.00", Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold), ForeColor = ColorDustyRose } });
+        bodyCustomers.Controls.Add(dgvTopCustomers);
+
+        table.Controls.Add(cardGarments, 0, 0);
+        table.Controls.Add(cardCustomers, 1, 0);
+
+        pnl.Controls.Add(table);
         return pnl;
     }
 
     private Panel BuildAuditLedgerSection()
     {
-        var pnl = new Panel { Dock = DockStyle.Top, Height = 340, Padding = new Padding(0, 6, 0, 16), BackColor = Color.Transparent };
+        var pnl = new Panel { Dock = DockStyle.Top, Height = 340, Padding = new Padding(0, 6, 0, 20), BackColor = Color.Transparent };
         var card = CreateCardContainer("ITEMIZED AUDIT LEDGER (TRANSACTION DRILL-DOWN)", out var body);
 
         dgvAuditLedger = CreateBaseDataGrid();
@@ -463,12 +482,17 @@ public partial class AnalyticsAndReportsView : UserControl
             chartRevenue.SetData(data.MonthlyRevenueTrend);
             chartStages.SetData(data.StageDistribution);
 
-            // 3. Leaderboard Grid
+            // 3. Top Garments Grid
             dgvTopGarments.DataSource = null;
             dgvTopGarments.DataSource = data.TopPerformingGarments;
             dgvTopGarments.ClearSelection();
 
-            // 4. Audit Ledger Grid
+            // 4. Top Customers Grid
+            dgvTopCustomers.DataSource = null;
+            dgvTopCustomers.DataSource = data.TopValuedCustomers;
+            dgvTopCustomers.ClearSelection();
+
+            // 5. Audit Ledger Grid
             _currentLedger = data.AuditLedger;
             dgvAuditLedger.DataSource = null;
             dgvAuditLedger.DataSource = _currentLedger;

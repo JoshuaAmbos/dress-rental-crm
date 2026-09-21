@@ -1,16 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Text;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using CRM.domain.entities;
+﻿using CRM.domain.entities;
 using CRM.infrastructure.data;
 using CRM.winforms.Models;
 using CRM.winforms.Services.RentalBookingServices;
+using System.ComponentModel;
+using System.Drawing.Drawing2D;
+using System.Drawing.Text;
 
 namespace CRM.winforms.Views;
 
@@ -23,6 +17,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
     private BookingDraftModel? _draft;
     private List<GarmentPickerRowViewModel> _garments = new();
     private readonly HashSet<int> _selectedGarmentIds = new();
+    private bool _isUpdatingDates = false;
 
     private Label lblSelectedCustomer = null!;
 
@@ -35,7 +30,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
     private static readonly Color ColorSelectedBg = Color.FromArgb(254, 250, 250);
     private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
 
-    private const string CurrencySymbol = "$";
+    private const string CurrencySymbol = "₱";
 
     public string StepTitle => "Select Garment & Dates";
 
@@ -64,7 +59,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
         BackColor = ColorViewBg;
         Padding = new Padding(32, 20, 32, 20);
 
-        // Header
+        // Header Title
         if (lblTitle != null)
         {
             lblTitle.Text = "Select Garment & Dates";
@@ -133,7 +128,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             lblAvailableGarments.AutoSize = true;
         }
 
-        // Garment listBox
+        // Garment ListBox
         if (listBoxGarments != null)
         {
             listBoxGarments.Location = new Point(32, 158);
@@ -160,20 +155,41 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
 
         if (dtpStartDate != null)
         {
-            dtpStartDate.ValueChanged += async (s, e) =>
-            {
-                if (dtpEndDate != null && dtpEndDate.Value < dtpStartDate.Value)
-                {
-                    dtpEndDate.Value = dtpStartDate.Value.AddDays(3);
-                }
-                await LoadAvailableGarmentsAsync();
-            };
+            dtpStartDate.ValueChanged -= DtpStartDate_ValueChanged;
+            dtpStartDate.ValueChanged += DtpStartDate_ValueChanged;
         }
 
         if (dtpEndDate != null)
         {
-            dtpEndDate.ValueChanged += async (s, e) => await LoadAvailableGarmentsAsync();
+            dtpEndDate.ValueChanged -= DtpEndDate_ValueChanged;
+            dtpEndDate.ValueChanged += DtpEndDate_ValueChanged;
         }
+    }
+
+    private async void DtpStartDate_ValueChanged(object? sender, EventArgs e)
+    {
+        if (_isUpdatingDates || dtpStartDate == null) return;
+
+        try
+        {
+            _isUpdatingDates = true;
+            if (dtpEndDate != null && dtpEndDate.Value.Date < dtpStartDate.Value.Date)
+            {
+                dtpEndDate.Value = dtpStartDate.Value.Date.AddDays(3);
+            }
+        }
+        finally
+        {
+            _isUpdatingDates = false;
+        }
+
+        await LoadAvailableGarmentsAsync();
+    }
+
+    private async void DtpEndDate_ValueChanged(object? sender, EventArgs e)
+    {
+        if (_isUpdatingDates) return;
+        await LoadAvailableGarmentsAsync();
     }
 
     public async Task LoadAvailableGarmentsAsync()
@@ -186,7 +202,14 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             DateTime start = dtpStartDate?.Value.Date ?? DateTime.Today;
             DateTime end = dtpEndDate?.Value.Date ?? DateTime.Today.AddDays(3);
 
+            if (end < start) end = start.AddDays(3);
+
+            // Query only garments free of overlapping bookings in this exact date range
             _garments = await _bookingService.GetAvailableGarmentsAsync(_getCompanyId(), start, end);
+
+            // Prune any previously selected garments that are no longer available in this date range
+            var availableIds = _garments.Select(g => g.GarmentId).ToHashSet();
+            _selectedGarmentIds.IntersectWith(availableIds);
 
             listBoxGarments.BeginUpdate();
             listBoxGarments.Items.Clear();
@@ -201,7 +224,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Failed to query garments: {ex.GetBaseException().Message}", "Data Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show($"Failed to query available garments: {ex.GetBaseException().Message}", "Data Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
     }
 
@@ -220,7 +243,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
         bool isSelected = _selectedGarmentIds.Contains(item.GarmentId);
         var bounds = e.Bounds;
 
-        // Gap Fill
+        // Background
         using (var bgBrush = new SolidBrush(ColorViewBg))
         {
             g.FillRectangle(bgBrush, bounds);
@@ -242,7 +265,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             }
         }
 
-        // Multi-Select checkbox
+        // Checkbox
         int boxSize = 16;
         int boxX = cardRect.Left + 18;
         int boxY = cardRect.Top + (cardRect.Height - boxSize) / 2;
@@ -270,6 +293,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             }
         }
 
+        // Details
         int textLeft = boxX + boxSize + 18;
         int topY = cardRect.Top + 13;
 
@@ -281,6 +305,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             TextRenderer.DrawText(g, subtitle, subFont, new Point(textLeft, topY + 20), ColorSubtext);
         }
 
+        // Price & Deposit
         using (var priceFont = new Font("Segoe UI Semibold", 10.5f, FontStyle.Bold))
         using (var depFont = new Font("Segoe UI", 8.5f, FontStyle.Regular))
         {
@@ -318,22 +343,46 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
     {
         if (lblAvailableGarments == null) return;
 
-        int count = _selectedGarmentIds.Count;
-        lblAvailableGarments.Text = count > 0
-            ? $"AVAILABLE GARMENTS ({count} selected)"
-            : "AVAILABLE GARMENTS";
+        int selectedCount = _selectedGarmentIds.Count;
+        int totalAvailable = _garments.Count;
+
+        if (totalAvailable == 0)
+        {
+            lblAvailableGarments.Text = "AVAILABLE GARMENTS (0 available for selected dates)";
+        }
+        else if (selectedCount > 0)
+        {
+            lblAvailableGarments.Text = $"AVAILABLE GARMENTS ({selectedCount} of {totalAvailable} selected)";
+        }
+        else
+        {
+            lblAvailableGarments.Text = $"AVAILABLE GARMENTS ({totalAvailable} available)";
+        }
     }
 
     public void OnStepEnter(BookingDraftModel draft)
     {
         _draft = draft;
-
         UpdateSelectedCustomerLabel();
 
-        if (dtpStartDate != null) dtpStartDate.Value = _draft.RentalStartDate;
-        if (dtpEndDate != null) dtpEndDate.Value = _draft.RentalEndDate;
+        _isUpdatingDates = true;
+        try
+        {
+            // Ensure valid date ranges
+            DateTime initialStart = (_draft.RentalStartDate > DateTime.MinValue) ? _draft.RentalStartDate : DateTime.Today;
+            DateTime initialEnd = (_draft.RentalEndDate > DateTime.MinValue) ? _draft.RentalEndDate : initialStart.AddDays(3);
 
-        // Restore previously selected garments
+            if (initialEnd < initialStart) initialEnd = initialStart.AddDays(3);
+
+            if (dtpStartDate != null) dtpStartDate.Value = initialStart;
+            if (dtpEndDate != null) dtpEndDate.Value = initialEnd;
+        }
+        finally
+        {
+            _isUpdatingDates = false;
+        }
+
+        // Pre-populate selections from draft
         _selectedGarmentIds.Clear();
         foreach (var g in _draft.SelectedGarments)
         {
@@ -362,7 +411,8 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             return false;
         }
 
-        if (_selectedGarmentIds.Count == 0)
+        var validSelected = _garments.Where(g => _selectedGarmentIds.Contains(g.GarmentId)).ToList();
+        if (validSelected.Count == 0)
         {
             errorMessage = "Please choose at least one available garment to continue.";
             return false;

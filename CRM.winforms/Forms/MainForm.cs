@@ -1,14 +1,17 @@
-﻿using System;
+﻿using CRM.infrastructure.data;
+using CRM.winforms.Controls;
+using CRM.winforms.Models;
+using CRM.winforms.Properties;
+using CRM.winforms.Views;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.VisualBasic.ApplicationServices;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Net.NetworkInformation;
 using System.Windows.Forms;
-using Microsoft.EntityFrameworkCore;
-using CRM.infrastructure.data;
-using CRM.winforms.Controls;
-using CRM.winforms.Models;
-using CRM.winforms.Views;
 
 namespace CRM.winforms.Forms;
 
@@ -150,44 +153,38 @@ public partial class MainForm : Form
         var pnlBrand = new Panel
         {
             Location = new Point(0, 0),
-            Size = new Size(198, 42),
+            Size = new Size(198, 48), // Increased slightly to 48px height to comfortably fit the 42px icon and stacked text
             BackColor = Color.Transparent
         };
 
-        var iconBrand = new Panel
+        var picIcon = new PictureBox
         {
-            Size = new Size(34, 34),
-            Location = new Point(0, 2),
-            BackColor = ColorDustyRose
-        };
-        iconBrand.Paint += (s, e) =>
-        {
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            using var path = GraphicsHelper.CreateRoundedRectangle(new Rectangle(0, 0, 33, 33), 8);
-            using var brush = new SolidBrush(ColorDustyRose);
-            e.Graphics.FillPath(brush, path);
-            using var font = new Font("Segoe UI", 12f, FontStyle.Bold);
-            using var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-            e.Graphics.DrawString("✦", font, Brushes.White, new RectangleF(0, 0, 34, 34), sf);
+            Size = new Size(42, 42),
+            Location = new Point(0, 3), // Centered vertically against the 48px panel
+            Image = Properties.Resources.ProjectCRM_LogoNoText,
+            SizeMode = PictureBoxSizeMode.Zoom,
+            BackColor = Color.Transparent
         };
 
         var lblBrandName = new Label
         {
             Text = "Atelier",
-            Font = new Font("Segoe UI", 12.5f, FontStyle.Bold),
+            Font = new Font("Segoe UI", 14f, FontStyle.Bold),
             ForeColor = ColorEspresso,
-            Location = new Point(42, 0),
+            Location = new Point(50, 2), // 8px gap after the 42px icon
             AutoSize = true
         };
+
         var lblBrandSub = new Label
         {
             Text = "CRM",
-            Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold),
+            Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
             ForeColor = ColorMutedLabel,
-            Location = new Point(43, 22),
+            Location = new Point(52, 26), // Pushed below the Atelier baseline to prevent overlap
             AutoSize = true
         };
-        pnlBrand.Controls.AddRange(new Control[] { iconBrand, lblBrandName, lblBrandSub });
+
+        pnlBrand.Controls.AddRange(new Control[] { picIcon, lblBrandName, lblBrandSub });
 
         // 2. Tenant Button ("Main Showroom ▾")
         var pnlTenant = new Panel

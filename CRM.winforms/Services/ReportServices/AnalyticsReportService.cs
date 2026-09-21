@@ -140,7 +140,41 @@ public class AnalyticsReportService
             .Take(5)
             .ToList();
 
-        // 7. Audit Ledger Table Rows
+        // 7. Top Valued Customers Leaderboard (VIP Clients)
+        var topCustomers = bookings
+            .Where(b => b.Customer != null && !IsCancelled(b.BookingStage))
+            .GroupBy(b => b.CustomerId)
+            .Select(g =>
+            {
+                var first = g.First();
+                var clientName = first.Customer != null
+                    ? $"{first.Customer.FirstName} {first.Customer.LastName}".Trim()
+                    : $"Client #{g.Key}";
+                var phone = first.Customer?.ContactNumber ?? "—";
+                int totalBookings = g.Count();
+                decimal totalSpent = g.Sum(b => b.RentalFee);
+
+                // Tiering assignment
+                string tier = totalSpent >= 15000 || totalBookings >= 3 ? "VIP"
+                            : totalSpent >= 8000 || totalBookings >= 2 ? "Gold"
+                            : "Standard";
+
+                return new TopCustomerReportRow
+                {
+                    CustomerId = g.Key,
+                    ClientName = clientName,
+                    ContactNumber = phone,
+                    TotalBookings = totalBookings,
+                    TotalSpent = totalSpent,
+                    ClientTier = tier
+                };
+            })
+            .OrderByDescending(c => c.TotalSpent)
+            .ThenByDescending(c => c.TotalBookings)
+            .Take(5)
+            .ToList();
+
+        // 8. Audit Ledger Table Rows
         var auditLedger = bookings
             .OrderByDescending(b => b.RentalStartDate)
             .Select(b => new RentalLedgerRowDto
@@ -172,6 +206,7 @@ public class AnalyticsReportService
             MonthlyRevenueTrend = monthlyTrend,
             StageDistribution = stageDistribution,
             TopPerformingGarments = topGarments,
+            TopValuedCustomers = topCustomers, // <-- Mapped
             AuditLedger = auditLedger
         };
     }
