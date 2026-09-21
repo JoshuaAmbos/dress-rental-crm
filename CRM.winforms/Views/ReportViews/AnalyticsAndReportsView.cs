@@ -2,8 +2,8 @@
 using CRM.winforms.Controllers;
 using CRM.winforms.Controls;
 using CRM.winforms.Models;
+using CRM.winforms.Services;
 using System.Drawing.Drawing2D;
-using System.Text;
 
 namespace CRM.winforms.Views;
 
@@ -12,6 +12,7 @@ public partial class AnalyticsAndReportsView : UserControl
     private readonly Func<TenantCrmDbContext> _contextFactory;
     private readonly Func<int> _getCompanyId;
     private readonly AnalyticsReportController _controller;
+    private readonly CsvExportService _csvExportService;
 
     // Filter Controls
     private DateTimePicker dtpStart = null!;
@@ -51,6 +52,7 @@ public partial class AnalyticsAndReportsView : UserControl
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         _getCompanyId = getCompanyId ?? throw new ArgumentNullException(nameof(getCompanyId));
         _controller = new AnalyticsReportController(_contextFactory);
+        _csvExportService = new CsvExportService();
 
         InitializeLayout();
         _ = LoadDashboardDataAsync();
@@ -478,52 +480,43 @@ public partial class AnalyticsAndReportsView : UserControl
         }
     }
 
-    private void BtnExportCsv_Click(object? sender, EventArgs e)
+    private async void BtnExportCsv_Click(object? sender, EventArgs e)
     {
         if (_currentLedger.Count == 0)
         {
-            MessageBox.Show("No transaction records available to export for the selected filter.", "Export Notice", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(
+                "No transaction records available to export for the selected filter.",
+                "Export Notice",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
             return;
         }
 
         using var sfd = new SaveFileDialog
         {
             Filter = "CSV File (*.csv)|*.csv",
-            FileName = $"Vantage_Rental_Ledger_{DateTime.Now:yyyyMMdd_HHmm}.csv"
+            FileName = $"Atelier_Rental_Ledger_{DateTime.Now:yyyyMMdd_HHmm}.csv"
         };
 
         if (sfd.ShowDialog() != DialogResult.OK) return;
 
         try
         {
-            var sb = new StringBuilder();
-            sb.AppendLine("Booking Code,Client,Garments,Start Date,End Date,Rental Fee,Security Deposit,Stage,Payment Method");
+            await _csvExportService.ExportRentalLedgerAsync(sfd.FileName, _currentLedger);
 
-            foreach (var row in _currentLedger)
-            {
-                string client = EscapeCsv(row.ClientName);
-                string garments = EscapeCsv(row.GarmentSummary);
-                string stage = EscapeCsv(row.Stage);
-                string payment = EscapeCsv(row.PaymentMethod);
-
-                sb.AppendLine($"{row.BookingCode},{client},{garments},{row.RentalStartDate:yyyy-MM-dd},{row.RentalEndDate:yyyy-MM-dd},{row.RentalFee:F2},{row.SecurityDeposit:F2},{stage},{payment}");
-            }
-
-            File.WriteAllText(sfd.FileName, sb.ToString(), Encoding.UTF8);
-            MessageBox.Show($"Audit ledger successfully exported to:\n{sfd.FileName}", "Export Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(
+                $"Audit ledger successfully exported to:\n{sfd.FileName}",
+                "Export Complete",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Failed to export CSV: {ex.Message}", "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(
+                $"Failed to export CSV: {ex.Message}",
+                "Export Error",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
         }
-    }
-
-    private static string EscapeCsv(string field)
-    {
-        if (field.Contains(",") || field.Contains("\"") || field.Contains("\n") || field.Contains("\r"))
-        {
-            return $"\"{field.Replace("\"", "\"\"")}\"";
-        }
-        return field;
     }
 }
