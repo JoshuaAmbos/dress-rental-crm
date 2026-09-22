@@ -1,4 +1,5 @@
-﻿using CRM.infrastructure.data;
+﻿using CRM.domain.entities;
+using CRM.infrastructure.data;
 using CRM.winforms.Controls;
 using CRM.winforms.Services.RentalBookingServices;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +15,10 @@ public partial class CatalogView : UserControl
 
     private string _currentStatusFilter = "All";
     private string _currentSearchTerm = string.Empty;
+
+    // Filter Bar & Tracking
+    private FlowLayoutPanel pnlFilterTabs = null!;
+    private readonly List<Button> _filterButtons = new();
 
     // Atelier Palette
     private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
@@ -62,26 +67,45 @@ public partial class CatalogView : UserControl
             label1.ForeColor = ColorEspresso;
         }
 
-        searchBar1.SetCueBanner("Search by garment name, SKU, or category...");
+        // Hide legacy designer buttons so the unified dynamic bar takes over
+        if (secondaryButtonAll != null) secondaryButtonAll.Visible = false;
+        if (secondaryButtonRented != null) secondaryButtonRented.Visible = false;
 
-        if (searchBar1 is Control searchCtrl)
-        {
-            searchCtrl.TextChanged += SearchBar_TextChanged;
-        }
+        // Initialize Dynamic Atelier Filter Strip
+        SetupFilterTabs();
 
-        // Re-wire status buttons
-        if (secondaryButtonAll != null)
+        if (searchBar1 != null)
         {
-            secondaryButtonAll.Click -= secondaryButtonAll_Click;
-            secondaryButtonAll.Click += secondaryButtonAll_Click;
-        }
-        if (secondaryButtonRented != null)
-        {
-            secondaryButtonRented.Click -= secondaryButtonRented_Click;
-            secondaryButtonRented.Click += secondaryButtonRented_Click;
+            searchBar1.SetCueBanner("Search by garment name, SKU, category, or color...");
+            if (searchBar1 is Control searchCtrl)
+            {
+                searchCtrl.TextChanged += SearchBar_TextChanged;
+            }
         }
 
         this.Load += CatalogView_Load;
+    }
+
+    private void SetupFilterTabs()
+    {
+        // Position the filter strip right above flpGarments
+        int stripY = (secondaryButtonAll != null) ? secondaryButtonAll.Top : 75;
+        int stripX = (secondaryButtonAll != null) ? secondaryButtonAll.Left : 32;
+
+        pnlFilterTabs = new FlowLayoutPanel
+        {
+            Location = new Point(stripX, stripY),
+            Height = 36,
+            Width = Width - stripX - 32,
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+            WrapContents = false,
+            AutoScroll = false,
+            BackColor = Color.Transparent
+        };
+
+        // Add above the garments flow panel
+        Controls.Add(pnlFilterTabs);
+        pnlFilterTabs.BringToFront();
     }
 
     private async void CatalogView_Load(object? sender, EventArgs e)
@@ -91,16 +115,12 @@ public partial class CatalogView : UserControl
 
         try
         {
-            await using var db = _contextFactory();
             int companyId = _getCompanyId();
 
-            // 1. Seed wardrobe if empty
-            await GarmentSeeder.SeedGarmentsAsync(db, companyId);
-
-            // 2. Synchronize garment statuses against real-time active bookings
+            // Synchronize garment statuses against active rental bookings
             await _bookingService.SyncGarmentStatusesAsync(companyId);
 
-            // 3. Load catalog items
+            // Load and render catalog
             await LoadGarmentsAsync();
         }
         catch (Exception ex)
@@ -112,43 +132,48 @@ public partial class CatalogView : UserControl
 
     public async Task LoadGarmentsAsync()
     {
-        flpGarments.SuspendLayout();
-
-        while (flpGarments.Controls.Count > 0)
-        {
-            var ctrl = flpGarments.Controls[0];
-            flpGarments.Controls.RemoveAt(0);
-            ctrl.Dispose();
-        }
-
         try
         {
             await using var db = _contextFactory();
             int companyId = _getCompanyId();
 
-            var query = db.Garments
+            // Fetch active wardrobe items
+            var allGarments = await db.Garments
                 .AsNoTracking()
-                .Where(g => g.CompanyId == companyId && g.IsActive);
+                .Where(g => g.CompanyId == companyId && g.IsActive)
+                .OrderBy(g => g.ItemCode)
+                .ToListAsync();
 
-            if (_currentStatusFilter != "All")
-            {
-                query = query.Where(g => g.Status == _currentStatusFilter);
-            }
+            // 1. Render / Update Filter Pill Buttons with Real-Time Counts
+            RenderFilterButtons(allGarments);
 
+            // 2. Apply Status Filter
+            var filtered = (_currentStatusFilter == "All")
+                ? allGarments
+                : allGarments.Where(g => string.Equals(g.Status, _currentStatusFilter, StringComparison.OrdinalIgnoreCase)).ToList();
+
+            // 3. Apply Search Filter
             if (!string.IsNullOrWhiteSpace(_currentSearchTerm))
             {
                 string term = _currentSearchTerm.Trim().ToLower();
-                query = query.Where(g =>
+                filtered = filtered.Where(g =>
                     g.ItemCode.ToLower().Contains(term) ||
                     g.StyleName.ToLower().Contains(term) ||
                     g.Category.ToLower().Contains(term) ||
-                    g.Color.ToLower().Contains(term));
+                    g.Color.ToLower().Contains(term)).ToList();
             }
 
-            var garments = await query.OrderBy(g => g.ItemCode).ToListAsync();
+            // 4. Populate Cards into flpGarments
+            flpGarments.SuspendLayout();
+            while (flpGarments.Controls.Count > 0)
+            {
+                var ctrl = flpGarments.Controls[0];
+                flpGarments.Controls.RemoveAt(0);
+                ctrl.Dispose();
+            }
 
             var cardList = new List<Control>();
-            foreach (var garment in garments)
+            foreach (var garment in filtered)
             {
                 var card = new GarmentCardControl
                 {
@@ -169,28 +194,78 @@ public partial class CatalogView : UserControl
             }
 
             flpGarments.Controls.AddRange(cardList.ToArray());
+            flpGarments.ResumeLayout();
         }
-        finally
+        catch (Exception ex)
         {
             flpGarments.ResumeLayout();
+            MessageBox.Show($"Failed to load garments: {ex.GetBaseException().Message}", "Catalog Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+    }
+
+    private void RenderFilterButtons(List<Garment> allGarments)
+    {
+        pnlFilterTabs.SuspendLayout();
+        pnlFilterTabs.Controls.Clear();
+        _filterButtons.Clear();
+
+        var tabs = new (string Status, int Count)[]
+        {
+            ("All", allGarments.Count),
+            ("Available", allGarments.Count(g => string.Equals(g.Status, "Available", StringComparison.OrdinalIgnoreCase))),
+            ("Rented", allGarments.Count(g => string.Equals(g.Status, "Rented", StringComparison.OrdinalIgnoreCase))),
+            ("Reserved", allGarments.Count(g => string.Equals(g.Status, "Reserved", StringComparison.OrdinalIgnoreCase) || string.Equals(g.Status, "Fitting", StringComparison.OrdinalIgnoreCase))),
+            ("In Cleaning", allGarments.Count(g => string.Equals(g.Status, "In Cleaning", StringComparison.OrdinalIgnoreCase)))
+        };
+
+        foreach (var (status, count) in tabs)
+        {
+            bool isSelected = string.Equals(_currentStatusFilter, status, StringComparison.OrdinalIgnoreCase);
+
+            var btn = new Button
+            {
+                Text = status == "All" ? $"All  {count}" : $"{status}  {count}",
+                AutoSize = true,
+                Height = 32,
+                Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
+                FlatStyle = FlatStyle.Flat,
+                Margin = new Padding(0, 0, 8, 0),
+                Cursor = Cursors.Hand,
+                BackColor = isSelected ? ColorDustyRose : Color.White,
+                ForeColor = isSelected ? Color.White : ColorEspresso
+            };
+
+            btn.FlatAppearance.BorderSize = isSelected ? 0 : 1;
+            btn.FlatAppearance.BorderColor = ColorBorder;
+
+            btn.Click += async (s, e) =>
+            {
+                _currentStatusFilter = status;
+                UpdateActiveTabVisuals(btn);
+                await LoadGarmentsAsync();
+            };
+
+            _filterButtons.Add(btn);
+            pnlFilterTabs.Controls.Add(btn);
+        }
+
+        pnlFilterTabs.ResumeLayout();
+    }
+
+    private void UpdateActiveTabVisuals(Button activeBtn)
+    {
+        foreach (var btn in _filterButtons)
+        {
+            bool isSelected = (btn == activeBtn);
+            btn.BackColor = isSelected ? ColorDustyRose : Color.White;
+            btn.ForeColor = isSelected ? Color.White : ColorEspresso;
+            btn.FlatAppearance.BorderSize = isSelected ? 0 : 1;
         }
     }
 
     private async void SearchBar_TextChanged(object? sender, EventArgs e)
     {
-        _currentSearchTerm = searchBar1.Text;
-        await LoadGarmentsAsync();
-    }
-
-    private async void secondaryButtonAll_Click(object? sender, EventArgs e)
-    {
-        _currentStatusFilter = "All";
-        await LoadGarmentsAsync();
-    }
-
-    private async void secondaryButtonRented_Click(object? sender, EventArgs e)
-    {
-        _currentStatusFilter = "Rented";
+        _currentSearchTerm = searchBar1?.Text ?? string.Empty;
         await LoadGarmentsAsync();
     }
 
@@ -241,10 +316,22 @@ public partial class CatalogView : UserControl
         else
         {
             MessageBox.Show(
-                info + $"This garment is currently {garment.Status.ToUpper()} and cannot be manually modified while locked in a booking.",
+                info + $"This garment is currently {garment.Status.ToUpper()} and cannot be manually modified while locked in an active booking.",
                 "Garment Status",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
         }
+    }
+    // Designer event handler stubs to satisfy CatalogView.Designer.cs
+    private async void secondaryButtonAll_Click(object? sender, EventArgs e)
+    {
+        _currentStatusFilter = "All";
+        await LoadGarmentsAsync();
+    }
+
+    private async void secondaryButtonRented_Click(object? sender, EventArgs e)
+    {
+        _currentStatusFilter = "Rented";
+        await LoadGarmentsAsync();
     }
 }

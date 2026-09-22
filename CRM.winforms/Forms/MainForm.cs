@@ -69,10 +69,17 @@ public partial class MainForm : Form
         BuildAtelierShell();
     }
 
-    private void MainForm_Load(object? sender, EventArgs e)
+    // SEEDER ON INIT
+
+    private async void MainForm_Load(object? sender, EventArgs e)
     {
         if (LicenseManager.UsageMode != LicenseUsageMode.Designtime)
         {
+            // One-time database reset and seed:
+            // (You can comment this out after running it once so data persists across launches)
+            //await CRM.infrastructure.data.DatabaseSeeder.ResetAndSeedDatabaseAsync(_contextFactory, _currentCompanyId);
+
+            // Load the initial view
             ShowCustomerProfiles();
         }
     }
@@ -243,7 +250,7 @@ public partial class MainForm : Form
 
         pnlTopSection.Controls.AddRange(new Control[] { pnlBrand, pnlTenant, lblNavTag });
 
-        // SECTION B: BOTTOM FIXED SECTION (User Profile)
+        //SECTION B: BOTTOM FIXED SECTION(User Profile)
         var pnlUser = new Panel
         {
             Dock = DockStyle.Bottom,
@@ -310,16 +317,13 @@ public partial class MainForm : Form
             Padding = new Padding(0, 6, 0, 0)
         };
 
-        // Create Navigation Items in reverse dock order so they appear top-to-bottom
         var btnAnalytics = CreateNavButton("📊", "Analytics", (s, e) => ShowDashboardView());
-        var btnInquiries = CreateNavButton("💬", "Inquiries", (s, e) => ShowInquiryView());
+        var btnInquiries = CreateNavButton("💬", "Inquiries / Complaints", (s, e) => ShowInquiryView());
         var btnLoyalty = CreateNavButton("🎗", "Loyalty Awards", (s, e) => { /* Awards */ });
         var btnCatalog = CreateNavButton("👗", "Garment Catalog", (s, e) => ShowCatalogView());
         var btnRentals = CreateNavButton("📅", "Rental Pipeline", (s, e) => ShowRentalBookingsView());
         var btnCustomers = CreateNavButton("👥", "Client Directory", (s, e) => ShowCustomerProfiles());
 
-        // Adding docked controls in reverse order produces the correct top-down sequence:
-        // Client Directory -> Rental Pipeline -> Garment Catalog -> Loyalty Awards -> Inquiries -> Analytics
         pnlNavList.Controls.AddRange(new Control[]
         {
             btnAnalytics,
@@ -330,9 +334,8 @@ public partial class MainForm : Form
             btnCustomers
         });
 
-        // Add containers to pnlSidebar and enforce strict docking order
         pnlSidebar.Controls.Add(pnlNavList);
-        pnlSidebar.Controls.Add(pnlUser);
+        //pnlSidebar.Controls.Add(pnlUser);
         pnlSidebar.Controls.Add(pnlTopSection);
 
         pnlTopSection.BringToFront();
