@@ -40,7 +40,6 @@ public class AtelierBarChart : Control
             return;
         }
 
-        // Expanded left padding to prevent currency clipping
         int padLeft = 74;
         int padRight = 24;
         int padBottom = 34;
@@ -54,20 +53,18 @@ public class AtelierBarChart : Control
         using var gridPen = new Pen(ColorGridLine, 1f);
         using var axisFont = new Font("Segoe UI", 8.25f);
 
-        // 1. Draw horizontal gridlines & right-aligned Y-axis labels
         for (int i = 0; i <= 4; i++)
         {
             int y = padTop + (chartHeight * i / 4);
             g.DrawLine(gridPen, padLeft, y, Width - padRight, y);
 
             decimal val = maxRevenue - (maxRevenue * i / 4);
-            string label = $"${val:N0}";
+            string label = $"₱{val:N0}";
 
             var labelRect = new Rectangle(0, y - 8, padLeft - 10, 16);
             TextRenderer.DrawText(g, label, axisFont, labelRect, ColorSubtext, TextFormatFlags.Right | TextFormatFlags.VerticalCenter);
         }
 
-        // 2. Render Bars
         int count = _data.Count;
         int slotWidth = chartWidth / count;
         int barWidth = Math.Min(42, (int)(slotWidth * 0.52));
@@ -91,20 +88,17 @@ public class AtelierBarChart : Control
                     g.FillPath(brush, path);
                 }
 
-                // Top Value Label
                 using var valFont = new Font("Segoe UI Semibold", 8.25f, FontStyle.Bold);
-                string revText = $"${item.Revenue:N0}";
+                string revText = $"₱{item.Revenue:N0}";
                 var sz = TextRenderer.MeasureText(g, revText, valFont);
                 TextRenderer.DrawText(g, revText, valFont, new Point(slotCenter - (sz.Width / 2), barTop - 18), ColorEspresso);
             }
             else
             {
-                // Baseline muted indicator dot for $0 months instead of an awkward floating bar
                 using var zeroBrush = new SolidBrush(ColorGridLine);
                 g.FillRectangle(zeroBrush, barLeft, padTop + chartHeight - 2, barWidth, 2);
             }
 
-            // Month Label at baseline
             var lblSz = TextRenderer.MeasureText(g, item.MonthLabel, axisFont);
             TextRenderer.DrawText(g, item.MonthLabel, axisFont, new Point(slotCenter - (lblSz.Width / 2), Height - padBottom + 8), ColorSubtext);
         }
