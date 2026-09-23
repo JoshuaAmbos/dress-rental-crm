@@ -66,25 +66,18 @@ public partial class AnalyticsAndReportsView : UserControl
         Padding = new Padding(32, 24, 32, 32);
         Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
-        // 1. Header
         var pnlHeader = BuildHeaderSection();
 
-        // 2. Interactive Slicer Bar
         var pnlFilterBar = BuildFilterBar();
 
-        // 3. 4 KPI Cards Row
         var pnlKpiRow = BuildKpiRow();
 
-        // 4. Visual Charts Row (Bar + Donut)
         var pnlChartsRow = BuildChartsRow();
 
-        // 5. Dual Leaderboards Row (Top Garments + Top Customers side-by-side)
         var pnlLeaderboardRow = BuildLeaderboardsSection();
 
-        // 6. Detailed Audit Ledger Section
         var pnlLedgerSection = BuildAuditLedgerSection();
 
-        // Adding top-down docking hierarchy in reverse order
         Controls.Add(pnlLedgerSection);
         Controls.Add(pnlLeaderboardRow);
         Controls.Add(pnlChartsRow);
@@ -329,7 +322,6 @@ public partial class AnalyticsAndReportsView : UserControl
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
 
-        // 1. Left: Top Garments Leaderboard
         var cardGarments = CreateCardContainer("TOP PERFORMING WARDROBE ASSETS", out var bodyGarments);
         cardGarments.Margin = new Padding(0, 0, 8, 0);
 
@@ -341,7 +333,6 @@ public partial class AnalyticsAndReportsView : UserControl
         dgvTopGarments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalRevenueGenerated", HeaderText = "REVENUE", Width = 110, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "₱#,##0.00", Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold), ForeColor = ColorDustyRose } });
         bodyGarments.Controls.Add(dgvTopGarments);
 
-        // 2. Right: Top Valued Clients Leaderboard
         var cardCustomers = CreateCardContainer("TOP VALUED CLIENTS (VIP LEADERBOARD)", out var bodyCustomers);
         cardCustomers.Margin = new Padding(8, 0, 0, 0);
 
@@ -396,11 +387,10 @@ public partial class AnalyticsAndReportsView : UserControl
             AutoGenerateColumns = false,
             SelectionMode = DataGridViewSelectionMode.FullRowSelect,
             MultiSelect = false,
-            RowTemplate = { Height = 44 }
+            RowTemplate = { Height = 44 },
+            ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None,
+            EnableHeadersVisualStyles = false
         };
-
-        dgv.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
-        dgv.EnableHeadersVisualStyles = false;
         dgv.ColumnHeadersDefaultCellStyle.BackColor = Color.White;
         dgv.ColumnHeadersDefaultCellStyle.ForeColor = ColorSubtext;
         dgv.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.White;
@@ -472,27 +462,27 @@ public partial class AnalyticsAndReportsView : UserControl
 
             var data = await _controller.LoadDashboardMetricsAsync(_getCompanyId(), start, end);
 
-            // 1. KPI Cards
+            // KPI Cards
             kpiRevenue.SetData("GROSS LEASE REVENUE", $"₱{data.TotalLeaseRevenue:N2}", "Filtered Period", ColorDustyRose, Color.FromArgb(254, 242, 243), ColorDustyRose);
             kpiDeposits.SetData("SECURITY DEPOSITS HELD", $"₱{data.ActiveDepositsHeld:N2}", "Active Escrow", Color.FromArgb(37, 99, 235), Color.FromArgb(239, 246, 255), Color.FromArgb(29, 78, 216));
             kpiUtilization.SetData("FLEET UTILIZATION", $"{data.FleetUtilizationRate:0.#}%", $"{data.CurrentlyRentedGarments}/{data.TotalActiveGarments} Rented", Color.FromArgb(5, 150, 105), Color.FromArgb(236, 253, 245), Color.FromArgb(5, 150, 105));
             kpiReturnRate.SetData("RETURN COMPLIANCE", $"{data.OnTimeReturnRate:0.#}%", $"{data.TotalBookingsCompleted} Completed", Color.FromArgb(124, 58, 237), Color.FromArgb(245, 243, 255), Color.FromArgb(124, 58, 237));
 
-            // 2. Charts
+            // Charts
             chartRevenue.SetData(data.MonthlyRevenueTrend);
             chartStages.SetData(data.StageDistribution);
 
-            // 3. Top Garments Grid
+            // Top Garments Grid
             dgvTopGarments.DataSource = null;
             dgvTopGarments.DataSource = data.TopPerformingGarments;
             dgvTopGarments.ClearSelection();
 
-            // 4. Top Customers Grid
+            // Top Customers Grid
             dgvTopCustomers.DataSource = null;
             dgvTopCustomers.DataSource = data.TopValuedCustomers;
             dgvTopCustomers.ClearSelection();
 
-            // 5. Audit Ledger Grid
+            // Audit Ledger Grid
             _currentLedger = data.AuditLedger;
             dgvAuditLedger.DataSource = null;
             dgvAuditLedger.DataSource = _currentLedger;
