@@ -21,7 +21,6 @@ public partial class InquiriesView : UserControl
     private string _currentSearch = string.Empty;
     private InquiryPipelineDto? _pipelineData;
 
-    // Header & Actions
     private Button btnLog = null!;
 
     // KPI Cards
@@ -30,7 +29,6 @@ public partial class InquiriesView : UserControl
     private KpiCardControl kpiRate = null!;
     private KpiCardControl kpiTotal = null!;
 
-    // Chevron Strip & Filter Bar
     private FlowLayoutPanel pnlChevronPills = null!;
     private FlowLayoutPanel pnlFilterTabs = null!;
     private TextBox txtSearch = null!;
@@ -62,7 +60,6 @@ public partial class InquiriesView : UserControl
         Padding = new Padding(32, 24, 32, 24);
         Font = new Font("Segoe UI", 9.5f);
 
-        // 1. Header
         var pnlHeader = new Panel { Dock = DockStyle.Top, Height = 64, BackColor = Color.Transparent };
         var lblTitle = new Label { Text = "Inquiries", UseMnemonic = false, Font = new Font("Segoe UI", 18f, FontStyle.Bold), ForeColor = ColorEspresso, AutoSize = true };
         var lblSub = new Label { Text = "Track inbound rental inquiries and convert them to bookings.", UseMnemonic = false, Font = new Font("Segoe UI", 9.75f), ForeColor = ColorSubtext, Location = new Point(0, 34), AutoSize = true };
@@ -88,7 +85,6 @@ public partial class InquiriesView : UserControl
 
         pnlHeader.Controls.AddRange([lblTitle, lblSub, btnLog]);
 
-        // 2. Section Rows
         var pnlKpis = BuildKpiRow();
         var pnlChevronStrip = BuildChevronStrip();
         var pnlFilterStrip = BuildFilterStrip();
@@ -190,11 +186,10 @@ public partial class InquiriesView : UserControl
             ReadOnly = true,
             AutoGenerateColumns = false,
             SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-            RowTemplate = { Height = 48 }
+            RowTemplate = { Height = 48 },
+            ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None,
+            EnableHeadersVisualStyles = false
         };
-
-        dgvInquiries.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
-        dgvInquiries.EnableHeadersVisualStyles = false;
         dgvInquiries.ColumnHeadersDefaultCellStyle.BackColor = Color.White;
         dgvInquiries.ColumnHeadersDefaultCellStyle.ForeColor = ColorSubtext;
         dgvInquiries.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.White;
