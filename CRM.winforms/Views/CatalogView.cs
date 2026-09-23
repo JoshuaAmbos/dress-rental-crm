@@ -16,7 +16,6 @@ public partial class CatalogView : UserControl
     private string _currentStatusFilter = "All";
     private string _currentSearchTerm = string.Empty;
 
-    // Filter Bar & Tracking
     private FlowLayoutPanel pnlFilterTabs = null!;
     private readonly List<Button> _filterButtons = new();
 
@@ -67,11 +66,9 @@ public partial class CatalogView : UserControl
             label1.ForeColor = ColorEspresso;
         }
 
-        // Hide legacy designer buttons so the unified dynamic bar takes over
         if (secondaryButtonAll != null) secondaryButtonAll.Visible = false;
         if (secondaryButtonRented != null) secondaryButtonRented.Visible = false;
 
-        // Initialize Dynamic Atelier Filter Strip
         SetupFilterTabs();
 
         if (searchBar1 != null)
@@ -88,7 +85,6 @@ public partial class CatalogView : UserControl
 
     private void SetupFilterTabs()
     {
-        // Position the filter strip right above flpGarments
         int stripY = (secondaryButtonAll != null) ? secondaryButtonAll.Top : 75;
         int stripX = (secondaryButtonAll != null) ? secondaryButtonAll.Left : 32;
 
@@ -103,7 +99,6 @@ public partial class CatalogView : UserControl
             BackColor = Color.Transparent
         };
 
-        // Add above the garments flow panel
         Controls.Add(pnlFilterTabs);
         pnlFilterTabs.BringToFront();
     }
@@ -137,22 +132,18 @@ public partial class CatalogView : UserControl
             await using var db = _contextFactory();
             int companyId = _getCompanyId();
 
-            // Fetch active wardrobe items
             var allGarments = await db.Garments
                 .AsNoTracking()
                 .Where(g => g.CompanyId == companyId && g.IsActive)
                 .OrderBy(g => g.ItemCode)
                 .ToListAsync();
 
-            // 1. Render / Update Filter Pill Buttons with Real-Time Counts
             RenderFilterButtons(allGarments);
 
-            // 2. Apply Status Filter
             var filtered = (_currentStatusFilter == "All")
                 ? allGarments
                 : allGarments.Where(g => string.Equals(g.Status, _currentStatusFilter, StringComparison.OrdinalIgnoreCase)).ToList();
 
-            // 3. Apply Search Filter
             if (!string.IsNullOrWhiteSpace(_currentSearchTerm))
             {
                 string term = _currentSearchTerm.Trim().ToLower();
@@ -163,7 +154,6 @@ public partial class CatalogView : UserControl
                     g.Color.ToLower().Contains(term)).ToList();
             }
 
-            // 4. Populate Cards into flpGarments
             flpGarments.SuspendLayout();
             while (flpGarments.Controls.Count > 0)
             {
@@ -322,6 +312,7 @@ public partial class CatalogView : UserControl
                 MessageBoxIcon.Information);
         }
     }
+    
     // Designer event handler stubs to satisfy CatalogView.Designer.cs
     private async void secondaryButtonAll_Click(object? sender, EventArgs e)
     {
