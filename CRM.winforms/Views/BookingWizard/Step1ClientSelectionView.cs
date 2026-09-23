@@ -58,7 +58,6 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
         BackColor = ColorViewBg;
         Padding = new Padding(32, 20, 32, 20);
 
-        // Header
         var pnlHeader = new Panel
         {
             Dock = DockStyle.Top,
@@ -78,7 +77,6 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
 
         var pnlHeaderSpacer = new Panel { Dock = DockStyle.Top, Height = 14, BackColor = Color.Transparent };
 
-        // Search Bar
         searchBarClients = new SearchBar
         {
             Dock = DockStyle.Top,
@@ -89,7 +87,6 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
 
         var pnlTopSpacer = new Panel { Dock = DockStyle.Top, Height = 14, BackColor = Color.Transparent };
 
-        // Quick-Add Footer Button
         btnQuickAdd = new Button
         {
             Text = "+ Quick-Add New Client",
@@ -106,7 +103,6 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
 
         var pnlBottomSpacer = new Panel { Dock = DockStyle.Bottom, Height = 14, BackColor = Color.Transparent };
 
-        // List Border Wrapper
         var pnlListBorder = new Panel
         {
             Dock = DockStyle.Fill,
@@ -114,7 +110,6 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
             BackColor = ColorBorder
         };
 
-        // Client ListBox
         listBoxCustomers = new ListBox
         {
             Dock = DockStyle.Fill,
@@ -129,7 +124,6 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
 
         pnlListBorder.Controls.Add(listBoxCustomers);
 
-        // Assembly (Reverse Dock Order)
         Controls.Add(pnlListBorder);
         Controls.Add(pnlBottomSpacer);
         Controls.Add(btnQuickAdd);
@@ -200,7 +194,6 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
             g.DrawLine(dividerPen, bounds.Left, bounds.Bottom - 1, bounds.Right, bounds.Bottom - 1);
         }
 
-        // Initials Avatar
         int avatarDiameter = 36;
         int avatarX = bounds.Left + 16;
         int avatarY = bounds.Top + (bounds.Height - avatarDiameter) / 2;

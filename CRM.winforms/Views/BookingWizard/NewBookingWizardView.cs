@@ -27,11 +27,9 @@ public partial class NewBookingWizardView : UserControl
         _getCompanyId = getCompanyId ?? throw new ArgumentNullException(nameof(getCompanyId));
         _onCloseWizard = onCloseWizard;
 
-        // 1. Ensure buttons are on top of any panels so mouse clicks aren't blocked
         btnNext.BringToFront();
         btnCancel.BringToFront();
 
-        // 2. Explicitly wire click handlers
         btnNext.Click -= BtnNext_Click;
         btnNext.Click += BtnNext_Click;
 

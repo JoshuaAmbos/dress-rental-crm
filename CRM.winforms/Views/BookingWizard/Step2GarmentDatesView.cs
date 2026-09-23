@@ -59,7 +59,6 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
         BackColor = ColorViewBg;
         Padding = new Padding(32, 20, 32, 20);
 
-        // Header Title
         if (lblTitle != null)
         {
             lblTitle.Text = "Select Garment & Dates";
@@ -83,7 +82,6 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
         Controls.Add(lblSelectedCustomer);
         lblSelectedCustomer.BringToFront();
 
-        // Rental start date
         if (lblStartDate != null)
         {
             lblStartDate.Text = "Rental Start Date";
@@ -101,7 +99,6 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             dtpStartDate.Format = DateTimePickerFormat.Short;
         }
 
-        // Rental end date
         if (lblEndDate != null)
         {
             lblEndDate.Text = "Rental End Date";
@@ -128,7 +125,6 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             lblAvailableGarments.AutoSize = true;
         }
 
-        // Garment ListBox
         if (listBoxGarments != null)
         {
             listBoxGarments.Location = new Point(32, 158);
@@ -243,13 +239,11 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
         bool isSelected = _selectedGarmentIds.Contains(item.GarmentId);
         var bounds = e.Bounds;
 
-        // Background
         using (var bgBrush = new SolidBrush(ColorViewBg))
         {
             g.FillRectangle(bgBrush, bounds);
         }
 
-        // Floating Card
         var cardRect = new Rectangle(bounds.Left + 1, bounds.Top + 3, bounds.Width - 4, bounds.Height - 7);
 
         using (var cardPath = CreateRoundedRectangle(cardRect, 8))
@@ -265,7 +259,6 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             }
         }
 
-        // Checkbox
         int boxSize = 16;
         int boxX = cardRect.Left + 18;
         int boxY = cardRect.Top + (cardRect.Height - boxSize) / 2;
@@ -382,7 +375,6 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             _isUpdatingDates = false;
         }
 
-        // Pre-populate selections from draft
         _selectedGarmentIds.Clear();
         foreach (var g in _draft.SelectedGarments)
         {
