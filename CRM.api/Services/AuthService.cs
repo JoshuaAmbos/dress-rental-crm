@@ -9,7 +9,7 @@ public class AuthService
 {
     private static readonly HttpClient Http = new()
     {
-        BaseAddress = new Uri("http://10.0.2.2:5171/")
+        BaseAddress = new Uri("http://10.0.2.2:5171/") // API is running in Docker on Ubuntu (Host) 
     };
 
     private static readonly JsonSerializerOptions JsonOptions = new()

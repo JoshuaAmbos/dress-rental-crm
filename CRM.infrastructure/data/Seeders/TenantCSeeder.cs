@@ -1,28 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using CRM.domain.entities;
+﻿using CRM.domain.entities;
 
-namespace CRM.infrastructure.data;
+namespace CRM.infrastructure.data.Seeders;
 
-public static class DatabaseSeeder
+public class TenantCSeeder : ITenantSeeder
 {
-    public static async Task ResetAndSeedDatabaseAsync(Func<TenantCrmDbContext> contextFactory, int companyId = 1)
+    public int CompanyId => 1;
+    public string CompanyCode => "ATELIER-01";
+
+    public async Task SeedAsync(TenantCrmDbContext db)
     {
-        await using var db = contextFactory();
-
-        // Drop and recreate database schema cleanly
-        await db.Database.EnsureDeletedAsync();
-        await db.Database.EnsureCreatedAsync();
-
         var today = new DateTime(2026, 9, 21);
 
         // Parent Tenant & Database Configuration
         var company = new Company
         {
-            CompanyCode = "ATELIER-01",
+            CompanyCode = CompanyCode,
             CompanyName = "Atelier Haute Couture",
             IsActive = true,
             CreatedAt = today.AddYears(-1)
@@ -41,7 +33,7 @@ public static class DatabaseSeeder
         db.Set<CompanyDatabase>().Add(companyDb);
         await db.SaveChangesAsync();
 
-        int activeCompanyId = companyDb.CompanyDatabaseId;
+        int activeCompanyId = company.CompanyId;
 
         // Enterprise Showroom Branches (Tenant C Multi-Location)
         var branches = new List<Branch>
@@ -80,21 +72,7 @@ public static class DatabaseSeeder
         db.Branches.AddRange(branches);
         await db.SaveChangesAsync();
 
-        // System Configurations & Policies
-        db.SystemConfigurations.AddRange(new List<SystemConfiguration>
-        {
-            new() { ConfigKey = "DefaultLateFeePerDay", ConfigValue = "500.00", Description = "Daily penalty for overdue garment returns", LastModified = today },
-            new() { ConfigKey = "StandardDepositPct", ConfigValue = "50.0", Description = "Standard security deposit percentage", LastModified = today },
-            new() { ConfigKey = "CleaningBufferDays", ConfigValue = "2", Description = "Required turnaround days for dry cleaning", LastModified = today }
-        });
-
-        db.LoyaltyAwards.AddRange(new List<LoyaltyAward>
-        {
-            new() { TierName = "Standard", MinLifetimeSpend = 0, MinRentalCount = 0, DiscountPercentage = 0.0m, RewardDescription = "Standard boutique membership and priority catalog notifications" },
-            new() { TierName = "Gold", MinLifetimeSpend = 8000, MinRentalCount = 2, DiscountPercentage = 5.0m, RewardDescription = "5% off wardrobe leases and complimentary fitting adjustments" },
-            new() { TierName = "VIP", MinLifetimeSpend = 15000, MinRentalCount = 3, DiscountPercentage = 10.0m, RewardDescription = "10% off, free minor alterations, and preview access to designer collections" }
-        });
-
+        // Lease Agreement
         db.Set<RentalTerm>().Add(new RentalTerm
         {
             PolicyTitle = "Atelier Haute Couture Lease Agreement",
@@ -189,7 +167,7 @@ public static class DatabaseSeeder
         db.Garments.AddRange(garments);
         await db.SaveChangesAsync();
 
-        // Procedural Generation: Exactly 200 Rental Bookings with Branch Distribution
+        // Exactly 200 Rental Bookings with Branch Distribution
         var monthQuotas = new (int Year, int Month, int Count)[]
         {
             (2026, 4, 25),

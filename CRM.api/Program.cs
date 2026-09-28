@@ -5,6 +5,7 @@ using CRM.domain.entities;
 using CRM.infrastructure.data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,20 +14,17 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. SERVICES & DEPENDENCY INJECTION CONFIGURATION
 // =============================================================
 
-// Serialization: Prevent infinite navigation cycles across relational entities
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
 });
 
-// DbContext Registrations
 builder.Services.AddDbContext<MasterCrmDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("MasterCrm")));
 
 builder.Services.AddDbContext<TenantCrmDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("TenantCrm")));
 
-// ASP.NET Core Identity (User, Password Security, and Role Management)
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {
     options.Password.RequireDigit = false;
@@ -37,7 +35,6 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<MasterCrmDbContext>()
 .AddDefaultTokenProviders();
 
-// Dynamic Multi-Tenant Resolution Services
 builder.Services.AddScoped<ITenantDatabaseResolver, TenantDatabaseResolver>();
 builder.Services.AddScoped<ITenantDbContextFactory, TenantDbContextFactory>();
 
@@ -52,7 +49,7 @@ using (var scope = app.Services.CreateScope())
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
 
-    // Seed roles defined in AppRoles.AllRoles
+    // Seed roles
     foreach (var role in AppRoles.AllRoles)
     {
         if (!await roleManager.RoleExistsAsync(role))
@@ -61,30 +58,59 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
-    // Seed root Super Admin account if missing
-    var superAdminEmail = "superadmin@crm.local";
-    var superAdmin = await userManager.FindByEmailAsync(superAdminEmail);
-    if (superAdmin == null)
+    // Helper to seed users with Tenant Claims
+    async Task SeedTenantUserAsync(string username, string email, string password, string role, int companyId, string companyName)
     {
-        var adminUser = new IdentityUser
+        var user = await userManager.FindByNameAsync(username);
+        if (user == null)
         {
-            UserName = "superadmin",
-            Email = superAdminEmail
-        };
-
-        var result = await userManager.CreateAsync(adminUser, "SuperSecret123!");
-        if (result.Succeeded)
+            user = new IdentityUser { UserName = username, Email = email };
+            var result = await userManager.CreateAsync(user, password);
+            if (result.Succeeded)
+            {
+                await userManager.AddToRoleAsync(user, role);
+                await userManager.AddClaimAsync(user, new Claim("CompanyId", companyId.ToString()));
+                await userManager.AddClaimAsync(user, new Claim("CompanyName", companyName));
+            }
+        }
+        else
         {
-            await userManager.AddToRoleAsync(adminUser, AppRoles.Superadmin);
+            // Ensure claims exist if user was already created previously
+            var claims = await userManager.GetClaimsAsync(user);
+            if (!claims.Any(c => c.Type == "CompanyId"))
+            {
+                await userManager.AddClaimAsync(user, new Claim("CompanyId", companyId.ToString()));
+                await userManager.AddClaimAsync(user, new Claim("CompanyName", companyName));
+            }
         }
     }
+
+    // Tenant 1 User: Atelier Haute Couture (Multi-Branch Showroom)
+    await SeedTenantUserAsync(
+        username: "superadmin",
+        email: "superadmin@crm.local",
+        password: "SuperSecret123!",
+        role: AppRoles.Superadmin,
+        companyId: 1,
+        companyName: "Atelier Haute Couture"
+    );
+
+    // Tenant 2 User: Maison Étoile Bridal (Single-Branch Boutique)
+    await SeedTenantUserAsync(
+        username: "maison_admin",
+        email: "admin@maisonetoile.local",
+        password: "SuperSecret123!",
+        role: AppRoles.Admin,
+        companyId: 2,
+        companyName: "Maison Étoile Bridal"
+    );
 }
 
 // =============================================================
 // 3. AUTHENTICATION & IDENTITY ENDPOINTS
 // =============================================================
 
-// POST: Authenticate user credentials and return roles
+// POST: Authenticate user credentials and return roles + tenant claims
 app.MapPost("/api/auth/login", async (
     LoginRequestDto request,
     UserManager<IdentityUser> userManager) =>
@@ -96,63 +122,31 @@ app.MapPost("/api/auth/login", async (
         return Results.Unauthorized();
     }
 
-    // 2. Validate salted hash password
+    // 2. Validate password
     var isPasswordValid = await userManager.CheckPasswordAsync(user, request.Password);
     if (!isPasswordValid)
     {
         return Results.Unauthorized();
     }
 
-    // 3. Retrieve user roles for client-side authorization
+    // 3. Retrieve user roles
     var roles = await userManager.GetRolesAsync(user);
+
+    // 4. Retrieve tenant claims (CompanyId and CompanyName)
+    var claims = await userManager.GetClaimsAsync(user);
+    var companyIdStr = claims.FirstOrDefault(c => c.Type == "CompanyId")?.Value;
+    var companyName = claims.FirstOrDefault(c => c.Type == "CompanyName")?.Value ?? "Atelier Haute Couture";
+    int companyId = int.TryParse(companyIdStr, out var parsedId) ? parsedId : 1;
 
     return Results.Ok(new LoginResponseDto
     {
         UserId = user.Id,
         Username = user.UserName ?? string.Empty,
         Email = user.Email ?? string.Empty,
+        CompanyId = companyId,
+        CompanyName = companyName,
         Roles = roles,
         Message = "Login successful."
-    });
-});
-
-// POST: Administrative account registration (Admin / Super Admin)
-app.MapPost("/api/users/register", async (
-    CreateUserRequestDto request,
-    UserManager<IdentityUser> userManager,
-    RoleManager<IdentityRole> roleManager) =>
-{
-    if (!AppRoles.AllRoles.Contains(request.Role))
-    {
-        return Results.BadRequest(new { message = $"Role '{request.Role}' is invalid." });
-    }
-
-    var existingUser = await userManager.FindByNameAsync(request.Username);
-    if (existingUser != null)
-    {
-        return Results.Conflict(new { message = "Username already taken." });
-    }
-
-    var user = new IdentityUser
-    {
-        UserName = request.Username,
-        Email = request.Email
-    };
-
-    var createResult = await userManager.CreateAsync(user, request.Password);
-    if (!createResult.Succeeded)
-    {
-        return Results.BadRequest(createResult.Errors);
-    }
-
-    await userManager.AddToRoleAsync(user, request.Role);
-
-    return Results.Created($"/api/users/{user.Id}", new
-    {
-        userId = user.Id,
-        username = user.UserName,
-        email = user.Email,
-        role = request.Role
     });
 });
 

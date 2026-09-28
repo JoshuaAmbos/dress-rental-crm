@@ -23,8 +23,9 @@ public partial class CustomerProfilesView : UserControl
     private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
     private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
 
-    public CustomerProfilesView() : this(() => 1)
+    public CustomerProfilesView(Func<TenantCrmDbContext> contextFactory, Func<int> value) : this(() => 1)
     {
+        _contextFactory = contextFactory;
     }
 
     public CustomerProfilesView(Func<int> getCompanyId)

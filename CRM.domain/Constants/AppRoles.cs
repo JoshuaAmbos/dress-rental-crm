@@ -1,5 +1,3 @@
-using System.Reflection.Metadata;
-
 namespace CRM.domain.Constants;
 
 public static class AppRoles

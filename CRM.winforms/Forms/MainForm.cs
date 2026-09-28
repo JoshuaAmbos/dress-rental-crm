@@ -12,12 +12,13 @@ public partial class MainForm : Form
 {
     private readonly LoginResult _user;
     private readonly Func<TenantCrmDbContext> _contextFactory;
-    private readonly int _currentCompanyId = 1;
+    private readonly int _currentCompanyId;
+    private ContextMenuStrip _userAccountMenu = null!;
 
     // Multi-Branch State Tracking (Tenant C)
     private int? _currentBranchId = null;
     private string _currentBranchName = "All Showrooms";
-    private List<Branch> _cachedBranches = new();
+    private List<Branch> _cachedBranches = [];
     private Label lblTenantBadge = null!;
     private Label lblTenantName = null!;
     private ContextMenuStrip _branchSelectorMenu = null!;
@@ -38,7 +39,7 @@ public partial class MainForm : Form
     private Label lblDate = null!;
 
     // Nav Item Tracking
-    private readonly List<Button> _navButtons = new();
+    private readonly List<Button> _navButtons = [];
     private Button? _currentActiveNavButton;
 
     // Atelier Palette
@@ -51,13 +52,20 @@ public partial class MainForm : Form
     private static readonly Color ColorMutedLabel = Color.FromArgb(150, 140, 145);
     private static readonly Color ColorBorder = Color.FromArgb(234, 224, 224);
 
-    public MainForm() : this(new LoginResult { Username = "Sophia Laurent", Roles = new[] { "Boutique Manager" } })
+    public MainForm() : this(new LoginResult
+    {
+        Username = "Sophia Laurent",
+        Roles = new[] { "Boutique Manager" },
+        CompanyId = 1,
+        CompanyName = "Atelier Haute Couture"
+    })
     {
     }
 
     public MainForm(LoginResult authenticatedUser)
     {
         _user = authenticatedUser ?? throw new ArgumentNullException(nameof(authenticatedUser));
+        _currentCompanyId = authenticatedUser.CompanyId > 0 ? authenticatedUser.CompanyId : 1;
 
         _contextFactory = () =>
         {
@@ -75,10 +83,10 @@ public partial class MainForm : Form
     {
         if (LicenseManager.UsageMode != LicenseUsageMode.Designtime)
         {
-            // uncomment to run seeder
-            // comment out once loaded to avoid reseeding
+            // Seed all tenants by passing null targetCompanyId
+            // Uncomment to re-seed, then comment out to persist data:
+            // await CRM.infrastructure.data.DatabaseSeeder.ResetAndSeedDatabaseAsync(_contextFactory);
 
-            await CRM.infrastructure.data.DatabaseSeeder.ResetAndSeedDatabaseAsync(_contextFactory, _currentCompanyId);
             await LoadBranchDropdownMenuAsync();
             ShowCustomerProfiles();
         }
@@ -175,8 +183,8 @@ public partial class MainForm : Form
 
         var lblBrandName = new Label
         {
-            Text = "Atelier",
-            Font = new Font("Segoe UI", 14f, FontStyle.Bold),
+            Text = string.IsNullOrWhiteSpace(_user.CompanyName) ? "Atelier" : _user.CompanyName,
+            Font = new Font("Segoe UI", 12f, FontStyle.Bold),
             ForeColor = ColorEspresso,
             Location = new Point(50, 2),
             AutoSize = true
@@ -266,13 +274,14 @@ public partial class MainForm : Form
 
         pnlTopSection.Controls.AddRange(new Control[] { pnlBrand, pnlTenant, lblNavTag });
 
-        // User Profile Section
+        // User Profile Section (Bottom Bar)
         var pnlUser = new Panel
         {
             Dock = DockStyle.Bottom,
             Height = 56,
             BackColor = Color.White,
-            Padding = new Padding(0, 8, 0, 0)
+            Padding = new Padding(0, 8, 0, 0),
+            Cursor = Cursors.Hand
         };
         pnlUser.Paint += (s, e) =>
         {
@@ -288,7 +297,8 @@ public partial class MainForm : Form
             BackColor = ColorDustyRose,
             Size = new Size(32, 32),
             Location = new Point(2, 12),
-            TextAlign = ContentAlignment.MiddleCenter
+            TextAlign = ContentAlignment.MiddleCenter,
+            Cursor = Cursors.Hand
         };
         avatar.Paint += (s, e) =>
         {
@@ -303,16 +313,20 @@ public partial class MainForm : Form
             Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
             ForeColor = ColorEspresso,
             Location = new Point(40, 10),
-            AutoSize = true
+            AutoSize = true,
+            Cursor = Cursors.Hand
         };
+
         var lblUserRole = new Label
         {
             Text = _user.Roles.Length > 0 ? _user.Roles[0] : "Staff",
             Font = new Font("Segoe UI", 7.5f),
             ForeColor = ColorMutedLabel,
             Location = new Point(41, 27),
-            AutoSize = true
+            AutoSize = true,
+            Cursor = Cursors.Hand
         };
+
         var lblMore = new Label
         {
             Text = "···",
@@ -322,6 +336,77 @@ public partial class MainForm : Form
             AutoSize = true,
             Cursor = Cursors.Hand
         };
+
+        // Wire Up the User Account Popup Menu
+        _userAccountMenu = new ContextMenuStrip
+        {
+            Font = new Font("Segoe UI", 9.5f),
+            ShowImageMargin = false
+        };
+
+        var itemAccountHeader = new ToolStripMenuItem($"👤  {_user.Username}") { Enabled = false };
+        var itemTenantHeader = new ToolStripMenuItem($"🏢  {_user.CompanyName}") { Enabled = false };
+
+        var itemProfile = new ToolStripMenuItem("⚙️  Account Profile", null, (s, e) =>
+        {
+            MessageBox.Show(
+                $"User ID: {_user.UserId}\n" +
+                $"Username: {_user.Username}\n" +
+                $"Email: {_user.Email}\n" +
+                $"Role: {string.Join(", ", _user.Roles)}\n\n" +
+                $"Tenant: {_user.CompanyName} (Company ID: {_currentCompanyId})\n" +
+                $"Active Showroom: {_currentBranchName}",
+                "Account Profile",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        });
+
+        var itemSignOut = new ToolStripMenuItem("🚪  Sign Out", null, (s, e) =>
+        {
+            var confirm = MessageBox.Show(
+                "Are you sure you want to sign out?",
+                "Confirm Sign Out",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (confirm == DialogResult.Yes)
+            {
+                this.Hide();
+                using var loginForm = new LoginForm();
+                if (loginForm.ShowDialog() == DialogResult.OK && loginForm.AuthenticatedUser != null)
+                {
+                    var newMain = new MainForm(loginForm.AuthenticatedUser);
+                    newMain.FormClosed += (sender, args) => this.Close();
+                    newMain.Show();
+                }
+                else
+                {
+                    this.Close();
+                }
+            }
+        });
+
+        _userAccountMenu.Items.AddRange(new ToolStripItem[]
+        {
+            itemAccountHeader,
+            itemTenantHeader,
+            new ToolStripSeparator(),
+            itemProfile,
+            new ToolStripSeparator(),
+            itemSignOut
+        });
+
+        EventHandler openUserMenu = (s, e) =>
+        {
+            _userAccountMenu.Show(pnlUser, new Point(0, 0), ToolStripDropDownDirection.AboveRight);
+        };
+
+        pnlUser.Click += openUserMenu;
+        avatar.Click += openUserMenu;
+        lblUserName.Click += openUserMenu;
+        lblUserRole.Click += openUserMenu;
+        lblMore.Click += openUserMenu;
+
         pnlUser.Controls.AddRange(new Control[] { avatar, lblUserName, lblUserRole, lblMore });
 
         // Navigation Buttons Container
@@ -352,9 +437,10 @@ public partial class MainForm : Form
 
         pnlSidebar.Controls.Add(pnlNavList);
         pnlSidebar.Controls.Add(pnlTopSection);
+        pnlSidebar.Controls.Add(pnlUser);
 
         pnlTopSection.BringToFront();
-        pnlUser.SendToBack();
+        pnlUser.BringToFront();
         pnlNavList.BringToFront();
     }
 
@@ -470,7 +556,7 @@ public partial class MainForm : Form
 
     public void ShowCustomerProfiles()
     {
-        _customerProfilesView ??= new CustomerProfilesView();
+        _customerProfilesView ??= new CustomerProfilesView(_contextFactory, () => _currentCompanyId);
         SwitchView(_customerProfilesView);
         HighlightNavByText("Client Directory");
     }
@@ -484,7 +570,7 @@ public partial class MainForm : Form
 
     public void ShowCatalogView()
     {
-        _catalogView ??= new CatalogView();
+        _catalogView ??= new CatalogView(_contextFactory, () => _currentCompanyId, () => _currentBranchId);
         SwitchView(_catalogView);
         HighlightNavByText("Garment Catalog");
     }

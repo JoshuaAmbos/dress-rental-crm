@@ -43,7 +43,7 @@ public partial class CatalogView : UserControl
         ConfigureView();
     }
 
-    public CatalogView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId)
+    public CatalogView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId, Func<int?> value)
     {
         InitializeComponent();
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
