@@ -1,8 +1,6 @@
 ﻿using CRM.infrastructure.data;
-using CRM.winforms.Controllers;
-using CRM.winforms.Controls.RentalReturnControls;
+using CRM.winforms.Controls.RentalBookingControls;
 using CRM.winforms.Forms;
-using CRM.winforms.Models.RentalBookingModels;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
 

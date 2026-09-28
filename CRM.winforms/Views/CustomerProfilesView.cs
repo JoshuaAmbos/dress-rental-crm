@@ -5,6 +5,7 @@ using CRM.infrastructure.data;
 using CRM.winforms.Forms;
 using CRM.winforms.Models;
 using CRM.winforms.Services;
+using CRM.api.Services.CustomerProfileServices;
 
 namespace CRM.winforms.Views;
 

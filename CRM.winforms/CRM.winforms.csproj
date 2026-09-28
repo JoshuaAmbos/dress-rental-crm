@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CRM.api\CRM.api.csproj" />
     <ProjectReference Include="..\CRM.domain\CRM.domain.csproj" />
     <ProjectReference Include="..\CRM.infrastructure\CRM.infrastructure.csproj" />
   </ItemGroup>

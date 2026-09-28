@@ -1,7 +1,6 @@
 ﻿using CRM.domain.entities;
 using CRM.infrastructure.data;
 using CRM.winforms.Models;
-using CRM.winforms.Services.RentalBookingServices;
 using System.ComponentModel;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;

@@ -1,9 +1,6 @@
-﻿using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Windows.Forms;
-using CRM.winforms.Models.RentalBookingModels;
+﻿using System.Drawing.Drawing2D;
 
-namespace CRM.winforms.Controls.RentalReturnControls;
+namespace CRM.winforms.Controls.RentalBookingControls;
 
 public static class RentalGridCellPainter
 {

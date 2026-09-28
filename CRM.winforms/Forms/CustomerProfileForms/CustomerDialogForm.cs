@@ -1,13 +1,7 @@
-﻿using System;
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using Microsoft.EntityFrameworkCore;
-using CRM.domain.entities;
+﻿using CRM.domain.entities;
 using CRM.infrastructure.data;
-using CRM.infrastructure.services;
+using Microsoft.EntityFrameworkCore;
+using System.Drawing.Drawing2D;
 
 namespace CRM.winforms.Forms;
 

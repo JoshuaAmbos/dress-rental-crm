@@ -3,7 +3,6 @@ using CRM.infrastructure.data;
 using CRM.winforms.Controls;
 using CRM.winforms.Forms;
 using CRM.winforms.Models;
-using CRM.winforms.Services;
 using System.ComponentModel;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;

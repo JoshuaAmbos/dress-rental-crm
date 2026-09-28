@@ -1,11 +1,11 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
-using System.Text.Json.Serialization;
+using CRM.api.DTOs;
+using CRM.api.Services;
 using CRM.domain.Constants;
 using CRM.domain.entities;
 using CRM.infrastructure.data;
-using CRM.infrastructure.services;
-using CRM.api.DTOs;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
