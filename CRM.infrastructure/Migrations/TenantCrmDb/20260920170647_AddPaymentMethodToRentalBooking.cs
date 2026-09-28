@@ -2,38 +2,37 @@
 
 #nullable disable
 
-namespace CRM.infrastructure.Migrations.TenantCrmDb
+namespace CRM.infrastructure.Migrations.TenantCrmDb;
+
+/// <inheritdoc />
+public partial class AddPaymentMethodToRentalBooking : Migration
 {
     /// <inheritdoc />
-    public partial class AddPaymentMethodToRentalBooking : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<string>(
-                name: "PaymentMethod",
-                table: "RentalBookings",
-                type: "nvarchar(max)",
-                nullable: true);
+        migrationBuilder.AddColumn<string>(
+            name: "PaymentMethod",
+            table: "RentalBookings",
+            type: "nvarchar(max)",
+            nullable: true);
 
-            migrationBuilder.AddColumn<decimal>(
-                name: "TotalAmount",
-                table: "RentalBookings",
-                type: "decimal(18,2)",
-                nullable: false,
-                defaultValue: 0m);
-        }
+        migrationBuilder.AddColumn<decimal>(
+            name: "TotalAmount",
+            table: "RentalBookings",
+            type: "decimal(18,2)",
+            nullable: false,
+            defaultValue: 0m);
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "PaymentMethod",
-                table: "RentalBookings");
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "PaymentMethod",
+            table: "RentalBookings");
 
-            migrationBuilder.DropColumn(
-                name: "TotalAmount",
-                table: "RentalBookings");
-        }
+        migrationBuilder.DropColumn(
+            name: "TotalAmount",
+            table: "RentalBookings");
     }
 }

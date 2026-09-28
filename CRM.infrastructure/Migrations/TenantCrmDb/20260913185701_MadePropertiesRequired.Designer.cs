@@ -9,393 +9,392 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace CRM.infrastructure.Migrations.TenantCrmDb
+namespace CRM.infrastructure.Migrations.TenantCrmDb;
+
+[DbContext(typeof(TenantCrmDbContext))]
+[Migration("20260913185701_MadePropertiesRequired")]
+partial class MadePropertiesRequired
 {
-    [DbContext(typeof(TenantCrmDbContext))]
-    [Migration("20260913185701_MadePropertiesRequired")]
-    partial class MadePropertiesRequired
+    /// <inheritdoc />
+    protected override void BuildTargetModel(ModelBuilder modelBuilder)
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
-        {
 #pragma warning disable 612, 618
-            modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+        modelBuilder
+            .HasAnnotation("ProductVersion", "10.0.12")
+            .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+        SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("CRM.domain.entities.BookingDetail", b =>
-                {
-                    b.Property<int>("BookingDetailId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+        modelBuilder.Entity("CRM.domain.entities.BookingDetail", b =>
+            {
+                b.Property<int>("BookingDetailId")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("BookingDetailId"));
+                SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("BookingDetailId"));
 
-                    b.Property<string>("AlterationNotes")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                b.Property<string>("AlterationNotes")
+                    .HasMaxLength(500)
+                    .HasColumnType("nvarchar(500)");
 
-                    b.Property<int>("RentalBookingId")
-                        .HasColumnType("int");
+                b.Property<int>("RentalBookingId")
+                    .HasColumnType("int");
 
-                    b.Property<int>("RentalItemId")
-                        .HasColumnType("int");
+                b.Property<int>("RentalItemId")
+                    .HasColumnType("int");
 
-                    b.HasKey("BookingDetailId");
+                b.HasKey("BookingDetailId");
 
-                    b.HasIndex("RentalBookingId");
+                b.HasIndex("RentalBookingId");
 
-                    b.HasIndex("RentalItemId");
+                b.HasIndex("RentalItemId");
 
-                    b.ToTable("BookingDetails");
-                });
+                b.ToTable("BookingDetails");
+            });
 
-            modelBuilder.Entity("CRM.domain.entities.Customer", b =>
-                {
-                    b.Property<int>("CustomerId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+        modelBuilder.Entity("CRM.domain.entities.Customer", b =>
+            {
+                b.Property<int>("CustomerId")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CustomerId"));
+                SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CustomerId"));
 
-                    b.Property<string>("Address")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                b.Property<string>("Address")
+                    .IsRequired()
+                    .HasMaxLength(300)
+                    .HasColumnType("nvarchar(300)");
 
-                    b.Property<decimal>("BustSize")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
+                b.Property<decimal>("BustSize")
+                    .HasPrecision(5, 2)
+                    .HasColumnType("decimal(5,2)");
 
-                    b.Property<string>("ContactNumber")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                b.Property<string>("ContactNumber")
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasColumnType("nvarchar(30)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<string>("CustomerCode")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                b.Property<string>("CustomerCode")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("CustomerName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                b.Property<string>("CustomerName")
+                    .IsRequired()
+                    .HasMaxLength(200)
+                    .HasColumnType("nvarchar(200)");
 
-                    b.Property<string>("EmailAddress")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                b.Property<string>("EmailAddress")
+                    .IsRequired()
+                    .HasMaxLength(150)
+                    .HasColumnType("nvarchar(150)");
 
-                    b.Property<decimal>("HipSize")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
+                b.Property<decimal>("HipSize")
+                    .HasPrecision(5, 2)
+                    .HasColumnType("decimal(5,2)");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                b.Property<bool>("IsActive")
+                    .HasColumnType("bit");
 
-                    b.Property<decimal>("WaistSize")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
+                b.Property<decimal>("WaistSize")
+                    .HasPrecision(5, 2)
+                    .HasColumnType("decimal(5,2)");
 
-                    b.HasKey("CustomerId");
+                b.HasKey("CustomerId");
 
-                    b.HasIndex("CustomerCode")
-                        .IsUnique();
+                b.HasIndex("CustomerCode")
+                    .IsUnique();
 
-                    b.ToTable("Customers");
-                });
+                b.ToTable("Customers");
+            });
 
-            modelBuilder.Entity("CRM.domain.entities.LoyaltyAward", b =>
-                {
-                    b.Property<int>("LoyaltyAwardId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+        modelBuilder.Entity("CRM.domain.entities.LoyaltyAward", b =>
+            {
+                b.Property<int>("LoyaltyAwardId")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LoyaltyAwardId"));
+                SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LoyaltyAwardId"));
 
-                    b.Property<decimal>("DiscountPercentage")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
+                b.Property<decimal>("DiscountPercentage")
+                    .HasPrecision(5, 2)
+                    .HasColumnType("decimal(5,2)");
 
-                    b.Property<decimal>("MinLifetimeSpend")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("MinLifetimeSpend")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<int>("MinRentalCount")
-                        .HasColumnType("int");
+                b.Property<int>("MinRentalCount")
+                    .HasColumnType("int");
 
-                    b.Property<string>("RewardDescription")
-                        .IsRequired()
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
+                b.Property<string>("RewardDescription")
+                    .IsRequired()
+                    .HasMaxLength(250)
+                    .HasColumnType("nvarchar(250)");
 
-                    b.Property<string>("TierName")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                b.Property<string>("TierName")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("nvarchar(50)");
 
-                    b.HasKey("LoyaltyAwardId");
+                b.HasKey("LoyaltyAwardId");
 
-                    b.ToTable("LoyaltyAwards");
-                });
+                b.ToTable("LoyaltyAwards");
+            });
 
-            modelBuilder.Entity("CRM.domain.entities.RentalBooking", b =>
-                {
-                    b.Property<int>("RentalBookingId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+        modelBuilder.Entity("CRM.domain.entities.RentalBooking", b =>
+            {
+                b.Property<int>("RentalBookingId")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RentalBookingId"));
+                SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RentalBookingId"));
 
-                    b.Property<bool>("AgreedToTerms")
-                        .HasColumnType("bit");
+                b.Property<bool>("AgreedToTerms")
+                    .HasColumnType("bit");
 
-                    b.Property<string>("AlterationNotes")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                b.Property<string>("AlterationNotes")
+                    .HasMaxLength(500)
+                    .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("BookingStage")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                b.Property<string>("BookingStage")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("nvarchar(50)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("int");
+                b.Property<int>("CustomerId")
+                    .HasColumnType("int");
 
-                    b.Property<string>("DressDescription")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                b.Property<string>("DressDescription")
+                    .IsRequired()
+                    .HasMaxLength(200)
+                    .HasColumnType("nvarchar(200)");
 
-                    b.Property<DateTime>("RentalEndDate")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("RentalEndDate")
+                    .HasColumnType("datetime2");
 
-                    b.Property<decimal>("RentalFee")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("RentalFee")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<DateTime>("RentalStartDate")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("RentalStartDate")
+                    .HasColumnType("datetime2");
 
-                    b.Property<decimal>("SecurityDeposit")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("SecurityDeposit")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("decimal(18,2)");
 
-                    b.HasKey("RentalBookingId");
+                b.HasKey("RentalBookingId");
 
-                    b.HasIndex("CustomerId");
+                b.HasIndex("CustomerId");
 
-                    b.ToTable("RentalBookings");
-                });
+                b.ToTable("RentalBookings");
+            });
 
-            modelBuilder.Entity("CRM.domain.entities.RentalItem", b =>
-                {
-                    b.Property<int>("RentalItemId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+        modelBuilder.Entity("CRM.domain.entities.RentalItem", b =>
+            {
+                b.Property<int>("RentalItemId")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RentalItemId"));
+                SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RentalItemId"));
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                b.Property<bool>("IsActive")
+                    .HasColumnType("bit");
 
-                    b.Property<string>("ItemCode")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                b.Property<string>("ItemCode")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("nvarchar(50)");
 
-                    b.Property<decimal>("RentalRate")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("RentalRate")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("ReplacementValue")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("ReplacementValue")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("StyleName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                b.Property<string>("StyleName")
+                    .IsRequired()
+                    .HasMaxLength(200)
+                    .HasColumnType("nvarchar(200)");
 
-                    b.HasKey("RentalItemId");
+                b.HasKey("RentalItemId");
 
-                    b.HasIndex("ItemCode")
-                        .IsUnique();
+                b.HasIndex("ItemCode")
+                    .IsUnique();
 
-                    b.ToTable("RentalItems");
-                });
+                b.ToTable("RentalItems");
+            });
 
-            modelBuilder.Entity("CRM.domain.entities.RentalTerm", b =>
-                {
-                    b.Property<int>("RentalTermId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+        modelBuilder.Entity("CRM.domain.entities.RentalTerm", b =>
+            {
+                b.Property<int>("RentalTermId")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RentalTermId"));
+                SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RentalTermId"));
 
-                    b.Property<DateTime>("EffectiveDate")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("EffectiveDate")
+                    .HasColumnType("datetime2");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                b.Property<bool>("IsActive")
+                    .HasColumnType("bit");
 
-                    b.Property<string>("PolicyContent")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("PolicyContent")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("PolicyTitle")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                b.Property<string>("PolicyTitle")
+                    .IsRequired()
+                    .HasMaxLength(150)
+                    .HasColumnType("nvarchar(150)");
 
-                    b.Property<string>("VersionNumber")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                b.Property<string>("VersionNumber")
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasColumnType("nvarchar(20)");
 
-                    b.HasKey("RentalTermId");
+                b.HasKey("RentalTermId");
 
-                    b.ToTable("RentalTerms");
-                });
+                b.ToTable("RentalTerms");
+            });
 
-            modelBuilder.Entity("CRM.domain.entities.ServiceIncident", b =>
-                {
-                    b.Property<int>("ServiceIncidentId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+        modelBuilder.Entity("CRM.domain.entities.ServiceIncident", b =>
+            {
+                b.Property<int>("ServiceIncidentId")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ServiceIncidentId"));
+                SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ServiceIncidentId"));
 
-                    b.Property<decimal>("FeeCharged")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("FeeCharged")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("IncidentType")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                b.Property<string>("IncidentType")
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .HasColumnType("nvarchar(100)");
 
-                    b.Property<DateTime>("LoggedDate")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("LoggedDate")
+                    .HasColumnType("datetime2");
 
-                    b.Property<int>("RentalBookingId")
-                        .HasColumnType("int");
+                b.Property<int>("RentalBookingId")
+                    .HasColumnType("int");
 
-                    b.Property<string>("ResolutionNotes")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                b.Property<string>("ResolutionNotes")
+                    .IsRequired()
+                    .HasMaxLength(1000)
+                    .HasColumnType("nvarchar(1000)");
 
-                    b.HasKey("ServiceIncidentId");
+                b.HasKey("ServiceIncidentId");
 
-                    b.HasIndex("RentalBookingId");
+                b.HasIndex("RentalBookingId");
 
-                    b.ToTable("ServiceIncidents");
-                });
+                b.ToTable("ServiceIncidents");
+            });
 
-            modelBuilder.Entity("CRM.domain.entities.SystemConfiguration", b =>
-                {
-                    b.Property<int>("SystemConfigurationId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+        modelBuilder.Entity("CRM.domain.entities.SystemConfiguration", b =>
+            {
+                b.Property<int>("SystemConfigurationId")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SystemConfigurationId"));
+                SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SystemConfigurationId"));
 
-                    b.Property<string>("ConfigKey")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                b.Property<string>("ConfigKey")
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("ConfigValue")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                b.Property<string>("ConfigValue")
+                    .IsRequired()
+                    .HasMaxLength(500)
+                    .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("Description")
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
+                b.Property<string>("Description")
+                    .HasMaxLength(250)
+                    .HasColumnType("nvarchar(250)");
 
-                    b.Property<DateTime>("LastModified")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("LastModified")
+                    .HasColumnType("datetime2");
 
-                    b.HasKey("SystemConfigurationId");
+                b.HasKey("SystemConfigurationId");
 
-                    b.HasIndex("ConfigKey")
-                        .IsUnique();
+                b.HasIndex("ConfigKey")
+                    .IsUnique();
 
-                    b.ToTable("SystemConfigurations");
-                });
+                b.ToTable("SystemConfigurations");
+            });
 
-            modelBuilder.Entity("CRM.domain.entities.BookingDetail", b =>
-                {
-                    b.HasOne("CRM.domain.entities.RentalBooking", "RentalBooking")
-                        .WithMany("BookingDetails")
-                        .HasForeignKey("RentalBookingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+        modelBuilder.Entity("CRM.domain.entities.BookingDetail", b =>
+            {
+                b.HasOne("CRM.domain.entities.RentalBooking", "RentalBooking")
+                    .WithMany("BookingDetails")
+                    .HasForeignKey("RentalBookingId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
 
-                    b.HasOne("CRM.domain.entities.RentalItem", "RentalItem")
-                        .WithMany("BookingDetails")
-                        .HasForeignKey("RentalItemId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                b.HasOne("CRM.domain.entities.RentalItem", "RentalItem")
+                    .WithMany("BookingDetails")
+                    .HasForeignKey("RentalItemId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
 
-                    b.Navigation("RentalBooking");
+                b.Navigation("RentalBooking");
 
-                    b.Navigation("RentalItem");
-                });
+                b.Navigation("RentalItem");
+            });
 
-            modelBuilder.Entity("CRM.domain.entities.RentalBooking", b =>
-                {
-                    b.HasOne("CRM.domain.entities.Customer", "Customer")
-                        .WithMany("RentalBookings")
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+        modelBuilder.Entity("CRM.domain.entities.RentalBooking", b =>
+            {
+                b.HasOne("CRM.domain.entities.Customer", "Customer")
+                    .WithMany("RentalBookings")
+                    .HasForeignKey("CustomerId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
 
-                    b.Navigation("Customer");
-                });
+                b.Navigation("Customer");
+            });
 
-            modelBuilder.Entity("CRM.domain.entities.ServiceIncident", b =>
-                {
-                    b.HasOne("CRM.domain.entities.RentalBooking", "RentalBooking")
-                        .WithMany("ServiceIncidents")
-                        .HasForeignKey("RentalBookingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+        modelBuilder.Entity("CRM.domain.entities.ServiceIncident", b =>
+            {
+                b.HasOne("CRM.domain.entities.RentalBooking", "RentalBooking")
+                    .WithMany("ServiceIncidents")
+                    .HasForeignKey("RentalBookingId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
 
-                    b.Navigation("RentalBooking");
-                });
+                b.Navigation("RentalBooking");
+            });
 
-            modelBuilder.Entity("CRM.domain.entities.Customer", b =>
-                {
-                    b.Navigation("RentalBookings");
-                });
+        modelBuilder.Entity("CRM.domain.entities.Customer", b =>
+            {
+                b.Navigation("RentalBookings");
+            });
 
-            modelBuilder.Entity("CRM.domain.entities.RentalBooking", b =>
-                {
-                    b.Navigation("BookingDetails");
+        modelBuilder.Entity("CRM.domain.entities.RentalBooking", b =>
+            {
+                b.Navigation("BookingDetails");
 
-                    b.Navigation("ServiceIncidents");
-                });
+                b.Navigation("ServiceIncidents");
+            });
 
-            modelBuilder.Entity("CRM.domain.entities.RentalItem", b =>
-                {
-                    b.Navigation("BookingDetails");
-                });
+        modelBuilder.Entity("CRM.domain.entities.RentalItem", b =>
+            {
+                b.Navigation("BookingDetails");
+            });
 #pragma warning restore 612, 618
-        }
     }
 }

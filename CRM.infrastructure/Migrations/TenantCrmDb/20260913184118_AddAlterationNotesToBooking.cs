@@ -2,28 +2,27 @@
 
 #nullable disable
 
-namespace CRM.infrastructure.Migrations.TenantCrmDb
+namespace CRM.infrastructure.Migrations.TenantCrmDb;
+
+/// <inheritdoc />
+public partial class AddAlterationNotesToBooking : Migration
 {
     /// <inheritdoc />
-    public partial class AddAlterationNotesToBooking : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<string>(
-                name: "AlterationNotes",
-                table: "RentalBookings",
-                type: "nvarchar(500)",
-                maxLength: 500,
-                nullable: true);
-        }
+        migrationBuilder.AddColumn<string>(
+            name: "AlterationNotes",
+            table: "RentalBookings",
+            type: "nvarchar(500)",
+            maxLength: 500,
+            nullable: true);
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "AlterationNotes",
-                table: "RentalBookings");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "AlterationNotes",
+            table: "RentalBookings");
     }
 }

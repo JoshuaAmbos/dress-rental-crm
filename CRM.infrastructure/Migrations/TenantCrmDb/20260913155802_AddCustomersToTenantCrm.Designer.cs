@@ -9,118 +9,117 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace CRM.infrastructure.Migrations.TenantCrmDb
+namespace CRM.infrastructure.Migrations.TenantCrmDb;
+
+[DbContext(typeof(TenantCrmDbContext))]
+[Migration("20260913155802_AddCustomersToTenantCrm")]
+partial class AddCustomersToTenantCrm
 {
-    [DbContext(typeof(TenantCrmDbContext))]
-    [Migration("20260913155802_AddCustomersToTenantCrm")]
-    partial class AddCustomersToTenantCrm
+    /// <inheritdoc />
+    protected override void BuildTargetModel(ModelBuilder modelBuilder)
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
-        {
 #pragma warning disable 612, 618
-            modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+        modelBuilder
+            .HasAnnotation("ProductVersion", "10.0.12")
+            .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+        SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("CRM.domain.entities.Customer", b =>
-                {
-                    b.Property<int>("CustomerId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+        modelBuilder.Entity("CRM.domain.entities.Customer", b =>
+            {
+                b.Property<int>("CustomerId")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CustomerId"));
+                SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CustomerId"));
 
-                    b.Property<string>("Address")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                b.Property<string>("Address")
+                    .HasMaxLength(300)
+                    .HasColumnType("nvarchar(300)");
 
-                    b.Property<decimal?>("BustSize")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
+                b.Property<decimal?>("BustSize")
+                    .HasPrecision(5, 2)
+                    .HasColumnType("decimal(5,2)");
 
-                    b.Property<string>("ContactNumber")
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                b.Property<string>("ContactNumber")
+                    .HasMaxLength(30)
+                    .HasColumnType("nvarchar(30)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<string>("CustomerCode")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                b.Property<string>("CustomerCode")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("CustomerName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                b.Property<string>("CustomerName")
+                    .IsRequired()
+                    .HasMaxLength(200)
+                    .HasColumnType("nvarchar(200)");
 
-                    b.Property<string>("EmailAddress")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                b.Property<string>("EmailAddress")
+                    .HasMaxLength(150)
+                    .HasColumnType("nvarchar(150)");
 
-                    b.Property<decimal?>("HipSize")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
+                b.Property<decimal?>("HipSize")
+                    .HasPrecision(5, 2)
+                    .HasColumnType("decimal(5,2)");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                b.Property<bool>("IsActive")
+                    .HasColumnType("bit");
 
-                    b.Property<decimal?>("WaistSize")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
+                b.Property<decimal?>("WaistSize")
+                    .HasPrecision(5, 2)
+                    .HasColumnType("decimal(5,2)");
 
-                    b.HasKey("CustomerId");
+                b.HasKey("CustomerId");
 
-                    b.HasIndex("CustomerCode")
-                        .IsUnique();
+                b.HasIndex("CustomerCode")
+                    .IsUnique();
 
-                    b.ToTable("Customers");
-                });
+                b.ToTable("Customers");
+            });
 
-            modelBuilder.Entity("CRM.domain.entities.RentalItem", b =>
-                {
-                    b.Property<int>("RentalItemId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+        modelBuilder.Entity("CRM.domain.entities.RentalItem", b =>
+            {
+                b.Property<int>("RentalItemId")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RentalItemId"));
+                SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RentalItemId"));
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                b.Property<bool>("IsActive")
+                    .HasColumnType("bit");
 
-                    b.Property<string>("ItemCode")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                b.Property<string>("ItemCode")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("nvarchar(50)");
 
-                    b.Property<decimal>("RentalRate")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("RentalRate")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("ReplacementValue")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                b.Property<decimal>("ReplacementValue")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("StyleName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                b.Property<string>("StyleName")
+                    .IsRequired()
+                    .HasMaxLength(200)
+                    .HasColumnType("nvarchar(200)");
 
-                    b.HasKey("RentalItemId");
+                b.HasKey("RentalItemId");
 
-                    b.HasIndex("ItemCode")
-                        .IsUnique();
+                b.HasIndex("ItemCode")
+                    .IsUnique();
 
-                    b.ToTable("RentalItems");
-                });
+                b.ToTable("RentalItems");
+            });
 #pragma warning restore 612, 618
-        }
     }
 }

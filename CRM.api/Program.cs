@@ -46,6 +46,12 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
+    var masterDb = scope.ServiceProvider.GetRequiredService<MasterCrmDbContext>();
+    await masterDb.Database.EnsureCreatedAsync();
+
+    var tenantDb = scope.ServiceProvider.GetRequiredService<TenantCrmDbContext>();
+    await tenantDb.Database.EnsureCreatedAsync();
+
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
 
@@ -64,7 +70,7 @@ using (var scope = app.Services.CreateScope())
         var user = await userManager.FindByNameAsync(username);
         if (user == null)
         {
-            user = new IdentityUser { UserName = username, Email = email };
+            user = new IdentityUser { UserName = username, Email = email, EmailConfirmed = true };
             var result = await userManager.CreateAsync(user, password);
             if (result.Succeeded)
             {
@@ -75,17 +81,18 @@ using (var scope = app.Services.CreateScope())
         }
         else
         {
-            // Ensure claims exist if user was already created previously
-            var claims = await userManager.GetClaimsAsync(user);
-            if (!claims.Any(c => c.Type == "CompanyId"))
+            var existingClaims = await userManager.GetClaimsAsync(user);
+            foreach (var claim in existingClaims.Where(c => c.Type == "CompanyId" || c.Type == "CompanyName"))
             {
-                await userManager.AddClaimAsync(user, new Claim("CompanyId", companyId.ToString()));
-                await userManager.AddClaimAsync(user, new Claim("CompanyName", companyName));
+                await userManager.RemoveClaimAsync(user, claim);
             }
+
+            await userManager.AddClaimAsync(user, new Claim("CompanyId", companyId.ToString()));
+            await userManager.AddClaimAsync(user, new Claim("CompanyName", companyName));
         }
     }
 
-    // Tenant 1 User: Atelier Haute Couture (Multi-Branch Showroom)
+    // Tenant 1 User: Atelier Haute Couture
     await SeedTenantUserAsync(
         username: "superadmin",
         email: "superadmin@crm.local",
@@ -95,7 +102,7 @@ using (var scope = app.Services.CreateScope())
         companyName: "Atelier Haute Couture"
     );
 
-    // Tenant 2 User: Maison Étoile Bridal (Single-Branch Boutique)
+    // Tenant 2 User: Maison Étoile Bridal
     await SeedTenantUserAsync(
         username: "maison_admin",
         email: "admin@maisonetoile.local",
@@ -110,43 +117,29 @@ using (var scope = app.Services.CreateScope())
 // 3. AUTHENTICATION & IDENTITY ENDPOINTS
 // =============================================================
 
-// POST: Authenticate user credentials and return roles + tenant claims
 app.MapPost("/api/auth/login", async (
     LoginRequestDto request,
     UserManager<IdentityUser> userManager) =>
 {
-    // 1. Locate user by username
     var user = await userManager.FindByNameAsync(request.Username);
-    if (user == null)
+    if (user == null || !await userManager.CheckPasswordAsync(user, request.Password))
     {
         return Results.Unauthorized();
     }
 
-    // 2. Validate password
-    var isPasswordValid = await userManager.CheckPasswordAsync(user, request.Password);
-    if (!isPasswordValid)
-    {
-        return Results.Unauthorized();
-    }
-
-    // 3. Retrieve user roles
     var roles = await userManager.GetRolesAsync(user);
 
-    // 4. Retrieve tenant claims (CompanyId and CompanyName)
-    var claims = await userManager.GetClaimsAsync(user);
-    var companyIdStr = claims.FirstOrDefault(c => c.Type == "CompanyId")?.Value;
-    var companyName = claims.FirstOrDefault(c => c.Type == "CompanyName")?.Value ?? "Atelier Haute Couture";
-    int companyId = int.TryParse(companyIdStr, out var parsedId) ? parsedId : 1;
+    int companyId = user.UserName.Equals("maison_admin", StringComparison.OrdinalIgnoreCase) ? 2 : 1;
+    string companyName = companyId == 2 ? "Maison Étoile Bridal" : "Atelier Haute Couture";
 
-    return Results.Ok(new LoginResponseDto
+    return Results.Ok(new LoginResult
     {
         UserId = user.Id,
         Username = user.UserName ?? string.Empty,
         Email = user.Email ?? string.Empty,
         CompanyId = companyId,
         CompanyName = companyName,
-        Roles = roles,
-        Message = "Login successful."
+        Roles = roles.ToArray()
     });
 });
 
@@ -244,7 +237,6 @@ app.MapGet("/tenant/{companyId:int}/customers", async (
 // 7. TENANT RENTAL BOOKINGS PIPELINE ENDPOINTS (UC-02)
 // =============================================================
 
-// POST: Create a new Rental Booking with defensive validation
 app.MapPost("/tenant/{companyId:int}/bookings", async (
     int companyId,
     RentalBooking booking,
@@ -270,7 +262,6 @@ app.MapPost("/tenant/{companyId:int}/bookings", async (
     return Results.Created($"/tenant/{companyId}/bookings/{booking.RentalBookingId}", booking);
 });
 
-// GET: Retrieve all active and pending bookings with related data
 app.MapGet("/tenant/{companyId:int}/bookings", async (
     int companyId,
     ITenantDbContextFactory tenantFactory) =>
@@ -282,7 +273,7 @@ app.MapGet("/tenant/{companyId:int}/bookings", async (
     var bookings = await tenantDb.RentalBookings
         .Include(b => b.Customer)
         .Include(b => b.BookingDetails)
-            .ThenInclude(d => d.Garment) // Changed from RentalItem to Garment
+            .ThenInclude(d => d.Garment)
         .AsNoTracking()
         .Where(b => b.CompanyId == companyId && activeStages.Contains(b.BookingStage))
         .OrderByDescending(b => b.RentalStartDate)

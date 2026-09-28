@@ -10,6 +10,8 @@ namespace CRM.winforms.Forms;
 
 public partial class MainForm : Form
 {
+    public bool IsSignedOut { get; private set; }
+
     private readonly LoginResult _user;
     private readonly Func<TenantCrmDbContext> _contextFactory;
     private readonly int _currentCompanyId;
@@ -85,7 +87,8 @@ public partial class MainForm : Form
         {
             // Seed all tenants by passing null targetCompanyId
             // Uncomment to re-seed, then comment out to persist data:
-            // await CRM.infrastructure.data.DatabaseSeeder.ResetAndSeedDatabaseAsync(_contextFactory);
+
+            //await CRM.infrastructure.data.DatabaseSeeder.ResetAndSeedDatabaseAsync(_contextFactory);
 
             await LoadBranchDropdownMenuAsync();
             ShowCustomerProfiles();
@@ -371,18 +374,8 @@ public partial class MainForm : Form
 
             if (confirm == DialogResult.Yes)
             {
-                this.Hide();
-                using var loginForm = new LoginForm();
-                if (loginForm.ShowDialog() == DialogResult.OK && loginForm.AuthenticatedUser != null)
-                {
-                    var newMain = new MainForm(loginForm.AuthenticatedUser);
-                    newMain.FormClosed += (sender, args) => this.Close();
-                    newMain.Show();
-                }
-                else
-                {
-                    this.Close();
-                }
+                IsSignedOut = true;
+                this.Close();
             }
         });
 
@@ -556,7 +549,7 @@ public partial class MainForm : Form
 
     public void ShowCustomerProfiles()
     {
-        _customerProfilesView ??= new CustomerProfilesView(_contextFactory, () => _currentCompanyId);
+        _customerProfilesView = new CustomerProfilesView(_contextFactory, () => _currentCompanyId);
         SwitchView(_customerProfilesView);
         HighlightNavByText("Client Directory");
     }

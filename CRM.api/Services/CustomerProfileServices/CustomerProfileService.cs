@@ -1,6 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using CRM.api.DTOs;
 using CRM.infrastructure.data;
-using CRM.api.DTOs;
+using Microsoft.EntityFrameworkCore;
 
 namespace CRM.api.Services;
 
@@ -17,6 +17,7 @@ public class CustomerProfileService
     {
         await using var db = _contextFactory();
 
+        // Strict row-level tenant discrimination
         var query = db.Customers
             .AsNoTracking()
             .Where(c => c.CompanyId == companyId && c.IsActive == !showArchived);

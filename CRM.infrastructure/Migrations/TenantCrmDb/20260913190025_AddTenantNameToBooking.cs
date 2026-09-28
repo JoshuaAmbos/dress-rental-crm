@@ -2,28 +2,27 @@
 
 #nullable disable
 
-namespace CRM.infrastructure.Migrations.TenantCrmDb
+namespace CRM.infrastructure.Migrations.TenantCrmDb;
+
+/// <inheritdoc />
+public partial class AddTenantNameToBooking : Migration
 {
     /// <inheritdoc />
-    public partial class AddTenantNameToBooking : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<string>(
-                name: "TenantName",
-                table: "RentalBookings",
-                type: "nvarchar(max)",
-                nullable: false,
-                defaultValue: "");
-        }
+        migrationBuilder.AddColumn<string>(
+            name: "TenantName",
+            table: "RentalBookings",
+            type: "nvarchar(max)",
+            nullable: false,
+            defaultValue: "");
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "TenantName",
-                table: "RentalBookings");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "TenantName",
+            table: "RentalBookings");
     }
 }

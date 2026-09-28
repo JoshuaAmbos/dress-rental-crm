@@ -1,5 +1,3 @@
-using System;
-using System.Windows.Forms;
 using CRM.winforms.Forms;
 
 namespace CRM.winforms;
@@ -11,10 +9,21 @@ static class Program
     {
         ApplicationConfiguration.Initialize();
 
-        using var login = new LoginForm();
-        if (login.ShowDialog() == DialogResult.OK && login.AuthenticatedUser != null)
+        while (true)
         {
-            Application.Run(new MainForm(login.AuthenticatedUser));
+            using var loginForm = new LoginForm();
+            if (loginForm.ShowDialog() != DialogResult.OK || loginForm.AuthenticatedUser == null)
+            {
+                break;
+            }
+
+            using var mainForm = new MainForm(loginForm.AuthenticatedUser);
+            Application.Run(mainForm);
+
+            if (!mainForm.IsSignedOut)
+            {
+                break;
+            }
         }
     }
 }

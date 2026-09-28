@@ -1,11 +1,8 @@
-﻿using System.ComponentModel;
-using Microsoft.EntityFrameworkCore;
-using CRM.domain.entities;
+﻿using CRM.domain.entities;
 using CRM.infrastructure.data;
 using CRM.winforms.Forms;
-using CRM.winforms.Models;
-using CRM.winforms.Services;
-using CRM.api.Services.CustomerProfileServices;
+using Microsoft.EntityFrameworkCore;
+using System.ComponentModel;
 
 namespace CRM.winforms.Views;
 
@@ -23,21 +20,11 @@ public partial class CustomerProfilesView : UserControl
     private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
     private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
 
-    public CustomerProfilesView(Func<TenantCrmDbContext> contextFactory, Func<int> value) : this(() => 1)
+    // Primary constructor called by MainForm
+    public CustomerProfilesView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId)
     {
-        _contextFactory = contextFactory;
-    }
-
-    public CustomerProfilesView(Func<int> getCompanyId)
-    {
+        _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         _getCompanyId = getCompanyId ?? (() => 1);
-        _contextFactory = () =>
-        {
-            var options = new DbContextOptionsBuilder<TenantCrmDbContext>()
-                .UseSqlServer(ConnectionString)
-                .Options;
-            return new TenantCrmDbContext(options);
-        };
         _customerService = new CustomerProfileService(_contextFactory);
 
         InitializeComponent();
@@ -73,6 +60,22 @@ public partial class CustomerProfilesView : UserControl
 
             _ = LoadCustomerDataAsync();
         }
+    }
+
+    // Secondary fallback constructor
+    public CustomerProfilesView(Func<int> getCompanyId) : this(() =>
+    {
+        var options = new DbContextOptionsBuilder<TenantCrmDbContext>()
+            .UseSqlServer(ConnectionString)
+            .Options;
+        return new TenantCrmDbContext(options);
+    }, getCompanyId)
+    {
+    }
+
+    // Parameterless constructor for WinForms Designer
+    public CustomerProfilesView() : this(() => 1)
+    {
     }
 
     private void CustomerProfilesView_Load(object? sender, EventArgs e)
@@ -189,7 +192,7 @@ public partial class CustomerProfilesView : UserControl
         dgvCustomers.Columns.Add(colEdit);
         dgvCustomers.Columns.Add(colArchive);
 
-        // Header Style consistency fix
+        // Header style consistency
         dgvCustomers.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
         dgvCustomers.EnableHeadersVisualStyles = false;
         dgvCustomers.ColumnHeadersDefaultCellStyle.BackColor = Color.White;

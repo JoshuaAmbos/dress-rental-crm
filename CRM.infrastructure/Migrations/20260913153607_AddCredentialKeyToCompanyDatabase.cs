@@ -2,21 +2,20 @@
 
 #nullable disable
 
-namespace CRM.infrastructure.Migrations
+namespace CRM.infrastructure.Migrations;
+
+/// <inheritdoc />
+public partial class AddCredentialKeyToCompanyDatabase : Migration
 {
     /// <inheritdoc />
-    public partial class AddCredentialKeyToCompanyDatabase : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
 
-        }
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
 
-        }
     }
 }
