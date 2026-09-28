@@ -1,17 +1,9 @@
 ﻿using CRM.infrastructure.data;
 using CRM.winforms.Controls;
-using CRM.winforms.Models;
-using CRM.winforms.Properties;
 using CRM.winforms.Views;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.VisualBasic.ApplicationServices;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Net.NetworkInformation;
-using System.Windows.Forms;
 
 namespace CRM.winforms.Forms;
 
@@ -28,6 +20,7 @@ public partial class MainForm : Form
     private RentalBookingsView? _bookingsView;
     private CatalogView? _catalogView;
     private InquiriesView? _inquiriesView;
+    private LoyaltyAwardsView? _loyaltyAwardsView;
 
     // UI Structure Controls
     private Panel pnlSidebar = null!;
@@ -69,17 +62,11 @@ public partial class MainForm : Form
         BuildAtelierShell();
     }
 
-    // SEEDER ON INIT
-
-    private async void MainForm_Load(object? sender, EventArgs e)
+    private void MainForm_Load(object? sender, EventArgs e)
     {
         if (LicenseManager.UsageMode != LicenseUsageMode.Designtime)
         {
-            // One-time database reset and seed:
-            // (You can comment this out after running it once so data persists across launches)
-            //await CRM.infrastructure.data.DatabaseSeeder.ResetAndSeedDatabaseAsync(_contextFactory, _currentCompanyId);
-
-            // Load the initial view
+            // await CRM.infrastructure.data.DatabaseSeeder.ResetAndSeedDatabaseAsync(_contextFactory, _currentCompanyId);
             ShowCustomerProfiles();
         }
     }
@@ -89,7 +76,7 @@ public partial class MainForm : Form
         DoubleBuffered = true;
         BackColor = ColorCanvasBg;
 
-        // 1. Left Navigation Sidebar
+        // Left Navigation Sidebar
         pnlSidebar = new Panel
         {
             Dock = DockStyle.Left,
@@ -107,7 +94,7 @@ public partial class MainForm : Form
         BuildSidebarContents();
         Controls.Add(pnlSidebar);
 
-        // 2. Main Viewport Area Wrapper
+        // Main Viewport Area Wrapper
         var pnlMainArea = new Panel
         {
             Dock = DockStyle.Fill,
@@ -116,7 +103,7 @@ public partial class MainForm : Form
         Controls.Add(pnlMainArea);
         pnlMainArea.BringToFront();
 
-        // 3. Top Status Bar
+        // Top Status Bar
         pnlTopBar = new Panel
         {
             Dock = DockStyle.Top,
@@ -136,7 +123,7 @@ public partial class MainForm : Form
         pnlTopBar.Controls.Add(lblDate);
         pnlMainArea.Controls.Add(pnlTopBar);
 
-        // 4. Content Area for Injected UserControls
+        // Content Area for Injected UserControls
         panelContents = new Panel
         {
             Dock = DockStyle.Fill,
@@ -148,7 +135,7 @@ public partial class MainForm : Form
 
     private void BuildSidebarContents()
     {
-        // SECTION A: TOP FIXED SECTION (Brand -> Tenant -> Section Tag)
+        // Top Fixed Section
         var pnlTopSection = new Panel
         {
             Dock = DockStyle.Top,
@@ -156,18 +143,18 @@ public partial class MainForm : Form
             BackColor = Color.Transparent
         };
 
-        // 1. Brand / Logo
+        // Brand / Logo
         var pnlBrand = new Panel
         {
             Location = new Point(0, 0),
-            Size = new Size(198, 48), // Increased slightly to 48px height to comfortably fit the 42px icon and stacked text
+            Size = new Size(198, 48),
             BackColor = Color.Transparent
         };
 
         var picIcon = new PictureBox
         {
             Size = new Size(42, 42),
-            Location = new Point(0, 3), // Centered vertically against the 48px panel
+            Location = new Point(0, 3),
             Image = Properties.Resources.ProjectCRM_LogoNoText,
             SizeMode = PictureBoxSizeMode.Zoom,
             BackColor = Color.Transparent
@@ -178,7 +165,7 @@ public partial class MainForm : Form
             Text = "Atelier",
             Font = new Font("Segoe UI", 14f, FontStyle.Bold),
             ForeColor = ColorEspresso,
-            Location = new Point(50, 2), // 8px gap after the 42px icon
+            Location = new Point(50, 2),
             AutoSize = true
         };
 
@@ -187,13 +174,13 @@ public partial class MainForm : Form
             Text = "CRM",
             Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
             ForeColor = ColorMutedLabel,
-            Location = new Point(52, 26), // Pushed below the Atelier baseline to prevent overlap
+            Location = new Point(52, 26),
             AutoSize = true
         };
 
         pnlBrand.Controls.AddRange(new Control[] { picIcon, lblBrandName, lblBrandSub });
 
-        // 2. Tenant Button ("Main Showroom ▾")
+        // Tenant Selector
         var pnlTenant = new Panel
         {
             Location = new Point(0, 52),
@@ -237,7 +224,7 @@ public partial class MainForm : Form
         };
         pnlTenant.Controls.AddRange(new Control[] { lblTenantBadge, lblTenantName });
 
-        // 3. Navigation Header Label
+        // Navigation Header Label
         var lblNavTag = new Label
         {
             Text = "NAVIGATION",
@@ -250,7 +237,7 @@ public partial class MainForm : Form
 
         pnlTopSection.Controls.AddRange(new Control[] { pnlBrand, pnlTenant, lblNavTag });
 
-        //SECTION B: BOTTOM FIXED SECTION(User Profile)
+        // Bottom User Profile Section
         var pnlUser = new Panel
         {
             Dock = DockStyle.Bottom,
@@ -308,7 +295,7 @@ public partial class MainForm : Form
         };
         pnlUser.Controls.AddRange(new Control[] { avatar, lblUserName, lblUserRole, lblMore });
 
-        // SECTION C: MIDDLE NAVIGATION BUTTONS CONTAINER
+        // Navigation Buttons Container
         var pnlNavList = new Panel
         {
             Dock = DockStyle.Fill,
@@ -319,7 +306,7 @@ public partial class MainForm : Form
 
         var btnAnalytics = CreateNavButton("📊", "Analytics", (s, e) => ShowDashboardView());
         var btnInquiries = CreateNavButton("💬", "Inquiries / Complaints", (s, e) => ShowInquiryView());
-        var btnLoyalty = CreateNavButton("🎗", "Loyalty Awards", (s, e) => { /* Awards */ });
+        var btnLoyalty = CreateNavButton("🎗", "Loyalty Awards", (s, e) => ShowLoyaltyAwardsView());
         var btnCatalog = CreateNavButton("👗", "Garment Catalog", (s, e) => ShowCatalogView());
         var btnRentals = CreateNavButton("📅", "Rental Pipeline", (s, e) => ShowRentalBookingsView());
         var btnCustomers = CreateNavButton("👥", "Client Directory", (s, e) => ShowCustomerProfiles());
@@ -335,7 +322,6 @@ public partial class MainForm : Form
         });
 
         pnlSidebar.Controls.Add(pnlNavList);
-        //pnlSidebar.Controls.Add(pnlUser);
         pnlSidebar.Controls.Add(pnlTopSection);
 
         pnlTopSection.BringToFront();
@@ -399,7 +385,7 @@ public partial class MainForm : Form
         _activeView = view;
     }
 
-    // --- View Navigation Routers ---
+    // View Navigation Routers
 
     public void ShowCustomerProfiles()
     {
@@ -436,6 +422,13 @@ public partial class MainForm : Form
         SwitchView(_reportsView);
         _ = _reportsView.LoadDashboardDataAsync();
         HighlightNavByText("Analytics");
+    }
+
+    public void ShowLoyaltyAwardsView()
+    {
+        _loyaltyAwardsView ??= new LoyaltyAwardsView(_contextFactory, () => _currentCompanyId);
+        SwitchView(_loyaltyAwardsView);
+        HighlightNavByText("Loyalty Awards");
     }
 
     private void HighlightNavByText(string labelSub)

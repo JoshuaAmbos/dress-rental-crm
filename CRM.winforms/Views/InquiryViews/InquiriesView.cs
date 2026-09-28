@@ -1,13 +1,7 @@
-﻿using System;
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using CRM.api.Controllers;
-using CRM.infrastructure.data;
+﻿using CRM.infrastructure.data;
 using CRM.winforms.Controls;
 using CRM.winforms.Forms;
-using CRM.winforms.Models;
+using System.Drawing.Drawing2D;
 
 namespace CRM.winforms.Views;
 
@@ -20,9 +14,6 @@ public partial class InquiriesView : UserControl
     private string _currentStatusFilter = "All";
     private string _currentSearch = string.Empty;
     private InquiryPipelineDto? _pipelineData;
-
-    // Header & Actions
-    private Button btnLog = null!;
 
     // KPI Cards
     private KpiCardControl kpiNew = null!;
@@ -37,7 +28,7 @@ public partial class InquiriesView : UserControl
     private Label lblRecordsCount = null!;
     private DataGridView dgvInquiries = null!;
 
-    // Atelier Palette
+    // Palette Constants
     private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
     private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
     private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
@@ -64,13 +55,15 @@ public partial class InquiriesView : UserControl
 
         // 1. Header
         var pnlHeader = new Panel { Dock = DockStyle.Top, Height = 64, BackColor = Color.Transparent };
-        var lblTitle = new Label { Text = "Inquiries", UseMnemonic = false, Font = new Font("Segoe UI", 18f, FontStyle.Bold), ForeColor = ColorEspresso, AutoSize = true };
-        var lblSub = new Label { Text = "Track inbound rental inquiries and convert them to bookings.", UseMnemonic = false, Font = new Font("Segoe UI", 9.75f), ForeColor = ColorSubtext, Location = new Point(0, 34), AutoSize = true };
+        var lblTitle = new Label { Text = "Inquiries", Font = new Font("Segoe UI", 18f, FontStyle.Bold), ForeColor = ColorEspresso, AutoSize = true };
+        var lblSub = new Label { Text = "Track inbound rental inquiries and convert them to bookings.", Font = new Font("Segoe UI", 9.75f), ForeColor = ColorSubtext, Location = new Point(0, 34), AutoSize = true };
 
-        btnLog = new Button
+        var btnLog = new Button
         {
             Text = "+ Log Inquiry",
             Size = new Size(130, 36),
+            Location = new Point(Width - 130 - 64, 14),
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
             BackColor = ColorDustyRose,
             ForeColor = Color.White,
             FlatStyle = FlatStyle.Flat,
@@ -80,24 +73,13 @@ public partial class InquiriesView : UserControl
         btnLog.FlatAppearance.BorderSize = 0;
         btnLog.Click += BtnLog_Click;
 
-        pnlHeader.Resize += (s, e) =>
-        {
-            btnLog.Location = new Point(Math.Max(0, pnlHeader.ClientSize.Width - btnLog.Width), 14);
-        };
-        btnLog.Location = new Point(Math.Max(0, pnlHeader.ClientSize.Width - btnLog.Width), 14);
+        pnlHeader.Controls.AddRange(new Control[] { lblTitle, lblSub, btnLog });
 
-        pnlHeader.Controls.AddRange([lblTitle, lblSub, btnLog]);
-
-        // 2. Section Rows
-        var pnlKpis = BuildKpiRow();
-        var pnlChevronStrip = BuildChevronStrip();
-        var pnlFilterStrip = BuildFilterStrip();
-        var pnlTableCard = BuildTableCard();
-
-        Controls.Add(pnlTableCard);
-        Controls.Add(pnlFilterStrip);
-        Controls.Add(pnlChevronStrip);
-        Controls.Add(pnlKpis);
+        // 2. Sections
+        Controls.Add(BuildTableCard());
+        Controls.Add(BuildFilterStrip());
+        Controls.Add(BuildChevronStrip());
+        Controls.Add(BuildKpiRow());
         Controls.Add(pnlHeader);
     }
 
@@ -112,7 +94,7 @@ public partial class InquiriesView : UserControl
         kpiRate = new KpiCardControl { Dock = DockStyle.Fill, Margin = new Padding(5, 0, 10, 0) };
         kpiTotal = new KpiCardControl { Dock = DockStyle.Fill, Margin = new Padding(5, 0, 0, 0) };
 
-        table.Controls.AddRange([kpiNew, kpiInReview, kpiRate, kpiTotal]);
+        table.Controls.AddRange(new Control[] { kpiNew, kpiInReview, kpiRate, kpiTotal });
         pnl.Controls.Add(table);
         return pnl;
     }
@@ -121,7 +103,6 @@ public partial class InquiriesView : UserControl
     {
         var wrapper = new Panel { Dock = DockStyle.Top, Height = 84, Padding = new Padding(0, 4, 0, 10), BackColor = Color.Transparent };
         var card = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(16, 12, 16, 12) };
-
         GraphicsHelper.ApplyRoundedCard(card, ColorBorder);
 
         pnlChevronPills = new FlowLayoutPanel
@@ -165,17 +146,60 @@ public partial class InquiriesView : UserControl
         pnlSearch.Controls.Add(txtSearch);
 
         pnlFilterTabs = new FlowLayoutPanel { Location = new Point(255, 4), AutoSize = true, WrapContents = false, BackColor = Color.Transparent };
+        InitFilterTabs();
+
         lblRecordsCount = new Label { Dock = DockStyle.Right, Text = "0 records", ForeColor = ColorSubtext, AutoSize = true, Font = new Font("Segoe UI", 9f), TextAlign = ContentAlignment.MiddleRight, Padding = new Padding(0, 8, 0, 0) };
 
-        pnl.Controls.AddRange([pnlSearch, pnlFilterTabs, lblRecordsCount]);
+        pnl.Controls.AddRange(new Control[] { pnlSearch, pnlFilterTabs, lblRecordsCount });
         return pnl;
+    }
+
+    private void InitFilterTabs()
+    {
+        string[] tabs = ["All", "New", "In Review", "Quoted", "Converted", "Closed"];
+        foreach (var tab in tabs)
+        {
+            var btn = new Button
+            {
+                Text = tab,
+                Tag = tab,
+                AutoSize = true,
+                Height = 32,
+                Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
+                FlatStyle = FlatStyle.Flat,
+                Margin = new Padding(0, 0, 6, 0),
+                Cursor = Cursors.Hand
+            };
+            btn.FlatAppearance.BorderColor = ColorBorder;
+            btn.Click += async (s, e) =>
+            {
+                _currentStatusFilter = tab;
+                UpdateFilterTabStyles();
+                await LoadInquiriesAsync();
+            };
+            pnlFilterTabs.Controls.Add(btn);
+        }
+        UpdateFilterTabStyles();
+    }
+
+    private void UpdateFilterTabStyles()
+    {
+        foreach (Control c in pnlFilterTabs.Controls)
+        {
+            if (c is Button btn && btn.Tag is string tabName)
+            {
+                bool isSelected = string.Equals(_currentStatusFilter, tabName, StringComparison.OrdinalIgnoreCase);
+                btn.BackColor = isSelected ? ColorDustyRose : Color.White;
+                btn.ForeColor = isSelected ? Color.White : ColorEspresso;
+                btn.FlatAppearance.BorderSize = isSelected ? 0 : 1;
+            }
+        }
     }
 
     private Panel BuildTableCard()
     {
         var wrapper = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 6, 0, 4), BackColor = Color.Transparent };
         var card = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(12) };
-
         GraphicsHelper.ApplyRoundedCard(card, ColorBorder);
 
         dgvInquiries = new DataGridView
@@ -190,38 +214,52 @@ public partial class InquiriesView : UserControl
             ReadOnly = true,
             AutoGenerateColumns = false,
             SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-            RowTemplate = { Height = 48 }
+            RowTemplate = { Height = 48 },
+            ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None,
+            EnableHeadersVisualStyles = false,
+            ColumnHeadersHeight = 38
         };
 
-        dgvInquiries.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
-        dgvInquiries.EnableHeadersVisualStyles = false;
-        dgvInquiries.ColumnHeadersDefaultCellStyle.BackColor = Color.White;
-        dgvInquiries.ColumnHeadersDefaultCellStyle.ForeColor = ColorSubtext;
-        dgvInquiries.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.White;
-        dgvInquiries.ColumnHeadersDefaultCellStyle.SelectionForeColor = ColorSubtext;
-        dgvInquiries.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold);
-        dgvInquiries.ColumnHeadersDefaultCellStyle.Padding = new Padding(8, 0, 8, 0);
-        dgvInquiries.ColumnHeadersHeight = 38;
+        dgvInquiries.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
+        {
+            BackColor = Color.White,
+            ForeColor = ColorSubtext,
+            SelectionBackColor = Color.White,
+            SelectionForeColor = ColorSubtext,
+            Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
+            Padding = new Padding(8, 0, 8, 0)
+        };
 
-        dgvInquiries.DefaultCellStyle.BackColor = Color.White;
-        dgvInquiries.DefaultCellStyle.ForeColor = ColorEspresso;
-        dgvInquiries.DefaultCellStyle.SelectionBackColor = Color.FromArgb(254, 246, 246);
-        dgvInquiries.DefaultCellStyle.SelectionForeColor = ColorEspresso;
-        dgvInquiries.DefaultCellStyle.Padding = new Padding(8, 0, 8, 0);
+        dgvInquiries.DefaultCellStyle = new DataGridViewCellStyle
+        {
+            BackColor = Color.White,
+            ForeColor = ColorEspresso,
+            SelectionBackColor = Color.FromArgb(254, 246, 246),
+            SelectionForeColor = ColorEspresso,
+            Padding = new Padding(8, 0, 8, 0)
+        };
 
-        dgvInquiries.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "InquiryCode", HeaderText = "ID", Width = 100, SortMode = DataGridViewColumnSortMode.NotSortable, DefaultCellStyle = { Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold) } });
-        dgvInquiries.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "ClientName", HeaderText = "CLIENT", Width = 160, SortMode = DataGridViewColumnSortMode.NotSortable, DefaultCellStyle = { Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold) } });
-        dgvInquiries.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "EventType", HeaderText = "EVENT", Width = 130, SortMode = DataGridViewColumnSortMode.NotSortable });
-        dgvInquiries.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "EventDateFormatted", HeaderText = "EVENT DATE", Width = 120, SortMode = DataGridViewColumnSortMode.NotSortable });
-        dgvInquiries.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "GarmentRequest", HeaderText = "GARMENT REQUEST", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, SortMode = DataGridViewColumnSortMode.NotSortable });
-        dgvInquiries.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "BudgetRange", HeaderText = "BUDGET", Width = 110, SortMode = DataGridViewColumnSortMode.NotSortable });
-        dgvInquiries.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "Priority", HeaderText = "PRIORITY", Width = 100, SortMode = DataGridViewColumnSortMode.NotSortable });
-        dgvInquiries.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "Status", HeaderText = "STATUS", Width = 100, SortMode = DataGridViewColumnSortMode.NotSortable });
+        var boldStyle = new DataGridViewCellStyle { Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold) };
 
-        var colView = new DataGridViewButtonColumn { Name = "ColView", HeaderText = "", Text = "View", UseColumnTextForButtonValue = true, Width = 75, FlatStyle = FlatStyle.Flat };
-        var colConvert = new DataGridViewButtonColumn { Name = "ColConvert", HeaderText = "ACTIONS", Text = "Convert", UseColumnTextForButtonValue = true, Width = 85, FlatStyle = FlatStyle.Flat };
+        dgvInquiries.Columns.AddRange(new DataGridViewColumn[]
+        {
+            new DataGridViewTextBoxColumn { DataPropertyName = "InquiryCode", HeaderText = "ID", Width = 100, DefaultCellStyle = boldStyle },
+            new DataGridViewTextBoxColumn { DataPropertyName = "ClientName", HeaderText = "CLIENT", Width = 160, DefaultCellStyle = boldStyle },
+            new DataGridViewTextBoxColumn { DataPropertyName = "EventType", HeaderText = "EVENT", Width = 130 },
+            new DataGridViewTextBoxColumn { DataPropertyName = "EventDateFormatted", HeaderText = "EVENT DATE", Width = 120 },
+            new DataGridViewTextBoxColumn { DataPropertyName = "GarmentRequest", HeaderText = "GARMENT REQUEST", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill },
+            new DataGridViewTextBoxColumn { DataPropertyName = "BudgetRange", HeaderText = "BUDGET", Width = 110 },
+            new DataGridViewTextBoxColumn { DataPropertyName = "Priority", HeaderText = "PRIORITY", Width = 100 },
+            new DataGridViewTextBoxColumn { DataPropertyName = "Status", HeaderText = "STATUS", Width = 100 },
+            new DataGridViewButtonColumn { Name = "ColView", HeaderText = "", Text = "View", UseColumnTextForButtonValue = true, Width = 75, FlatStyle = FlatStyle.Flat },
+            new DataGridViewButtonColumn { Name = "ColConvert", HeaderText = "ACTIONS", Text = "Convert", UseColumnTextForButtonValue = true, Width = 85, FlatStyle = FlatStyle.Flat }
+        });
 
-        dgvInquiries.Columns.AddRange([colView, colConvert]);
+        foreach (DataGridViewColumn col in dgvInquiries.Columns)
+        {
+            col.SortMode = DataGridViewColumnSortMode.NotSortable;
+        }
+
         dgvInquiries.CellContentClick += Grid_CellContentClick;
         dgvInquiries.CellPainting += DgvInquiries_CellPainting;
 
@@ -245,7 +283,6 @@ public partial class InquiriesView : UserControl
             lblRecordsCount.Text = $"{_pipelineData.Rows.Count} records";
 
             RenderChevronPills();
-            RenderFilterTabs();
 
             dgvInquiries.DataSource = null;
             dgvInquiries.DataSource = _pipelineData.Rows;
@@ -277,10 +314,10 @@ public partial class InquiriesView : UserControl
         {
             var item = stages[i];
             var container = new Panel { Width = 150, Height = 48, BackColor = Color.Transparent };
-            var lblCount = new Label { Text = item.Count.ToString(), Font = new Font("Segoe UI", 12f, FontStyle.Bold), ForeColor = ColorEspresso, Location = new Point(0, 0), AutoSize = true };
+            var lblCount = new Label { Text = item.Count.ToString(), Font = new Font("Segoe UI", 12f, FontStyle.Bold), ForeColor = ColorEspresso, AutoSize = true };
             var badge = new Label { Text = item.Stage, Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold), ForeColor = item.BadgeText, BackColor = item.BadgeBg, AutoSize = true, Padding = new Padding(8, 2, 8, 2), Location = new Point(0, 24) };
 
-            container.Controls.AddRange([lblCount, badge]);
+            container.Controls.AddRange(new Control[] { lblCount, badge });
             pnlChevronPills.Controls.Add(container);
 
             if (i < stages.Length - 1)
@@ -293,97 +330,42 @@ public partial class InquiriesView : UserControl
         pnlChevronPills.ResumeLayout();
     }
 
-    private void RenderFilterTabs()
-    {
-        if (pnlFilterTabs == null) return;
-
-        pnlFilterTabs.SuspendLayout();
-        pnlFilterTabs.Controls.Clear();
-
-        string[] tabs = ["All", "New", "In Review", "Quoted", "Converted", "Closed"];
-        foreach (var tab in tabs)
-        {
-            bool isSelected = string.Equals(_currentStatusFilter, tab, StringComparison.OrdinalIgnoreCase);
-            var btn = new Button
-            {
-                Text = tab,
-                AutoSize = true,
-                Height = 32,
-                Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
-                FlatStyle = FlatStyle.Flat,
-                Margin = new Padding(0, 0, 6, 0),
-                Cursor = Cursors.Hand,
-                BackColor = isSelected ? ColorDustyRose : Color.White,
-                ForeColor = isSelected ? Color.White : ColorEspresso
-            };
-            btn.FlatAppearance.BorderSize = isSelected ? 0 : 1;
-            btn.FlatAppearance.BorderColor = ColorBorder;
-            btn.Click += async (s, e) =>
-            {
-                _currentStatusFilter = tab;
-                await LoadInquiriesAsync();
-            };
-            pnlFilterTabs.Controls.Add(btn);
-        }
-        pnlFilterTabs.ResumeLayout();
-    }
-
     private void DgvInquiries_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)
     {
         if (e.RowIndex < 0 || e.ColumnIndex < 0 || _pipelineData?.Rows == null || e.RowIndex >= _pipelineData.Rows.Count || e.Graphics == null)
             return;
 
-        var column = dgvInquiries.Columns[e.ColumnIndex];
-        if (column == null) return;
-        var colName = column.DataPropertyName;
-        if (string.IsNullOrEmpty(colName)) return;
+        var colName = dgvInquiries.Columns[e.ColumnIndex]?.DataPropertyName;
+        if (colName is not ("Priority" or "Status")) return;
 
         var row = _pipelineData.Rows[e.RowIndex];
-        if (row == null) return;
+        string text = (colName == "Priority" ? row.Priority : row.Status) ?? string.Empty;
 
-        if (colName is "Priority" or "Status")
+        var (bg, fg) = text switch
         {
-            e.PaintBackground(e.ClipBounds, true);
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            "High" => (Color.FromArgb(254, 242, 242), Color.FromArgb(220, 38, 38)),
+            "Medium" => (Color.FromArgb(254, 243, 199), Color.FromArgb(180, 83, 9)),
+            "New" => (Color.FromArgb(239, 246, 255), Color.FromArgb(37, 99, 235)),
+            "In Review" => (Color.FromArgb(254, 243, 199), Color.FromArgb(180, 83, 9)),
+            "Quoted" => (Color.FromArgb(243, 232, 255), Color.FromArgb(126, 34, 206)),
+            "Converted" => (Color.FromArgb(236, 253, 245), Color.FromArgb(5, 150, 105)),
+            _ => (Color.FromArgb(243, 244, 246), Color.FromArgb(107, 114, 128))
+        };
 
-            string text = (colName == "Priority" ? row.Priority : row.Status) ?? string.Empty;
+        e.PaintBackground(e.ClipBounds, true);
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-            Color bg = text switch
-            {
-                "High" => Color.FromArgb(254, 242, 242),
-                "Medium" => Color.FromArgb(254, 243, 199),
-                "Low" => Color.FromArgb(243, 244, 246),
-                "New" => Color.FromArgb(239, 246, 255),
-                "In Review" => Color.FromArgb(254, 243, 199),
-                "Quoted" => Color.FromArgb(243, 232, 255),
-                "Converted" => Color.FromArgb(236, 253, 245),
-                _ => Color.FromArgb(243, 244, 246)
-            };
-
-            Color fg = text switch
-            {
-                "High" => Color.FromArgb(220, 38, 38),
-                "Medium" => Color.FromArgb(180, 83, 9),
-                "Low" => Color.FromArgb(107, 114, 128),
-                "New" => Color.FromArgb(37, 99, 235),
-                "In Review" => Color.FromArgb(180, 83, 9),
-                "Quoted" => Color.FromArgb(126, 34, 206),
-                "Converted" => Color.FromArgb(5, 150, 105),
-                _ => Color.FromArgb(107, 114, 128)
-            };
-
-            var badgeRect = new Rectangle(e.CellBounds.X + 6, e.CellBounds.Y + 12, 76, 24);
-            using (var brush = new SolidBrush(bg))
-            using (var path = GraphicsHelper.CreateRoundedRectangle(badgeRect, 4))
-            {
-                e.Graphics.FillPath(brush, path);
-            }
-
-            using var font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold);
-            TextRenderer.DrawText(e.Graphics, text, font, badgeRect, fg, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-
-            e.Handled = true;
+        var badgeRect = new Rectangle(e.CellBounds.X + 6, e.CellBounds.Y + 12, 76, 24);
+        using (var brush = new SolidBrush(bg))
+        using (var path = GraphicsHelper.CreateRoundedRectangle(badgeRect, 4))
+        {
+            e.Graphics.FillPath(brush, path);
         }
+
+        using var font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold);
+        TextRenderer.DrawText(e.Graphics, text, font, badgeRect, fg, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+
+        e.Handled = true;
     }
 
     private async void Grid_CellContentClick(object? sender, DataGridViewCellEventArgs e)
@@ -392,10 +374,9 @@ public partial class InquiriesView : UserControl
             return;
 
         var row = _pipelineData.Rows[e.RowIndex];
-        var col = dgvInquiries.Columns[e.ColumnIndex];
-        if (col == null) return;
+        var colName = dgvInquiries.Columns[e.ColumnIndex]?.Name;
 
-        if (col.Name == "ColView")
+        if (colName == "ColView")
         {
             var entity = await _controller.GetInquiryAsync(row.InquiryId);
             if (entity != null)
@@ -408,7 +389,7 @@ public partial class InquiriesView : UserControl
                 }
             }
         }
-        else if (col.Name == "ColConvert")
+        else if (colName == "ColConvert")
         {
             var confirm = MessageBox.Show(
                 $"Convert inquiry {row.InquiryCode} for '{row.ClientName}' into a confirmed booking draft?",

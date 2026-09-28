@@ -1,6 +1,6 @@
-﻿using CRM.domain.entities;
+﻿using CRM.api.DTOs;
+using CRM.domain.entities;
 using CRM.infrastructure.data;
-using CRM.api.DTOs;
 using Microsoft.EntityFrameworkCore;
 
 namespace CRM.api.Services;
@@ -160,7 +160,7 @@ public class RentalBookingService
         var reqEnd = draft.RentalEndDate.Date;
         var selectedIds = draft.SelectedGarments.Select(g => g.GarmentId).Distinct().ToList();
 
-        // Defensive validation: ensure none of the selected garments were booked concurrently
+        // Validate overlapping bookings
         var conflictingStyles = await db.RentalBookings
             .AsNoTracking()
             .Where(b => b.CompanyId == companyId
@@ -181,24 +181,28 @@ public class RentalBookingService
                 $"The following garment(s) are already booked for the selected rental dates: {string.Join(", ", conflictingStyles)}");
         }
 
-        // 1. Instantiate the RentalBooking parent entity
+        string notes = draft.AlterationNotes ?? string.Empty;
+        if (draft.LoyaltyDiscountAmount > 0)
+        {
+            notes = $"{notes} [Loyalty perk applied: {draft.LoyaltyTierName} (-₱{draft.LoyaltyDiscountAmount:N2})]".Trim();
+        }
+
         var booking = new RentalBooking
         {
             CompanyId = companyId,
             CustomerId = draft.SelectedCustomer.CustomerId,
             RentalStartDate = reqStart,
             RentalEndDate = reqEnd,
-            RentalFee = draft.TotalRentalFee,
-            SecurityDeposit = draft.TotalSecurityDeposit,
-            TotalAmount = draft.TotalDue,
+            RentalFee = draft.TotalRentalFee,             // Discounted fee
+            SecurityDeposit = draft.TotalSecurityDeposit, // 100% full deposit
+            TotalAmount = draft.TotalDue,                 // Discounted fee + Deposit
             PaymentMethod = draft.SelectedPaymentMethod,
-            AlterationNotes = draft.AlterationNotes,
+            AlterationNotes = notes,
             BookingStage = "Fitting",
             AgreedToTerms = draft.AgreedToTerms,
             CreatedAt = DateTime.UtcNow
         };
 
-        // 2. Map selected garments into BookingDetail line items
         foreach (var garment in draft.SelectedGarments)
         {
             booking.BookingDetails.Add(new BookingDetail
@@ -209,7 +213,6 @@ public class RentalBookingService
             });
         }
 
-        // 3. Load garments and synchronize their physical status to 'Reserved'
         var garmentsToUpdate = await db.Garments
             .Where(g => selectedIds.Contains(g.GarmentId) && g.CompanyId == companyId)
             .ToListAsync();

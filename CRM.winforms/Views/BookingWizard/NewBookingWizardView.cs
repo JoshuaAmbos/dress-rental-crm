@@ -1,6 +1,5 @@
 ﻿using CRM.infrastructure.data;
 using CRM.winforms.Models;
-using CRM.winforms.Services.RentalBookingServices;
 
 namespace CRM.winforms.Views;
 
@@ -11,7 +10,7 @@ public partial class NewBookingWizardView : UserControl
     private readonly Action? _onCloseWizard;
 
     private readonly BookingDraftModel _draft = new();
-    private readonly List<IBookingWizardStep> _steps = new();
+    private readonly List<IBookingWizardStep> _steps = [];
     private int _currentStepIndex = 0;
 
     public NewBookingWizardView()
@@ -27,11 +26,9 @@ public partial class NewBookingWizardView : UserControl
         _getCompanyId = getCompanyId ?? throw new ArgumentNullException(nameof(getCompanyId));
         _onCloseWizard = onCloseWizard;
 
-        // 1. Ensure buttons are on top of any panels so mouse clicks aren't blocked
         btnNext.BringToFront();
         btnCancel.BringToFront();
 
-        // 2. Explicitly wire click handlers
         btnNext.Click -= BtnNext_Click;
         btnNext.Click += BtnNext_Click;
 
@@ -104,6 +101,27 @@ public partial class NewBookingWizardView : UserControl
         }
 
         step.OnStepLeave(_draft);
+
+        // When leaving Step 1 (Client Selection), calculate the client's loyalty tier
+        if (_currentStepIndex == 0 && _draft.SelectedCustomer != null && _contextFactory != null)
+        {
+            try
+            {
+                var loyaltyService = new LoyaltyAwardService(_contextFactory);
+                var loyaltyCalc = await loyaltyService.CalculateCustomerDiscountAsync(
+                    _getCompanyId?.Invoke() ?? 1,
+                    _draft.SelectedCustomer.CustomerId,
+                    100m);
+
+                _draft.LoyaltyTierName = loyaltyCalc.TierName;
+                _draft.LoyaltyDiscountPercentage = loyaltyCalc.DiscountPercentage;
+            }
+            catch
+            {
+                _draft.LoyaltyTierName = "Standard";
+                _draft.LoyaltyDiscountPercentage = 0m;
+            }
+        }
 
         if (_currentStepIndex < _steps.Count - 1)
         {

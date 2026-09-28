@@ -1,31 +1,24 @@
-﻿using System;
-using System.Drawing;
+﻿using CRM.winforms.Models;
 using System.Drawing.Drawing2D;
-using System.Linq;
-using System.Windows.Forms;
-using CRM.winforms.Models;
 
 namespace CRM.winforms.Views;
 
 public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
 {
-    // 1. State & Draft
     private BookingDraftModel? _draft;
 
-    // 2. UI Value Labels (Right Column)
     private Label lblBookingIdVal = null!;
     private Label lblClientVal = null!;
     private Label lblGarmentVal = null!;
     private Label lblPeriodVal = null!;
     private Label lblRentalFeeVal = null!;
+    private Label lblLoyaltyDiscountVal = null!;
     private Label lblDepositVal = null!;
     private Label lblTotalVal = null!;
     private Label lblPaymentMethodVal = null!;
 
-    // 3. Terms Agreement Checkbox
     private CheckBox chkAgreeTerms = null!;
 
-    // 4. Atelier Palette
     private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
     private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
     private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
@@ -33,12 +26,12 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
     private static readonly Color ColorDivider = Color.FromArgb(242, 235, 235);
     private static readonly Color ColorCardBg = Color.White;
     private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
+    private static readonly Color ColorSuccess = Color.FromArgb(5, 150, 105);
 
-    private const string CurrencySymbol = "$";
-    private const int RowHeight = 48; // Slightly compact to fit the checkbox comfortably
-    private const int TotalRows = 8;
+    private const string CurrencySymbol = "₱";
+    private const int RowHeight = 44;
+    private const int TotalRows = 9;
 
-    // 5. Wizard Step Title
     public string StepTitle => "Review & Confirm";
 
     public Step5ConfirmationView()
@@ -53,14 +46,7 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
         Padding = new Padding(32, 20, 32, 20);
         Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
-        // 1. Header Title (No Subtitle)
-        var pnlHeader = new Panel
-        {
-            Dock = DockStyle.Top,
-            Height = 36,
-            BackColor = Color.Transparent
-        };
-
+        var pnlHeader = new Panel { Dock = DockStyle.Top, Height = 36, BackColor = Color.Transparent };
         var lblTitle = new Label
         {
             Text = "Review & Confirm",
@@ -74,7 +60,6 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
 
         var pnlHeaderSpacer = new Panel { Dock = DockStyle.Top, Height = 10, BackColor = Color.Transparent };
 
-        // 3. Terms & Conditions Checkbox (Docked at Bottom above wizard buttons)
         var pnlTerms = new Panel
         {
             Dock = DockStyle.Bottom,
@@ -95,11 +80,8 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
         pnlTerms.Controls.Add(chkAgreeTerms);
 
         var pnlTermsSpacer = new Panel { Dock = DockStyle.Bottom, Height = 10, BackColor = Color.Transparent };
-
-        // 2. Main Confirmation Card
         var pnlCard = BuildReviewCard();
 
-        // Assembly (Order matters for Docking)
         Controls.Add(pnlTermsSpacer);
         Controls.Add(pnlTerms);
         Controls.Add(pnlCard);
@@ -109,8 +91,6 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
 
     private Panel BuildReviewCard()
     {
-        //int cardHeight = (RowHeight * TotalRows) + 4;
-
         var card = new Panel
         {
             Dock = DockStyle.Fill,
@@ -118,38 +98,31 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
             Padding = new Padding(24, 0, 24, 0)
         };
 
-        // Draw card border and horizontal dividers between each row
         card.Paint += (s, e) =>
         {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-            // Outer rounded border
-            using (var borderPath = CreateRoundedRectangle(new Rectangle(0, 0, card.Width - 1, card.Height - 1), 8))
-            using (var borderPen = new Pen(ColorBorder, 1.25f))
-            {
-                e.Graphics.DrawPath(borderPen, borderPath);
-            }
+            using var borderPath = CreateRoundedRectangle(new Rectangle(0, 0, card.Width - 1, card.Height - 1), 8);
+            using var borderPen = new Pen(ColorBorder, 1.25f);
+            e.Graphics.DrawPath(borderPen, borderPath);
 
-            // Divider lines between rows
-            using (var dividerPen = new Pen(ColorDivider, 1f))
+            using var dividerPen = new Pen(ColorDivider, 1f);
+            for (int i = 1; i < TotalRows; i++)
             {
-                for (int i = 1; i < TotalRows; i++)
-                {
-                    int y = i * RowHeight;
-                    e.Graphics.DrawLine(dividerPen, 24, y, card.Width - 24, y);
-                }
+                int y = i * RowHeight;
+                e.Graphics.DrawLine(dividerPen, 24, y, card.Width - 24, y);
             }
         };
 
-        // Build the 8 rows
         AddRow(card, 0, "Booking ID", out lblBookingIdVal);
         AddRow(card, 1, "Client", out lblClientVal);
         AddRow(card, 2, "Garment", out lblGarmentVal);
         AddRow(card, 3, "Rental Period", out lblPeriodVal);
-        AddRow(card, 4, "Rental Fee", out lblRentalFeeVal);
-        AddRow(card, 5, "Security Deposit", out lblDepositVal);
-        AddRow(card, 6, "Total", out lblTotalVal);
-        AddRow(card, 7, "Payment Method", out lblPaymentMethodVal);
+        AddRow(card, 4, "Base Rental Fee", out lblRentalFeeVal);
+        AddRow(card, 5, "Loyalty Discount", out lblLoyaltyDiscountVal);
+        AddRow(card, 6, "Security Deposit", out lblDepositVal);
+        AddRow(card, 7, "Total Due", out lblTotalVal);
+        AddRow(card, 8, "Payment Method", out lblPaymentMethodVal);
 
         return card;
     }
@@ -158,18 +131,16 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
     {
         int y = rowIndex * RowHeight;
 
-        // Left Label (Subtext color, regular font)
         var lblTag = new Label
         {
             Text = labelText,
             UseMnemonic = false,
             Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
             ForeColor = ColorSubtext,
-            Location = new Point(24, y + 13),
+            Location = new Point(24, y + 11),
             AutoSize = true
         };
 
-        // Right Label (Espresso color, Semibold font)
         valLabel = new Label
         {
             Text = "—",
@@ -177,8 +148,8 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
             Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold),
             ForeColor = ColorEspresso,
             Anchor = AnchorStyles.Top | AnchorStyles.Right,
-            Location = new Point(container.Width - 524, y + 13),
-            Size = new Size(500, 24),
+            Location = new Point(container.Width - 524, y + 11),
+            Size = new Size(500, 22),
             TextAlign = ContentAlignment.MiddleRight
         };
 
@@ -186,64 +157,44 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
         container.Controls.Add(valLabel);
     }
 
-    // --- IBookingWizardStep Implementation ---
-
     public void OnStepEnter(BookingDraftModel draft)
     {
         _draft = draft;
 
-        // 1. Booking ID (Draft preview indicator)
         lblBookingIdVal.Text = "Pending (Auto-generated)";
+        lblClientVal.Text = _draft.SelectedCustomer is { } c ? $"{c.FirstName} {c.LastName}".Trim() : "—";
+        lblGarmentVal.Text = _draft.SelectedGarments.Count switch
+        {
+            1 => _draft.SelectedGarments[0].StyleName,
+            > 1 => string.Join(", ", _draft.SelectedGarments.Select(g => g.StyleName)),
+            _ => "None Selected"
+        };
 
-        // 2. Client Name
-        if (_draft.SelectedCustomer is { } c)
-        {
-            lblClientVal.Text = $"{c.FirstName} {c.LastName}".Trim();
-        }
-        else
-        {
-            lblClientVal.Text = "—";
-        }
-
-        // 3. Garment(s)
-        if (_draft.SelectedGarments.Count == 1)
-        {
-            lblGarmentVal.Text = _draft.SelectedGarments[0].StyleName;
-        }
-        else if (_draft.SelectedGarments.Count > 1)
-        {
-            lblGarmentVal.Text = string.Join(", ", _draft.SelectedGarments.Select(g => g.StyleName));
-        }
-        else
-        {
-            lblGarmentVal.Text = "None Selected";
-        }
-
-        // 4. Rental Period
         int days = _draft.RentalDurationDays;
         lblPeriodVal.Text = $"{_draft.RentalStartDate:yyyy-MM-dd} → {_draft.RentalEndDate:yyyy-MM-dd} ({days} day{(days == 1 ? "" : "s")})";
 
-        // 5. Rental Fee
-        lblRentalFeeVal.Text = $"{CurrencySymbol}{_draft.TotalRentalFee:N0}";
+        lblRentalFeeVal.Text = $"{CurrencySymbol}{_draft.SubtotalRentalFee:N2}";
 
-        // 6. Security Deposit
-        lblDepositVal.Text = $"{CurrencySymbol}{_draft.TotalSecurityDeposit:N0}";
+        if (_draft.LoyaltyDiscountAmount > 0)
+        {
+            lblLoyaltyDiscountVal.ForeColor = ColorSuccess;
+            lblLoyaltyDiscountVal.Text = $"-{CurrencySymbol}{_draft.LoyaltyDiscountAmount:N2} ({_draft.LoyaltyTierName} {_draft.LoyaltyDiscountPercentage:0.#}%)";
+        }
+        else
+        {
+            lblLoyaltyDiscountVal.ForeColor = ColorSubtext;
+            lblLoyaltyDiscountVal.Text = "₱0.00 (Standard Tier)";
+        }
 
-        // 7. Total
-        lblTotalVal.Text = $"{CurrencySymbol}{_draft.TotalDue:N0}";
+        lblDepositVal.Text = $"{CurrencySymbol}{_draft.TotalSecurityDeposit:N2}";
+        lblTotalVal.Text = $"{CurrencySymbol}{_draft.TotalDue:N2}";
+        lblPaymentMethodVal.Text = string.IsNullOrWhiteSpace(_draft.SelectedPaymentMethod) ? "Not specified" : _draft.SelectedPaymentMethod;
 
-        // 8. Payment Method
-        lblPaymentMethodVal.Text = string.IsNullOrWhiteSpace(_draft.SelectedPaymentMethod)
-            ? "Not specified"
-            : _draft.SelectedPaymentMethod;
-
-        // Restore agreement checkbox state if returning back/forth
         chkAgreeTerms.Checked = _draft.AgreedToTerms;
     }
 
     public void OnStepLeave(BookingDraftModel draft)
     {
-        // Save checkbox state to draft model before proceeding to submit
         draft.AgreedToTerms = chkAgreeTerms.Checked;
     }
 
@@ -264,7 +215,7 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
         var path = new GraphicsPath();
         int d = radius * 2;
         path.AddArc(rect.X, rect.Y, d, d, 180, 90);
-        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Right - d, d, d, 270, 90);
         path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
         path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
         path.CloseFigure();
