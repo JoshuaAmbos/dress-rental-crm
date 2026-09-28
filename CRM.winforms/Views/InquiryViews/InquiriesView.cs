@@ -21,7 +21,6 @@ public partial class InquiriesView : UserControl
     private KpiCardControl kpiRate = null!;
     private KpiCardControl kpiTotal = null!;
 
-    // Chevron Strip & Filter Bar
     private FlowLayoutPanel pnlChevronPills = null!;
     private FlowLayoutPanel pnlFilterTabs = null!;
     private TextBox txtSearch = null!;
@@ -53,7 +52,6 @@ public partial class InquiriesView : UserControl
         Padding = new Padding(32, 24, 32, 24);
         Font = new Font("Segoe UI", 9.5f);
 
-        // 1. Header
         var pnlHeader = new Panel { Dock = DockStyle.Top, Height = 64, BackColor = Color.Transparent };
         var lblTitle = new Label { Text = "Inquiries", Font = new Font("Segoe UI", 18f, FontStyle.Bold), ForeColor = ColorEspresso, AutoSize = true };
         var lblSub = new Label { Text = "Track inbound rental inquiries and convert them to bookings.", Font = new Font("Segoe UI", 9.75f), ForeColor = ColorSubtext, Location = new Point(0, 34), AutoSize = true };
@@ -75,11 +73,18 @@ public partial class InquiriesView : UserControl
 
         pnlHeader.Controls.AddRange(new Control[] { lblTitle, lblSub, btnLog });
 
-        // 2. Sections
-        Controls.Add(BuildTableCard());
-        Controls.Add(BuildFilterStrip());
-        Controls.Add(BuildChevronStrip());
-        Controls.Add(BuildKpiRow());
+        pnlHeader.Controls.AddRange([lblTitle, lblSub, btnLog]);
+
+        // 2. Section Rows
+        var pnlKpis = BuildKpiRow();
+        var pnlChevronStrip = BuildChevronStrip();
+        var pnlFilterStrip = BuildFilterStrip();
+        var pnlTableCard = BuildTableCard();
+
+        Controls.Add(pnlTableCard);
+        Controls.Add(pnlFilterStrip);
+        Controls.Add(pnlChevronStrip);
+        Controls.Add(pnlKpis);
         Controls.Add(pnlHeader);
     }
 
@@ -214,30 +219,18 @@ public partial class InquiriesView : UserControl
             ReadOnly = true,
             AutoGenerateColumns = false,
             SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-            RowTemplate = { Height = 48 },
-            ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None,
-            EnableHeadersVisualStyles = false,
-            ColumnHeadersHeight = 38
+            RowTemplate = { Height = 48 }
         };
 
-        dgvInquiries.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
-        {
-            BackColor = Color.White,
-            ForeColor = ColorSubtext,
-            SelectionBackColor = Color.White,
-            SelectionForeColor = ColorSubtext,
-            Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
-            Padding = new Padding(8, 0, 8, 0)
-        };
-
-        dgvInquiries.DefaultCellStyle = new DataGridViewCellStyle
-        {
-            BackColor = Color.White,
-            ForeColor = ColorEspresso,
-            SelectionBackColor = Color.FromArgb(254, 246, 246),
-            SelectionForeColor = ColorEspresso,
-            Padding = new Padding(8, 0, 8, 0)
-        };
+        dgvInquiries.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
+        dgvInquiries.EnableHeadersVisualStyles = false;
+        dgvInquiries.ColumnHeadersDefaultCellStyle.BackColor = Color.White;
+        dgvInquiries.ColumnHeadersDefaultCellStyle.ForeColor = ColorSubtext;
+        dgvInquiries.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.White;
+        dgvInquiries.ColumnHeadersDefaultCellStyle.SelectionForeColor = ColorSubtext;
+        dgvInquiries.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold);
+        dgvInquiries.ColumnHeadersDefaultCellStyle.Padding = new Padding(8, 0, 8, 0);
+        dgvInquiries.ColumnHeadersHeight = 38;
 
         var boldStyle = new DataGridViewCellStyle { Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold) };
 

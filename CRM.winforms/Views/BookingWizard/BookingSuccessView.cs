@@ -30,14 +30,12 @@ public partial class BookingSuccessView : UserControl
         BackColor = ColorViewBg;
         Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
-        // Centered Card Container
         var pnlCenter = new Panel
         {
             Size = new Size(500, 320),
             BackColor = Color.Transparent
         };
 
-        // Center card on view resize
         Resize += (s, e) =>
         {
             pnlCenter.Location = new Point(
@@ -45,7 +43,6 @@ public partial class BookingSuccessView : UserControl
                 Math.Max(0, (ClientSize.Height - pnlCenter.Height) / 2 - 20));
         };
 
-        // 1. Success Check Badge (Circle)
         var pnlBadge = new Panel
         {
             Size = new Size(54, 54),
@@ -57,11 +54,9 @@ public partial class BookingSuccessView : UserControl
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            // Light green filled circle
             using var fillBrush = new SolidBrush(ColorBadgeBg);
             g.FillEllipse(fillBrush, 0, 0, 53, 53);
 
-            // Green checkmark
             using var pen = new Pen(ColorCheckmark, 2.75f)
             {
                 StartCap = LineCap.Round,
@@ -77,7 +72,6 @@ public partial class BookingSuccessView : UserControl
             });
         };
 
-        // 2. Main Title
         var lblTitle = new Label
         {
             Text = "Booking Confirmed!",
@@ -88,7 +82,6 @@ public partial class BookingSuccessView : UserControl
             Location = new Point(0, 78)
         };
 
-        // 3. Subtitle / Confirmation Text with Highlighted Code
         var pnlText = new Panel
         {
             Size = new Size(pnlCenter.Width, 54),
@@ -103,7 +96,6 @@ public partial class BookingSuccessView : UserControl
             using var regularFont = new Font("Segoe UI", 10f, FontStyle.Regular);
             using var codeFont = new Font("Segoe UI Semibold", 10f, FontStyle.Bold);
 
-            // Line 1: "Booking " + [BKG-XXXX] + " has been created successfully."
             string part1 = "Booking ";
             string part2 = _bookingCode;
             string part3 = " has been created successfully.";
@@ -119,14 +111,12 @@ public partial class BookingSuccessView : UserControl
             TextRenderer.DrawText(g, part2, codeFont, new Point(startX + sz1.Width - 7, 4), ColorDustyRose);
             TextRenderer.DrawText(g, part3, regularFont, new Point(startX + sz1.Width + sz2.Width - 14, 4), ColorSubtext);
 
-            // Line 2: "A confirmation has been sent to the client."
             string line2 = "A confirmation has been sent to the client.";
             var szLine2 = TextRenderer.MeasureText(g, line2, regularFont);
             int startX2 = (pnlText.Width - szLine2.Width) / 2;
             TextRenderer.DrawText(g, line2, regularFont, new Point(startX2, 28), ColorSubtext);
         };
 
-        // 4. "Return to Dashboard" Button
         var btnReturn = new Button
         {
             Text = "Return to Dashboard",
