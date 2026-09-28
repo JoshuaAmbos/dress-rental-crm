@@ -1,6 +1,5 @@
 using CRM.domain.entities;
 using Microsoft.EntityFrameworkCore;
-using System.Reflection.Emit;
 
 namespace CRM.infrastructure.data;
 
@@ -20,6 +19,7 @@ public class TenantCrmDbContext : DbContext
     public DbSet<LoyaltyAward> LoyaltyAwards => Set<LoyaltyAward>();
     public DbSet<Garment> Garments { get; set; } = null!;
     public DbSet<SystemConfiguration> SystemConfigurations => Set<SystemConfiguration>();
+    public DbSet<Branch> Branches => Set<Branch>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

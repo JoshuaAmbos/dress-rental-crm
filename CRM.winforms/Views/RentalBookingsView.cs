@@ -11,6 +11,7 @@ public partial class RentalBookingsView : UserControl
     private readonly RentalBookingController _controller;
     private readonly Func<TenantCrmDbContext> _contextFactory;
     private readonly Func<int> _getCompanyId;
+    private readonly Func<int?>? _getBranchId;
 
     private string _currentStageFilter = "All";
     private string _currentSearchTerm = string.Empty;
@@ -46,12 +47,13 @@ public partial class RentalBookingsView : UserControl
         WireGridEvents();
     }
 
-    public RentalBookingsView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId)
+    public RentalBookingsView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId, Func<int?>? getBranchId = null)
     {
         InitializeComponent();
 
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         _getCompanyId = getCompanyId ?? throw new ArgumentNullException(nameof(getCompanyId));
+        _getBranchId = getBranchId;
         _controller = new RentalBookingController(_contextFactory);
 
         SetupFilterBar();
@@ -137,8 +139,12 @@ public partial class RentalBookingsView : UserControl
     {
         try
         {
-            // Call through the MVC Controller layer instead of service directly
-            _pipelineData = await _controller.LoadPipelineAsync(_getCompanyId(), _currentStageFilter, _currentSearchTerm);
+            // Propagate active branch filter into the controller call
+            _pipelineData = await _controller.LoadPipelineAsync(
+                _getCompanyId(),
+                _getBranchId?.Invoke(),
+                _currentStageFilter,
+                _currentSearchTerm);
 
             kpiCardControlActiveLeases?.SetData(
                 "ACTIVE LEASES",
@@ -254,7 +260,6 @@ public partial class RentalBookingsView : UserControl
 
                 if (confirm == DialogResult.Yes)
                 {
-                    // Call controller method instead of service directly
                     await _controller.ProcessReturnAsync(item.BookingId);
                     await LoadBookingsAsync();
                 }

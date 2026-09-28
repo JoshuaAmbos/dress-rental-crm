@@ -13,15 +13,13 @@ public static class DatabaseSeeder
     {
         await using var db = contextFactory();
 
-        // 1. Drop and recreate database schema cleanly
+        // Drop and recreate database schema cleanly
         await db.Database.EnsureDeletedAsync();
         await db.Database.EnsureCreatedAsync();
 
-        var today = new DateTime(2026, 9, 21); // Current operational date
+        var today = new DateTime(2026, 9, 21);
 
-        // -------------------------------------------------------------
-        // 2. PARENT TENANT & DATABASE (Resolves FK Constraint)
-        // -------------------------------------------------------------
+        // Parent Tenant & Database Configuration
         var company = new Company
         {
             CompanyCode = "ATELIER-01",
@@ -45,9 +43,44 @@ public static class DatabaseSeeder
 
         int activeCompanyId = companyDb.CompanyDatabaseId;
 
-        // -------------------------------------------------------------
-        // 3. SYSTEM CONFIGURATIONS & POLICIES
-        // -------------------------------------------------------------
+        // Enterprise Showroom Branches (Tenant C Multi-Location)
+        var branches = new List<Branch>
+        {
+            new()
+            {
+                CompanyId = activeCompanyId,
+                BranchCode = "BR-MKT",
+                BranchName = "Main Showroom (Makati)",
+                City = "Makati City",
+                Address = "Ayala Center, Makati City",
+                ContactPhone = "+63 2 8812 4321",
+                IsActive = true
+            },
+            new()
+            {
+                CompanyId = activeCompanyId,
+                BranchCode = "BR-BGC",
+                BranchName = "BGC Design Studio (Taguig)",
+                City = "Taguig",
+                Address = "Bonifacio High Street, BGC",
+                ContactPhone = "+63 2 8898 7654",
+                IsActive = true
+            },
+            new()
+            {
+                CompanyId = activeCompanyId,
+                BranchCode = "BR-CEB",
+                BranchName = "Cebu Pop-Up (IT Park)",
+                City = "Cebu City",
+                Address = "Cebu IT Park, Lahug",
+                ContactPhone = "+63 32 412 8890",
+                IsActive = true
+            }
+        };
+        db.Branches.AddRange(branches);
+        await db.SaveChangesAsync();
+
+        // System Configurations & Policies
         db.SystemConfigurations.AddRange(new List<SystemConfiguration>
         {
             new() { ConfigKey = "DefaultLateFeePerDay", ConfigValue = "500.00", Description = "Daily penalty for overdue garment returns", LastModified = today },
@@ -72,9 +105,7 @@ public static class DatabaseSeeder
         });
         await db.SaveChangesAsync();
 
-        // -------------------------------------------------------------
-        // 4. CUSTOMERS (30 Profiles)
-        // -------------------------------------------------------------
+        // Customer Profiles
         var firstNames = new[] { "Jonalyn", "Margot", "Vivienne", "Celeste", "Joshua", "Janin", "Gwen Giesha", "Aurelia", "Serena", "Camille", "Fleur", "Dominique", "Isabella", "Beatrice", "Katrina", "Danica", "Patricia", "Eleanor", "Samantha", "Lucille", "Genevieve", "Roxanne", "Sophia", "Yvette", "Bianca", "Kassandra", "Natalie", "Marian", "Corazon", "Therese" };
         var lastNames = new[] { "Gelay", "Ellison", "Hartwell", "Moreau", "Ambos", "Lagmay", "Goya", "Fontaine", "Blackwood", "Beaumont", "Delacroix", "Vanier", "Rosario", "Zobel", "Halili", "Reyes", "Tan", "Vance", "Lee", "Mercado", "Castillo", "Villanueva", "Soriano", "Salvador", "Perez", "Aquino", "Mendoza", "Santos", "Alcantara", "Valdez" };
         var districts = new[] { "Lanang, Davao City", "Matina, Davao City", "Bajada, Davao City", "Buhangin, Davao City", "Toril, Davao City", "Ecoland, Davao City", "Tagum City", "Panacan, Davao City", "Obrero, Davao City", "Calinan, Davao City" };
@@ -102,9 +133,7 @@ public static class DatabaseSeeder
         db.Customers.AddRange(customers);
         await db.SaveChangesAsync();
 
-        // -------------------------------------------------------------
-        // 5. GARMENTS (25 Designer Wardrobe Items)
-        // -------------------------------------------------------------
+        // Garments Catalog with Branch Inventory Allocation
         var garmentTemplates = new (string Code, string Style, string Cat, string Color, string Size, decimal Rate, decimal Dep)[]
         {
             ("GOW-001", "Blush Silk A-Line Gown", "Evening Gown", "Dusty Rose", "M", 4500m, 2500m),
@@ -135,11 +164,13 @@ public static class DatabaseSeeder
         };
 
         var garments = new List<Garment>();
-        foreach (var t in garmentTemplates)
+        for (int i = 0; i < garmentTemplates.Length; i++)
         {
+            var t = garmentTemplates[i];
             garments.Add(new Garment
             {
                 CompanyId = activeCompanyId,
+                BranchId = branches[i % branches.Count].BranchId,
                 ItemCode = t.Code,
                 StyleName = t.Style,
                 Category = t.Cat,
@@ -158,11 +189,7 @@ public static class DatabaseSeeder
         db.Garments.AddRange(garments);
         await db.SaveChangesAsync();
 
-        // -------------------------------------------------------------
-        // 6. PROCEDURAL GENERATION: EXACTLY 200 RENTAL BOOKINGS
-        // -------------------------------------------------------------
-        // Monthly distribution:
-        // Apr: 25 | May: 30 | Jun: 35 | Jul: 40 | Aug: 45 | Sep: 25 = 200 bookings
+        // Procedural Generation: Exactly 200 Rental Bookings with Branch Distribution
         var monthQuotas = new (int Year, int Month, int Count)[]
         {
             (2026, 4, 25),
@@ -183,29 +210,28 @@ public static class DatabaseSeeder
             for (int i = 0; i < count; i++)
             {
                 var customer = customers[rng.Next(customers.Count)];
+                var branch = branches[rng.Next(branches.Count)];
+
                 int startDay = (mo == 9)
-                    ? rng.Next(1, 22) // September staggered around today (Sep 21)
+                    ? rng.Next(1, 22)
                     : rng.Next(1, Math.Max(2, daysInMonth - 5));
 
                 var startDate = new DateTime(yr, mo, startDay);
                 int duration = rng.Next(3, 6);
                 var endDate = startDate.AddDays(duration);
 
-                // Stage determination
                 string stage = "Returned";
                 if (mo == 9)
                 {
-                    // Controlled breakdown for current operational month:
                     if (i < 12)
                     {
-                        stage = "Returned"; // Settled early September
+                        stage = "Returned";
                     }
                     else if (i < 18)
                     {
-                        // Active leases out now, due back within the upcoming 7 days
                         stage = "Active";
                         startDate = today.AddDays(-rng.Next(1, 4));
-                        endDate = today.AddDays(rng.Next(1, 7)); // Triggers upcoming returns KPI
+                        endDate = today.AddDays(rng.Next(1, 7));
                     }
                     else if (i < 21)
                     {
@@ -221,14 +247,12 @@ public static class DatabaseSeeder
                     }
                     else
                     {
-                        // Overdue return: ended before today but still active
                         stage = "Active";
                         startDate = today.AddDays(-7);
                         endDate = today.AddDays(-2);
                     }
                 }
 
-                // 15% chance of multi-item rental (2 garments)
                 int itemsCount = (rng.Next(100) < 15) ? 2 : 1;
                 var selectedGarments = new List<Garment>();
                 while (selectedGarments.Count < itemsCount)
@@ -243,6 +267,7 @@ public static class DatabaseSeeder
                 var booking = new RentalBooking
                 {
                     CompanyId = activeCompanyId,
+                    BranchId = branch.BranchId,
                     CustomerId = customer.CustomerId,
                     RentalStartDate = startDate,
                     RentalEndDate = endDate,
@@ -271,12 +296,9 @@ public static class DatabaseSeeder
         }
 
         db.RentalBookings.AddRange(bookings);
-        await db.SaveChangesAsync(); // Generates all 200 Booking IDs
+        await db.SaveChangesAsync();
 
-        // -------------------------------------------------------------
-        // 7. SYNCHRONIZE WARDROBE ASSET STATUSES
-        // -------------------------------------------------------------
-        // Set garments locked in active leases to "Rented"
+        // Synchronize Wardrobe Asset Statuses
         var activeGarmentIds = bookings
             .Where(b => b.BookingStage == "Active")
             .SelectMany(b => b.BookingDetails.Select(d => d.GarmentId))
@@ -305,15 +327,12 @@ public static class DatabaseSeeder
             }
         }
 
-        // Set 2 recently returned dresses to "In Cleaning"
         garments[13].Status = "In Cleaning";
         garments[14].Status = "In Cleaning";
 
         await db.SaveChangesAsync();
 
-        // -------------------------------------------------------------
-        // 8. INQUIRIES PIPELINE (30 Leads Across Stages)
-        // -------------------------------------------------------------
+        // Inquiries Pipeline
         var eventTypes = new[] { "Wedding", "Gala", "Prom / Debut", "Black Tie Awards", "Cocktail Party", "Fashion Editorial", "Anniversary" };
         var priorities = new[] { "High", "Medium", "Low" };
         var stages = new[] { "New", "In Review", "Quoted", "Converted", "Closed" };

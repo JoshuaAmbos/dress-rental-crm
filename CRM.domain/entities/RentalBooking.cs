@@ -5,7 +5,8 @@ public class RentalBooking
     public int RentalBookingId { get; set; }
     public int CustomerId { get; set; }
     public int CompanyId { get; set; }
-
+    public int? BranchId { get; set; }
+    public Branch? Branch { get; set; }
     public DateTime RentalStartDate { get; set; }
     public DateTime RentalEndDate { get; set; }
     public decimal RentalFee { get; set; }

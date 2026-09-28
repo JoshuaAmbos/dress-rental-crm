@@ -4,16 +4,19 @@ using CRM.infrastructure.data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace CRM.infrastructure.Migrations.TenantCrmDb
+namespace CRM.infrastructure.Migrations.TenantCrm
 {
     [DbContext(typeof(TenantCrmDbContext))]
-    partial class TenantCrmDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260928111413_AddBranchingSupport")]
+    partial class AddBranchingSupport
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -1,4 +1,5 @@
-﻿using CRM.infrastructure.data;
+﻿using CRM.domain.entities;
+using CRM.infrastructure.data;
 using CRM.winforms.Controls;
 using CRM.winforms.Views;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,14 @@ public partial class MainForm : Form
     private readonly LoginResult _user;
     private readonly Func<TenantCrmDbContext> _contextFactory;
     private readonly int _currentCompanyId = 1;
+
+    // Multi-Branch State Tracking (Tenant C)
+    private int? _currentBranchId = null;
+    private string _currentBranchName = "All Showrooms";
+    private List<Branch> _cachedBranches = new();
+    private Label lblTenantBadge = null!;
+    private Label lblTenantName = null!;
+    private ContextMenuStrip _branchSelectorMenu = null!;
 
     // View Caching
     private UserControl? _activeView;
@@ -62,11 +71,15 @@ public partial class MainForm : Form
         BuildAtelierShell();
     }
 
-    private void MainForm_Load(object? sender, EventArgs e)
+    private async void MainForm_Load(object? sender, EventArgs e)
     {
         if (LicenseManager.UsageMode != LicenseUsageMode.Designtime)
         {
-            // await CRM.infrastructure.data.DatabaseSeeder.ResetAndSeedDatabaseAsync(_contextFactory, _currentCompanyId);
+            // uncomment to run seeder
+            // comment out once loaded to avoid reseeding
+
+            await CRM.infrastructure.data.DatabaseSeeder.ResetAndSeedDatabaseAsync(_contextFactory, _currentCompanyId);
+            await LoadBranchDropdownMenuAsync();
             ShowCustomerProfiles();
         }
     }
@@ -123,7 +136,7 @@ public partial class MainForm : Form
         pnlTopBar.Controls.Add(lblDate);
         pnlMainArea.Controls.Add(pnlTopBar);
 
-        // Content Area for Injected UserControls
+        // Content Area for Injected Views
         panelContents = new Panel
         {
             Dock = DockStyle.Fill,
@@ -143,7 +156,7 @@ public partial class MainForm : Form
             BackColor = Color.Transparent
         };
 
-        // Brand / Logo
+        // Brand and Logo
         var pnlBrand = new Panel
         {
             Location = new Point(0, 0),
@@ -180,7 +193,13 @@ public partial class MainForm : Form
 
         pnlBrand.Controls.AddRange(new Control[] { picIcon, lblBrandName, lblBrandSub });
 
-        // Tenant Selector
+        // Branch and Showroom Selector Dropdown
+        _branchSelectorMenu = new ContextMenuStrip
+        {
+            Font = new Font("Segoe UI", 9f),
+            ShowImageMargin = false
+        };
+
         var pnlTenant = new Panel
         {
             Location = new Point(0, 52),
@@ -196,7 +215,7 @@ public partial class MainForm : Form
             e.Graphics.DrawPath(pen, path);
         };
 
-        var lblTenantBadge = new Label
+        lblTenantBadge = new Label
         {
             Text = "M",
             Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
@@ -213,15 +232,25 @@ public partial class MainForm : Form
             lblTenantBadge.Region = new Region(path);
         };
 
-        var lblTenantName = new Label
+        lblTenantName = new Label
         {
-            Text = "Main Showroom  ▾",
-            Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
+            Text = "All Showrooms  ▾",
+            Font = new Font("Segoe UI Semibold", 8.75f, FontStyle.Bold),
             ForeColor = ColorEspresso,
             Location = new Point(34, 9),
             AutoSize = true,
             Cursor = Cursors.Hand
         };
+
+        EventHandler openBranchMenu = (s, e) =>
+        {
+            _branchSelectorMenu.Show(pnlTenant, new Point(0, pnlTenant.Height + 2));
+        };
+
+        pnlTenant.Click += openBranchMenu;
+        lblTenantBadge.Click += openBranchMenu;
+        lblTenantName.Click += openBranchMenu;
+
         pnlTenant.Controls.AddRange(new Control[] { lblTenantBadge, lblTenantName });
 
         // Navigation Header Label
@@ -237,7 +266,7 @@ public partial class MainForm : Form
 
         pnlTopSection.Controls.AddRange(new Control[] { pnlBrand, pnlTenant, lblNavTag });
 
-        // Bottom User Profile Section
+        // User Profile Section
         var pnlUser = new Panel
         {
             Dock = DockStyle.Bottom,
@@ -329,6 +358,58 @@ public partial class MainForm : Form
         pnlNavList.BringToFront();
     }
 
+    private async Task LoadBranchDropdownMenuAsync()
+    {
+        try
+        {
+            await using var db = _contextFactory();
+            _cachedBranches = await db.Branches
+                .AsNoTracking()
+                .Where(b => b.CompanyId == _currentCompanyId && b.IsActive)
+                .OrderBy(b => b.BranchName)
+                .ToListAsync();
+
+            _branchSelectorMenu.Items.Clear();
+
+            var itemAll = new ToolStripMenuItem("🌐  All Showrooms", null, (s, e) => SelectBranch(null, "All Showrooms", "A"));
+            _branchSelectorMenu.Items.Add(itemAll);
+            _branchSelectorMenu.Items.Add(new ToolStripSeparator());
+
+            foreach (var b in _cachedBranches)
+            {
+                string badgeInitial = string.IsNullOrEmpty(b.City) ? "B" : b.City.Substring(0, 1).ToUpperInvariant();
+                var item = new ToolStripMenuItem($"🏢  {b.BranchName}", null, (s, e) => SelectBranch(b.BranchId, b.BranchName, badgeInitial));
+                _branchSelectorMenu.Items.Add(item);
+            }
+        }
+        catch { }
+    }
+
+    private void SelectBranch(int? branchId, string branchName, string initial)
+    {
+        _currentBranchId = branchId;
+        _currentBranchName = branchName;
+
+        lblTenantBadge.Text = initial;
+        lblTenantName.Text = branchName.Length > 16 ? $"{branchName.Substring(0, 14)}... ▾" : $"{branchName} ▾";
+
+        if (_activeView is RentalBookingsView)
+        {
+            _bookingsView = null;
+            ShowRentalBookingsView();
+        }
+        else if (_activeView is CatalogView)
+        {
+            _catalogView = null;
+            ShowCatalogView();
+        }
+        else if (_activeView is AnalyticsAndReportsView)
+        {
+            _reportsView = null;
+            ShowDashboardView();
+        }
+    }
+
     private Button CreateNavButton(string icon, string text, EventHandler onClick)
     {
         var btn = new Button
@@ -396,7 +477,7 @@ public partial class MainForm : Form
 
     public void ShowRentalBookingsView()
     {
-        _bookingsView ??= new RentalBookingsView(_contextFactory, () => _currentCompanyId);
+        _bookingsView ??= new RentalBookingsView(_contextFactory, () => _currentCompanyId, () => _currentBranchId);
         SwitchView(_bookingsView);
         HighlightNavByText("Rental Pipeline");
     }

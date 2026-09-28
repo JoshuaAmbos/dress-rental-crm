@@ -16,9 +16,9 @@ public class RentalBookingController
     }
 
     // 1. Pipeline Queries
-    public async Task<RentalPipelineDto> LoadPipelineAsync(int companyId, string stageFilter = "All", string searchTerm = "")
+    public async Task<RentalPipelineDto> LoadPipelineAsync(int companyId, int? branchId = null, string stageFilter = "All", string searchTerm = "")
     {
-        return await _bookingService.GetPipelineAsync(companyId, stageFilter, searchTerm);
+        return await _bookingService.GetPipelineAsync(companyId, branchId, stageFilter, searchTerm);
     }
 
     public async Task<List<GarmentPickerRowViewModel>> LoadAvailableGarmentsAsync(int companyId, DateTime start, DateTime end, string search = "")

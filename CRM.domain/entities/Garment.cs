@@ -3,7 +3,9 @@ namespace CRM.domain.entities;
 public class Garment
 {
     public int GarmentId { get; set; }
-    public int CompanyId { get; set; }  
+    public int CompanyId { get; set; }
+    public int? BranchId { get; set; }
+    public Branch? Branch { get; set; }
     public string ItemCode { get; set; } = string.Empty;
     public string StyleName { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;

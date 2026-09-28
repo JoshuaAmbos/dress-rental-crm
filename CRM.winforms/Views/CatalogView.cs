@@ -1,7 +1,6 @@
 ﻿using CRM.domain.entities;
 using CRM.infrastructure.data;
 using CRM.winforms.Controls;
-using CRM.winforms.Services.RentalBookingServices;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
 

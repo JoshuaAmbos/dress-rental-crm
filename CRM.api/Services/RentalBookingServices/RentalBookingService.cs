@@ -14,7 +14,7 @@ public class RentalBookingService
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
     }
 
-    public async Task<RentalPipelineDto> GetPipelineAsync(int companyId, string stageFilter = "All", string searchTerm = "")
+    public async Task<RentalPipelineDto> GetPipelineAsync(int companyId, int? branchId = null, string stageFilter = "All", string searchTerm = "")
     {
         await using var db = _contextFactory();
         var today = DateTime.Today;
@@ -26,6 +26,12 @@ public class RentalBookingService
             .Include(b => b.BookingDetails)
                 .ThenInclude(d => d.Garment)
             .Where(b => b.CompanyId == companyId);
+
+        // Apply branch filter if a specific branch is selected
+        if (branchId.HasValue)
+        {
+            query = query.Where(b => b.BranchId == branchId.Value);
+        }
 
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
