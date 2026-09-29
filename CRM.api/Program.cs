@@ -34,7 +34,9 @@ builder.Services.AddScoped<ITenantDbContextFactory, TenantDbContextFactory>();
 
 var app = builder.Build();
 
-await app.SeedIdentityAndTenantsAsync();
+// =============================================================
+// 2. DATABASE STARTUP INITIALIZATION & ROLE/TENANT SEEDING
+// =============================================================
 
 app.MapAuthEndpoints();
 app.MapTenantEndpoints();
