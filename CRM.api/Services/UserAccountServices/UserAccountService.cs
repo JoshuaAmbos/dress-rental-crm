@@ -1,4 +1,8 @@
-﻿using System.Text.Json;
+﻿using System;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace CRM.winforms.Services;
 
@@ -25,7 +29,8 @@ public class UserAccountService
                 CompanyName = companyName
             };
 
-            var response = await Http.PostAsJsonAsync("api/users/register", payload);
+            // Note the leading slash: /api/users/register
+            var response = await Http.PostAsJsonAsync("/api/users/register", payload);
             return await ParseResponseAsync(response, "User registered successfully.");
         }
         catch (Exception ex)
@@ -47,7 +52,7 @@ public class UserAccountService
                 CompanyName = companyName
             };
 
-            var response = await Http.PutAsJsonAsync($"api/users/{userId}", payload);
+            var response = await Http.PutAsJsonAsync($"/api/users/{userId}", payload);
             return await ParseResponseAsync(response, "User updated successfully.");
         }
         catch (Exception ex)
@@ -61,7 +66,7 @@ public class UserAccountService
         try
         {
             var payload = new { NewPassword = newPassword };
-            var response = await Http.PostAsJsonAsync($"api/users/{userId}/reset-password", payload);
+            var response = await Http.PostAsJsonAsync($"/api/users/{userId}/reset-password", payload);
             return await ParseResponseAsync(response, "Password reset successfully.");
         }
         catch (Exception ex)
@@ -74,7 +79,7 @@ public class UserAccountService
     {
         try
         {
-            var response = await Http.DeleteAsync($"api/users/{userId}");
+            var response = await Http.DeleteAsync($"/api/users/{userId}");
             return await ParseResponseAsync(response, "User deleted successfully.");
         }
         catch (Exception ex)

@@ -236,9 +236,14 @@ public partial class CreateUserDialogForm : Form
 
         var selectedRole = cmbRole.SelectedItem?.ToString() ?? AppRoles.Staff;
 
-        // Defensive tenant check (avoids NullReferenceException)
-        var selectedTenant = cmbTenant.SelectedItem as TenantItem
-            ?? new TenantItem(_currentCompanyId, string.IsNullOrWhiteSpace(_currentCompanyName) ? "Atelier Haute Couture" : _currentCompanyName);
+        int compId = _currentCompanyId;
+        string compName = string.IsNullOrWhiteSpace(_currentCompanyName) ? "Atelier Haute Couture" : _currentCompanyName;
+
+        if (cmbTenant.SelectedItem is TenantItem item)
+        {
+            compId = item.CompanyId;
+            compName = item.CompanyName;
+        }
 
         btnSubmit.Enabled = false;
         btnSubmit.Text = "Creating...";
@@ -248,12 +253,12 @@ public partial class CreateUserDialogForm : Form
             txtEmail.Text.Trim(),
             txtPassword.Text,
             selectedRole,
-            selectedTenant.CompanyId,
-            selectedTenant.CompanyName);
+            compId,
+            compName);
 
         if (success)
         {
-            MessageBox.Show($"Account '{txtUsername.Text.Trim()}' provisioned successfully under {selectedTenant.CompanyName}.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show($"Account '{txtUsername.Text.Trim()}' provisioned successfully under {compName}.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
             DialogResult = DialogResult.OK;
             Close();
         }
