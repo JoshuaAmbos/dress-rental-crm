@@ -1,10 +1,14 @@
 using CRM.api.Endpoints;
 using CRM.api.Extensions;
+using CRM.domain.Constants;
 using CRM.api.Services;
 using CRM.infrastructure.data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
+using System.Security.Claims;
+using CRM.api.DTOs;
+using CRM.domain.entities;
 
 var builder = WebApplication.CreateBuilder(args);
 
