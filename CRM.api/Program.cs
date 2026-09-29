@@ -1,18 +1,12 @@
-using CRM.api.DTOs;
+using CRM.api.Endpoints;
+using CRM.api.Extensions;
 using CRM.api.Services;
-using CRM.domain.Constants;
-using CRM.domain.entities;
 using CRM.infrastructure.data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// =============================================================
-// 1. SERVICES & DEPENDENCY INJECTION CONFIGURATION
-// =============================================================
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
