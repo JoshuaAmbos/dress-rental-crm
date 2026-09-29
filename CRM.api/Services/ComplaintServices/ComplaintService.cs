@@ -8,10 +8,12 @@ namespace CRM.api.Services;
 public class ComplaintService
 {
     private readonly Func<TenantCrmDbContext> _contextFactory;
+    private readonly EmailNotificationService _emailService;
 
     public ComplaintService(Func<TenantCrmDbContext> contextFactory)
     {
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
+        _emailService = new EmailNotificationService(_contextFactory);
     }
 
     public async Task<ComplaintPipelineDto> GetPipelineAsync(int companyId, int? branchId = null, string statusFilter = "All", string search = "")
@@ -96,8 +98,10 @@ public class ComplaintService
     public async Task SaveComplaintAsync(Complaint model)
     {
         await using var db = _contextFactory();
+        bool isNew = model.ComplaintId == 0;
+        bool wasJustResolved = false;
 
-        if (model.ComplaintId == 0)
+        if (isNew)
         {
             if (string.IsNullOrEmpty(model.ComplaintCode))
             {
@@ -113,6 +117,8 @@ public class ComplaintService
             var existing = await db.Complaints.FirstOrDefaultAsync(c => c.ComplaintId == model.ComplaintId);
             if (existing != null)
             {
+                wasJustResolved = model.Status == "Resolved" && existing.Status != "Resolved";
+
                 existing.ClientName = model.ClientName;
                 existing.ClientPhone = model.ClientPhone;
                 existing.ClientEmail = model.ClientEmail;
@@ -132,6 +138,35 @@ public class ComplaintService
         }
 
         await db.SaveChangesAsync();
+
+        // Dispatch Complaint Notifications
+        if (isNew && !string.IsNullOrWhiteSpace(model.ClientEmail))
+        {
+            _ = _emailService.SendNotificationAsync(
+                model.CompanyId,
+                model.BranchId,
+                null,
+                model.ClientEmail,
+                model.ClientName,
+                $"Incident Ticket Logged ({model.ComplaintCode})",
+                "Complaints",
+                $"We received your report regarding <strong>{model.Category}</strong>. " +
+                $"Our showroom management has initiated a review under status: <em>{model.Status}</em>.");
+        }
+        else if (wasJustResolved && !string.IsNullOrWhiteSpace(model.ClientEmail))
+        {
+            _ = _emailService.SendNotificationAsync(
+                model.CompanyId,
+                model.BranchId,
+                null,
+                model.ClientEmail,
+                model.ClientName,
+                $"Incident Resolved ({model.ComplaintCode})",
+                "Complaints",
+                $"Your complaint has been marked as <strong>Resolved</strong>.<br/>" +
+                $"Resolution: <em>{model.ResolutionNotes ?? "Corrective action completed."}</em>" +
+                (model.CompensationAmount > 0 ? $"<br/>A credit/refund of <strong>₱{model.CompensationAmount:N2}</strong> was authorized." : ""));
+        }
     }
 
     public async Task ResolveComplaintAsync(int complaintId, string notes, decimal compensation)
@@ -145,6 +180,21 @@ public class ComplaintService
             existing.CompensationAmount = compensation;
             existing.ResolvedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
+
+            if (!string.IsNullOrWhiteSpace(existing.ClientEmail))
+            {
+                _ = _emailService.SendNotificationAsync(
+                    existing.CompanyId,
+                    existing.BranchId,
+                    null,
+                    existing.ClientEmail,
+                    existing.ClientName,
+                    $"Incident Resolved ({existing.ComplaintCode})",
+                    "Complaints",
+                    $"Your complaint has been marked as <strong>Resolved</strong>.<br/>" +
+                    $"Resolution: <em>{notes}</em>" +
+                    (compensation > 0 ? $"<br/>A credit/refund of <strong>₱{compensation:N2}</strong> was authorized." : ""));
+            }
         }
     }
 }

@@ -20,6 +20,7 @@ public class TenantCrmDbContext : DbContext
     public DbSet<LoyaltyAward> LoyaltyAwards => Set<LoyaltyAward>();
     public DbSet<RentalTerm> RentalTerms => Set<RentalTerm>();
     public DbSet<Garment> Garments { get; set; } = null!;
+    public DbSet<CustomerNotification> CustomerNotifications => Set<CustomerNotification>();
     public DbSet<SystemConfiguration> SystemConfigurations => Set<SystemConfiguration>();
     public DbSet<Branch> Branches => Set<Branch>();
 
@@ -175,6 +176,28 @@ public class TenantCrmDbContext : DbContext
             entity.Property(x => x.PolicyTitle).HasMaxLength(150).IsRequired();
             entity.Property(x => x.PolicyContent).IsRequired();
             entity.Property(x => x.VersionNumber).HasMaxLength(20).IsRequired();
+        });
+
+        // CustomerNotification
+        builder.Entity<CustomerNotification>(entity =>
+        {
+            entity.ToTable("CustomerNotifications");
+            entity.HasKey(e => e.NotificationId);
+
+            entity.Property(e => e.RecipientEmail).HasMaxLength(150).IsRequired();
+            entity.Property(e => e.Subject).HasMaxLength(250).IsRequired();
+            entity.Property(e => e.Module).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.DeliveryStatus).HasMaxLength(50).IsRequired();
+
+            entity.HasOne(e => e.Branch)
+                  .WithMany()
+                  .HasForeignKey(e => e.BranchId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Customer)
+                  .WithMany()
+                  .HasForeignKey(e => e.CustomerId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // SystemConfiguration

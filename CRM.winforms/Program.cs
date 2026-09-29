@@ -7,6 +7,7 @@ static class Program
     [STAThread]
     static void Main()
     {
+        DotNetEnv.Env.TraversePath().Load();
         ApplicationConfiguration.Initialize();
 
         while (true)

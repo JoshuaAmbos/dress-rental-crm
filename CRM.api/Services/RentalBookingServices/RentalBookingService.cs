@@ -1,21 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using CRM.api.DTOs;
+﻿using CRM.api.DTOs;
 using CRM.domain.entities;
 using CRM.infrastructure.data;
+using Microsoft.EntityFrameworkCore;
 
 namespace CRM.api.Services;
 
 public class RentalBookingService
 {
     private readonly Func<TenantCrmDbContext> _contextFactory;
+    private readonly EmailNotificationService _emailService;
 
     public RentalBookingService(Func<TenantCrmDbContext> contextFactory)
     {
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
+        _emailService = new EmailNotificationService(_contextFactory);
     }
 
     // =========================================================================
@@ -190,7 +188,7 @@ public class RentalBookingService
     // =========================================================================
     /// <summary>
     /// Creates a new booking, enforces client active lease limits, checks date conflicts with buffers,
-    /// and synchronizes Garment.Status to "Reserved".
+    /// synchronizes Garment.Status to "Reserved", and dispatches confirmation notifications.
     /// </summary>
     public async Task<int> CreateBookingFromDraftAsync(int companyId, BookingDraftModel draft)
     {
@@ -292,6 +290,24 @@ public class RentalBookingService
         db.RentalBookings.Add(booking);
         await db.SaveChangesAsync();
 
+        // 6. Dispatch Booking Confirmation Email Notification
+        if (!string.IsNullOrWhiteSpace(draft.SelectedCustomer.EmailAddress))
+        {
+            string garmentsList = string.Join(", ", draft.SelectedGarments.Select(g => g.StyleName));
+            string clientName = $"{draft.SelectedCustomer.FirstName} {draft.SelectedCustomer.LastName}".Trim();
+
+            _ = _emailService.SendNotificationAsync(
+                companyId,
+                booking.BranchId,
+                draft.SelectedCustomer.CustomerId,
+                draft.SelectedCustomer.EmailAddress,
+                clientName,
+                $"Rental Booking Confirmed (BKG-{booking.RentalBookingId:D4})",
+                "Rental Pipeline",
+                $"Your lease for <strong>{garmentsList}</strong> has been confirmed. " +
+                $"Scheduled pickup begins on <strong>{draft.RentalStartDate:MMM dd, yyyy}</strong>. Total Due: ₱{draft.TotalDue:N2}.");
+        }
+
         return booking.RentalBookingId;
     }
 
@@ -300,7 +316,8 @@ public class RentalBookingService
     // =========================================================================
     /// <summary>
     /// Processes garment return, checks for overdue return status, dynamically computes penalty fees
-    /// using DefaultLateFeePerDay, appends audit notes, and transitions garments to 'In Cleaning'.
+    /// using DefaultLateFeePerDay, appends audit notes, transitions garments to 'In Cleaning',
+    /// and dispatches overdue penalty notifications if applicable.
     /// </summary>
     public async Task<(bool WasOverdue, int DaysLate, decimal LateFeeCharged)> ProcessReturnAsync(int bookingId)
     {
@@ -308,6 +325,7 @@ public class RentalBookingService
         var booking = await db.RentalBookings
             .Include(b => b.BookingDetails)
                 .ThenInclude(d => d.Garment)
+            .Include(b => b.Customer)
             .FirstOrDefaultAsync(b => b.RentalBookingId == bookingId);
 
         if (booking == null) return (false, 0, 0m);
@@ -327,6 +345,22 @@ public class RentalBookingService
             booking.AlterationNotes = string.IsNullOrWhiteSpace(booking.AlterationNotes)
                 ? auditNote
                 : $"{booking.AlterationNotes} | {auditNote}";
+
+            // Dispatch Overdue Penalty Notice Email Notification
+            if (booking.Customer != null && !string.IsNullOrWhiteSpace(booking.Customer.EmailAddress))
+            {
+                string clientName = $"{booking.Customer.FirstName} {booking.Customer.LastName}".Trim();
+                _ = _emailService.SendNotificationAsync(
+                    booking.CompanyId,
+                    booking.BranchId,
+                    booking.CustomerId,
+                    booking.Customer.EmailAddress,
+                    clientName,
+                    $"Overdue Return Notice (BKG-{booking.RentalBookingId:D4})",
+                    "Rental Pipeline",
+                    $"Your returned lease was logged <strong>{daysLate} day(s) overdue</strong>. " +
+                    $"An assessment of <strong>₱{lateFeeCharged:N2}</strong> has been debited in accordance with boutique terms.");
+            }
         }
 
         booking.BookingStage = "Returned";
@@ -419,25 +453,20 @@ public class RentalBookingService
 
         foreach (var garment in garments)
         {
-            // Ignore garments manually flagged as damaged, lost, or retired
             if (garment.Status is "Damaged" or "Lost" or "Retired") continue;
 
-            // Find relevant active bookings
             var activeBookings = garment.BookingDetails
                 .Select(d => d.RentalBooking)
                 .Where(b => b != null && b.BookingStage != "Cancelled")
                 .ToList();
 
-            // 1. Is it currently out with a client?
             bool isRented = activeBookings.Any(b =>
                 (b.BookingStage == "Active" || (b.BookingStage != "Returned" && b.RentalStartDate.Date <= today && b.RentalEndDate.Date >= today)));
 
-            // 2. Is it in an upcoming reserved or fitting stage?
             bool isReserved = !isRented && activeBookings.Any(b =>
                 (b.BookingStage is "Reserved" or "Fitting") ||
                 (b.BookingStage != "Returned" && b.RentalStartDate.Date > today));
 
-            // 3. Was it returned and waiting for cleaning?
             bool isCleaning = !isRented && !isReserved && garment.Status == "In Cleaning";
 
             if (isRented)

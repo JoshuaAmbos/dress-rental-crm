@@ -8,10 +8,12 @@ namespace CRM.api.Services;
 public class LoyaltyAwardService
 {
     private readonly Func<TenantCrmDbContext> _contextFactory;
+    private readonly EmailNotificationService _emailService;
 
     public LoyaltyAwardService(Func<TenantCrmDbContext> contextFactory)
     {
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
+        _emailService = new EmailNotificationService(_contextFactory);
     }
 
     // Overload for backwards compatibility
@@ -143,7 +145,8 @@ public class LoyaltyAwardService
     }
 
     /// <summary>
-    /// Computes the automatic booking discount for a client based on their loyalty qualification.
+    /// Computes the automatic booking discount for a client based on their loyalty qualification
+    /// and dispatches milestone congratulations for VIP / Gold tier members.
     /// </summary>
     public async Task<LoyaltyDiscountCalculationDto> CalculateCustomerDiscountAsync(int companyId, int customerId, decimal baseRentalFee, int? branchId = null)
     {
@@ -183,6 +186,22 @@ public class LoyaltyAwardService
 
         decimal discountPct = matchedTier?.DiscountPercentage ?? 0m;
         decimal discountAmount = Math.Round(baseRentalFee * (discountPct / 100m), 2);
+
+        // Dispatch VIP / Gold Tier Upgrade Email
+        if (matchedTier != null && matchedTier.TierName != "Standard" && !string.IsNullOrWhiteSpace(customer.EmailAddress))
+        {
+            string clientName = $"{customer.FirstName} {customer.LastName}".Trim();
+            _ = _emailService.SendNotificationAsync(
+                companyId,
+                branchId ?? customer.BranchId,
+                customer.CustomerId,
+                customer.EmailAddress,
+                clientName,
+                $"Congratulations! You unlocked {matchedTier.TierName} Status",
+                "Loyalty Awards",
+                $"Thank you for your patronage. Your cumulative spend has elevated you to the <strong>{matchedTier.TierName}</strong> tier, " +
+                $"entitling you to an automatic <strong>{matchedTier.DiscountPercentage:0.#}% discount</strong> on all future leases.");
+        }
 
         return new LoyaltyDiscountCalculationDto
         {
