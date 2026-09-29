@@ -1,4 +1,5 @@
-﻿using CRM.domain.entities;
+﻿using CRM.domain.Constants;
+using CRM.domain.entities;
 using CRM.infrastructure.data;
 using CRM.winforms.Controls;
 using CRM.winforms.Views;
@@ -14,15 +15,17 @@ public partial class MainForm : Form
 
     private readonly LoginResult _user;
     private readonly Func<TenantCrmDbContext> _contextFactory;
+    private readonly Func<MasterCrmDbContext> _masterContextFactory;
     private readonly int _currentCompanyId;
     private ContextMenuStrip _userAccountMenu = null!;
 
-    // Multi-Branch State Tracking (Tenant C)
+    // Multi-Branch State Tracking
     private int? _currentBranchId = null;
     private string _currentBranchName = "All Showrooms";
     private List<Branch> _cachedBranches = [];
     private Label lblTenantBadge = null!;
     private Label lblTenantName = null!;
+    private Panel pnlTenant = null!;
     private ContextMenuStrip _branchSelectorMenu = null!;
 
     // View Caching
@@ -33,6 +36,8 @@ public partial class MainForm : Form
     private CatalogView? _catalogView;
     private InquiriesView? _inquiriesView;
     private LoyaltyAwardsView? _loyaltyAwardsView;
+    private TermsAndConditionsView? _termsView;
+    private UserAccountsView? _usersView;
 
     // UI Structure Controls
     private Panel pnlSidebar = null!;
@@ -40,9 +45,18 @@ public partial class MainForm : Form
     private Panel panelContents = null!;
     private Label lblDate = null!;
 
-    // Nav Item Tracking
+    // Nav Item Tracking & Role-Gated Buttons
     private readonly List<Button> _navButtons = [];
     private Button? _currentActiveNavButton;
+    private Button _btnCustomers = null!;
+    private Button _btnRentals = null!;
+    private Button _btnCatalog = null!;
+    private Button _btnInquiries = null!;
+    private Button _btnLoyalty = null!;
+    private Button _btnAnalytics = null!;
+    private Button _btnTerms = null!;
+    private Button _btnUsers = null!;
+    private Button _btnSettings = null!;
 
     // Atelier Palette
     private static readonly Color ColorCanvasBg = Color.FromArgb(250, 245, 245);
@@ -57,7 +71,7 @@ public partial class MainForm : Form
     public MainForm() : this(new LoginResult
     {
         Username = "Sophia Laurent",
-        Roles = new[] { "Boutique Manager" },
+        Roles = new[] { "Manager" },
         CompanyId = 1,
         CompanyName = "Atelier Haute Couture"
     })
@@ -77,6 +91,14 @@ public partial class MainForm : Form
             return new TenantCrmDbContext(options);
         };
 
+        _masterContextFactory = () =>
+        {
+            var options = new DbContextOptionsBuilder<MasterCrmDbContext>()
+                .UseSqlServer("Server=10.0.2.2,1433;Database=DB_MasterCRM;User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;")
+                .Options;
+            return new MasterCrmDbContext(options);
+        };
+
         InitializeComponent();
         BuildAtelierShell();
     }
@@ -85,13 +107,21 @@ public partial class MainForm : Form
     {
         if (LicenseManager.UsageMode != LicenseUsageMode.Designtime)
         {
-            // Seed all tenants by passing null targetCompanyId
-            // Uncomment to re-seed, then comment out to persist data:
-
-            //await CRM.infrastructure.data.DatabaseSeeder.ResetAndSeedDatabaseAsync(_contextFactory);
-
             await LoadBranchDropdownMenuAsync();
-            ShowCustomerProfiles();
+
+            bool isSuperAdmin = _user.Roles.Any(r =>
+                r.Equals(AppRoles.Superadmin, StringComparison.OrdinalIgnoreCase) ||
+                r.Equals("Super Admin", StringComparison.OrdinalIgnoreCase));
+
+            // Super Admin lands on User Accounts; store roles land on Customer Profiles
+            if (isSuperAdmin)
+            {
+                ShowUsersView();
+            }
+            else
+            {
+                ShowCustomerProfiles();
+            }
         }
     }
 
@@ -118,7 +148,10 @@ public partial class MainForm : Form
         BuildSidebarContents();
         Controls.Add(pnlSidebar);
 
-        // Main Viewport Area Wrapper
+        // Apply role visibility directly after building the sidebar
+        ApplyRolePermissions();
+
+        // Main Content Area Wrapper
         var pnlMainArea = new Panel
         {
             Dock = DockStyle.Fill,
@@ -159,7 +192,7 @@ public partial class MainForm : Form
 
     private void BuildSidebarContents()
     {
-        // Top Fixed Section
+        // Top Fixed Brand Section
         var pnlTopSection = new Panel
         {
             Dock = DockStyle.Top,
@@ -167,7 +200,6 @@ public partial class MainForm : Form
             BackColor = Color.Transparent
         };
 
-        // Brand and Logo
         var pnlBrand = new Panel
         {
             Location = new Point(0, 0),
@@ -211,7 +243,7 @@ public partial class MainForm : Form
             ShowImageMargin = false
         };
 
-        var pnlTenant = new Panel
+        pnlTenant = new Panel
         {
             Location = new Point(0, 52),
             Size = new Size(198, 36),
@@ -277,7 +309,7 @@ public partial class MainForm : Form
 
         pnlTopSection.Controls.AddRange(new Control[] { pnlBrand, pnlTenant, lblNavTag });
 
-        // User Profile Section (Bottom Bar)
+        // Bottom User Profile Section
         var pnlUser = new Panel
         {
             Dock = DockStyle.Bottom,
@@ -340,7 +372,7 @@ public partial class MainForm : Form
             Cursor = Cursors.Hand
         };
 
-        // Wire Up the User Account Popup Menu
+        // User Account Popup Menu
         _userAccountMenu = new ContextMenuStrip
         {
             Font = new Font("Segoe UI", 9.5f),
@@ -406,26 +438,33 @@ public partial class MainForm : Form
         var pnlNavList = new Panel
         {
             Dock = DockStyle.Fill,
-            AutoScroll = false,
+            AutoScroll = true,
             BackColor = Color.Transparent,
             Padding = new Padding(0, 6, 0, 0)
         };
 
-        var btnAnalytics = CreateNavButton("📊", "Analytics", (s, e) => ShowDashboardView());
-        var btnInquiries = CreateNavButton("💬", "Inquiries / Complaints", (s, e) => ShowInquiryView());
-        var btnLoyalty = CreateNavButton("🎗", "Loyalty Awards", (s, e) => ShowLoyaltyAwardsView());
-        var btnCatalog = CreateNavButton("👗", "Garment Catalog", (s, e) => ShowCatalogView());
-        var btnRentals = CreateNavButton("📅", "Rental Pipeline", (s, e) => ShowRentalBookingsView());
-        var btnCustomers = CreateNavButton("👥", "Client Directory", (s, e) => ShowCustomerProfiles());
+        //TODO: Replace emoji icons with line icons
+        _btnSettings = CreateNavButton("⚙️", "System Config", (s, e) => ShowSystemConfigView());
+        _btnUsers = CreateNavButton("👥", "User Accounts", (s, e) => ShowUsersView());
+        _btnTerms = CreateNavButton("📜", "Terms & Conditions", (s, e) => ShowTermsView());
+        _btnAnalytics = CreateNavButton("📊", "Analytics", (s, e) => ShowDashboardView());
+        _btnLoyalty = CreateNavButton("🎗", "Loyalty Awards", (s, e) => ShowLoyaltyAwardsView());
+        _btnInquiries = CreateNavButton("💬", "Inquiries / Complaints", (s, e) => ShowInquiryView());
+        _btnCatalog = CreateNavButton("👗", "Garment Catalog", (s, e) => ShowCatalogView());
+        _btnRentals = CreateNavButton("📅", "Rental Pipeline", (s, e) => ShowRentalBookingsView());
+        _btnCustomers = CreateNavButton("👤", "Client Directory", (s, e) => ShowCustomerProfiles());
 
         pnlNavList.Controls.AddRange(new Control[]
         {
-            btnAnalytics,
-            btnInquiries,
-            btnLoyalty,
-            btnCatalog,
-            btnRentals,
-            btnCustomers
+            _btnSettings,
+            _btnUsers,
+            _btnTerms,
+            _btnAnalytics,
+            _btnLoyalty,
+            _btnInquiries,
+            _btnCatalog,
+            _btnRentals,
+            _btnCustomers
         });
 
         pnlSidebar.Controls.Add(pnlNavList);
@@ -435,6 +474,49 @@ public partial class MainForm : Form
         pnlTopSection.BringToFront();
         pnlUser.BringToFront();
         pnlNavList.BringToFront();
+    }
+
+    private void ApplyRolePermissions()
+    {
+        // 1. Role identification flags
+        bool isSuperAdmin = _user.Roles.Any(r =>
+            r.Equals(AppRoles.Superadmin, StringComparison.OrdinalIgnoreCase) ||
+            r.Equals("Super Admin", StringComparison.OrdinalIgnoreCase));
+
+        bool isAdmin = _user.Roles.Any(r =>
+            r.Equals(AppRoles.Admin, StringComparison.OrdinalIgnoreCase));
+
+        bool isManager = _user.Roles.Any(r =>
+            r.Equals(AppRoles.Manager, StringComparison.OrdinalIgnoreCase) ||
+            r.Equals("Boutique Manager", StringComparison.OrdinalIgnoreCase));
+
+        bool isStaff = _user.Roles.Any(r =>
+            r.Equals(AppRoles.Staff, StringComparison.OrdinalIgnoreCase) ||
+            r.Equals("Sales Staff", StringComparison.OrdinalIgnoreCase));
+
+        // 2. Operational Front-Desk & Loyalty (Staff, Manager, Admin)
+        bool hasFrontDeskAccess = isStaff || isManager || isAdmin;
+        _btnCustomers.Visible = hasFrontDeskAccess;
+        _btnRentals.Visible = hasFrontDeskAccess;
+        _btnCatalog.Visible = hasFrontDeskAccess;
+        _btnInquiries.Visible = hasFrontDeskAccess;
+        _btnLoyalty.Visible = hasFrontDeskAccess;
+
+        // 3. Oversight & Analytics (Manager and Admin only)
+        _btnAnalytics.Visible = isManager || isAdmin;
+
+        // 4. Terms and Conditions (All 4 roles)
+        _btnTerms.Visible = true;
+
+        // 5. User Accounts Management (Admin and Super Admin)
+        _btnUsers.Visible = isAdmin || isSuperAdmin;
+
+        // 6. System Configuration Management (Super Admin ONLY)
+        _btnSettings.Visible = isSuperAdmin;
+
+        // 7. Showroom Switching Lock (Managers and Admins)
+        pnlTenant.Enabled = isManager || isAdmin;
+        pnlTenant.Cursor = (isManager || isAdmin) ? Cursors.Hand : Cursors.Default;
     }
 
     private async Task LoadBranchDropdownMenuAsync()
@@ -589,6 +671,39 @@ public partial class MainForm : Form
         _loyaltyAwardsView ??= new LoyaltyAwardsView(_contextFactory, () => _currentCompanyId);
         SwitchView(_loyaltyAwardsView);
         HighlightNavByText("Loyalty Awards");
+    }
+
+    public void ShowTermsView()
+    {
+        _termsView ??= new TermsAndConditionsView(_contextFactory, _user.Roles);
+        SwitchView(_termsView);
+        HighlightNavByText("Terms & Conditions");
+    }
+
+    public void ShowUsersView()
+    {
+        bool isSuperAdmin = _user.Roles.Any(r =>
+            r.Equals(AppRoles.Superadmin, StringComparison.OrdinalIgnoreCase) ||
+            r.Equals("Super Admin", StringComparison.OrdinalIgnoreCase));
+
+        _usersView ??= new UserAccountsView(
+            _masterContextFactory,
+            _currentCompanyId,
+            string.IsNullOrWhiteSpace(_user.CompanyName) ? "Atelier Haute Couture" : _user.CompanyName,
+            isSuperAdmin);
+
+        SwitchView(_usersView);
+        HighlightNavByText("User Accounts");
+    }
+
+    public void ShowSystemConfigView()
+    {
+        MessageBox.Show(
+            "System Configuration Management is reserved for the Superadmin.\n" +
+            "Platform routing, tenant database connection pooling, and multi-tenant schema provisioning are running normally.",
+            "System Configuration",
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Information);
     }
 
     private void HighlightNavByText(string labelSub)

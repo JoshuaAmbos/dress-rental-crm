@@ -17,6 +17,7 @@ public class TenantCrmDbContext : DbContext
     public DbSet<ServiceIncident> ServiceIncidents => Set<ServiceIncident>();
     public DbSet<Inquiry> Inquiries => Set<Inquiry>();
     public DbSet<LoyaltyAward> LoyaltyAwards => Set<LoyaltyAward>();
+    public DbSet<RentalTerm> RentalTerms => Set<RentalTerm>();
     public DbSet<Garment> Garments { get; set; } = null!;
     public DbSet<SystemConfiguration> SystemConfigurations => Set<SystemConfiguration>();
     public DbSet<Branch> Branches => Set<Branch>();
