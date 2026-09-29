@@ -112,35 +112,7 @@ using (var scope = app.Services.CreateScope())
 // 3. AUTHENTICATION & IDENTITY ENDPOINTS
 // =============================================================
 
-app.MapPost("/api/auth/login", async (
-    LoginRequestDto request,
-    UserManager<IdentityUser> userManager) =>
-{
-    var user = await userManager.FindByNameAsync(request.Username);
-    if (user == null || !await userManager.CheckPasswordAsync(user, request.Password))
-    {
-        return Results.Unauthorized();
-    }
-
-    var roles = await userManager.GetRolesAsync(user);
-    var claims = await userManager.GetClaimsAsync(user);
-
-    var companyIdClaim = claims.FirstOrDefault(c => c.Type == "CompanyId")?.Value;
-    var companyNameClaim = claims.FirstOrDefault(c => c.Type == "CompanyName")?.Value;
-
-    int companyId = int.TryParse(companyIdClaim, out var cid) ? cid : 1;
-    string companyName = companyNameClaim ?? "Boutique Atelier";
-
-    return Results.Ok(new LoginResult
-    {
-        UserId = user.Id,
-        Username = user.UserName ?? string.Empty,
-        Email = user.Email ?? string.Empty,
-        CompanyId = companyId,
-        CompanyName = companyName,
-        Roles = roles.ToArray()
-    });
-});
+app.MapAuthEndpoints();
 
 // =============================================================
 // 4. MASTER CRM INFRASTRUCTURE ENDPOINTS
