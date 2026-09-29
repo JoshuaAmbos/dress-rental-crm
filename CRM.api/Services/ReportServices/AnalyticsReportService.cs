@@ -13,16 +13,27 @@ public class AnalyticsReportService
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
     }
 
-    public async Task<AnalyticsDashboardDto> GetAnalyticsOverviewAsync(int companyId, DateTime? startDate = null, DateTime? endDate = null)
+    // Overload for backwards compatibility
+    public Task<AnalyticsDashboardDto> GetAnalyticsOverviewAsync(int companyId, DateTime? startDate = null, DateTime? endDate = null)
+        => GetAnalyticsOverviewAsync(companyId, null, startDate, endDate);
+
+    // Multi-Branch Scoped Analytics Query
+    public async Task<AnalyticsDashboardDto> GetAnalyticsOverviewAsync(int companyId, int? branchId = null, DateTime? startDate = null, DateTime? endDate = null)
     {
         await using var db = _contextFactory();
         var today = DateTime.Today;
 
-        // 1. Fetch total wardrobe fleet for utilization metric
-        var allGarments = await db.Garments
+        // 1. Fetch wardrobe fleet scoped to active branch (or all branches if null)
+        var garmentQuery = db.Garments
             .AsNoTracking()
-            .Where(g => g.CompanyId == companyId && g.IsActive)
-            .ToListAsync();
+            .Where(g => g.CompanyId == companyId && g.IsActive);
+
+        if (branchId.HasValue)
+        {
+            garmentQuery = garmentQuery.Where(g => g.BranchId == branchId.Value);
+        }
+
+        var allGarments = await garmentQuery.ToListAsync();
 
         int totalActiveFleet = allGarments.Count;
         int currentlyRentedCount = allGarments.Count(g => string.Equals(g.Status, "Rented", StringComparison.OrdinalIgnoreCase));
@@ -30,13 +41,18 @@ public class AnalyticsReportService
             ? Math.Round((double)currentlyRentedCount / totalActiveFleet * 100.0, 1)
             : 0.0;
 
-        // 2. Fetch bookings query
+        // 2. Fetch bookings query scoped to company and branch
         var query = db.RentalBookings
             .AsNoTracking()
             .Include(b => b.Customer)
             .Include(b => b.BookingDetails)
                 .ThenInclude(d => d.Garment)
             .Where(b => b.CompanyId == companyId);
+
+        if (branchId.HasValue)
+        {
+            query = query.Where(b => b.BranchId == branchId.Value);
+        }
 
         if (startDate.HasValue)
         {
@@ -58,7 +74,7 @@ public class AnalyticsReportService
         static bool IsCancelled(string? stage) =>
             string.Equals(stage?.Trim(), "Cancelled", StringComparison.OrdinalIgnoreCase);
 
-        // 3. High-Level KPIs
+        // 3. High-Level Financial & Compliance KPIs
         var activeCirculationBookings = bookings
             .Where(b => !IsReturned(b.BookingStage) && !IsCancelled(b.BookingStage))
             .ToList();
@@ -77,7 +93,7 @@ public class AnalyticsReportService
         int onTimeReturns = completedBookings.Count(b => b.RentalEndDate.Date >= b.CreatedAt.Date);
         double returnRate = totalCompleted > 0 ? (double)onTimeReturns / totalCompleted * 100.0 : 100.0;
 
-        // 4. Monthly Trend
+        // 4. Monthly Trend (Scoped to Branch)
         var monthlyTrend = new List<MonthlyRevenueMetric>();
         int monthsLookback = 6;
         var lookbackStart = new DateTime(today.Year, today.Month, 1).AddMonths(-(monthsLookback - 1));
@@ -140,7 +156,7 @@ public class AnalyticsReportService
             .Take(5)
             .ToList();
 
-        // 7. Top Valued Customers Leaderboard (VIP Clients)
+        // 7. Top Valued Customers Leaderboard
         var topCustomers = bookings
             .Where(b => b.Customer != null && !IsCancelled(b.BookingStage))
             .GroupBy(b => b.CustomerId)
@@ -154,7 +170,6 @@ public class AnalyticsReportService
                 int totalBookings = g.Count();
                 decimal totalSpent = g.Sum(b => b.RentalFee);
 
-                // Tiering assignment
                 string tier = totalSpent >= 15000 || totalBookings >= 3 ? "VIP"
                             : totalSpent >= 8000 || totalBookings >= 2 ? "Gold"
                             : "Standard";
@@ -174,7 +189,7 @@ public class AnalyticsReportService
             .Take(5)
             .ToList();
 
-        // 8. Audit Ledger Table Rows
+        // 8. Audit Ledger Drill-Down Rows
         var auditLedger = bookings
             .OrderByDescending(b => b.RentalStartDate)
             .Select(b => new RentalLedgerRowDto
@@ -206,7 +221,7 @@ public class AnalyticsReportService
             MonthlyRevenueTrend = monthlyTrend,
             StageDistribution = stageDistribution,
             TopPerformingGarments = topGarments,
-            TopValuedCustomers = topCustomers, // <-- Mapped
+            TopValuedCustomers = topCustomers,
             AuditLedger = auditLedger
         };
     }

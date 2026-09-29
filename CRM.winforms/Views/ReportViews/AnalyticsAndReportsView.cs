@@ -1,9 +1,5 @@
-﻿using CRM.api.Controllers;
-using CRM.infrastructure.data;
+﻿using CRM.infrastructure.data;
 using CRM.winforms.Controls;
-using CRM.winforms.Models;
-using CRM.winforms.Services;
-using System.Drawing.Drawing2D;
 
 namespace CRM.winforms.Views;
 
@@ -11,6 +7,7 @@ public partial class AnalyticsAndReportsView : UserControl
 {
     private readonly Func<TenantCrmDbContext> _contextFactory;
     private readonly Func<int> _getCompanyId;
+    private readonly Func<int?>? _getBranchId;
     private readonly AnalyticsReportController _controller;
     private readonly CsvExportService _csvExportService;
 
@@ -48,9 +45,15 @@ public partial class AnalyticsAndReportsView : UserControl
     private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
 
     public AnalyticsAndReportsView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId)
+        : this(contextFactory, getCompanyId, null)
+    {
+    }
+
+    public AnalyticsAndReportsView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId, Func<int?>? getBranchId)
     {
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         _getCompanyId = getCompanyId ?? throw new ArgumentNullException(nameof(getCompanyId));
+        _getBranchId = getBranchId;
         _controller = new AnalyticsReportController(_contextFactory);
         _csvExportService = new CsvExportService();
 
@@ -67,15 +70,10 @@ public partial class AnalyticsAndReportsView : UserControl
         Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
         var pnlHeader = BuildHeaderSection();
-
         var pnlFilterBar = BuildFilterBar();
-
         var pnlKpiRow = BuildKpiRow();
-
         var pnlChartsRow = BuildChartsRow();
-
         var pnlLeaderboardRow = BuildLeaderboardsSection();
-
         var pnlLedgerSection = BuildAuditLedgerSection();
 
         Controls.Add(pnlLedgerSection);
@@ -418,17 +416,11 @@ public partial class AnalyticsAndReportsView : UserControl
             Padding = new Padding(18, 14, 18, 14)
         };
 
-        card.Resize += (s, e) =>
-        {
-            using var clipPath = GraphicsHelper.CreateRoundedRectangle(new Rectangle(0, 0, card.Width, card.Height), 8);
-            card.Region = new Region(clipPath);
-        };
-
         card.Paint += (s, e) =>
         {
             using var pen = new Pen(ColorBorder, 1.25f);
-            using var path = GraphicsHelper.CreateRoundedRectangle(new Rectangle(0, 0, card.Width - 1, card.Height - 1), 8);
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            using var path = CreateRoundedRectangle(new Rectangle(0, 0, card.Width - 1, card.Height - 1), 8);
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             e.Graphics.DrawPath(pen, path);
         };
 
@@ -459,8 +451,9 @@ public partial class AnalyticsAndReportsView : UserControl
         {
             DateTime? start = _activePreset == "All Time" ? null : dtpStart.Value.Date;
             DateTime? end = _activePreset == "All Time" ? null : dtpEnd.Value.Date;
+            int? branchId = _getBranchId?.Invoke(); // Dynamically scopes query to active showroom
 
-            var data = await _controller.LoadDashboardMetricsAsync(_getCompanyId(), start, end);
+            var data = await _controller.LoadDashboardMetricsAsync(_getCompanyId(), branchId, start, end);
 
             // KPI Cards
             kpiRevenue.SetData("GROSS LEASE REVENUE", $"₱{data.TotalLeaseRevenue:N2}", "Filtered Period", ColorDustyRose, Color.FromArgb(254, 242, 243), ColorDustyRose);
@@ -532,5 +525,17 @@ public partial class AnalyticsAndReportsView : UserControl
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
         }
+    }
+
+    private static System.Drawing.Drawing2D.GraphicsPath CreateRoundedRectangle(Rectangle rect, int radius)
+    {
+        var path = new System.Drawing.Drawing2D.GraphicsPath();
+        int d = radius * 2;
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 }

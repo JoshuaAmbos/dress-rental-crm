@@ -13,14 +13,25 @@ public class CustomerProfileService
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
     }
 
-    public async Task<List<CustomerRowViewModel>> GetCustomersAsync(int companyId, bool showArchived, string search = "")
+    // Backwards-compatible overload for wizard steps that don't pass branchId
+    public Task<List<CustomerRowViewModel>> GetCustomersAsync(int companyId, bool showArchived, string search = "")
+        => GetCustomersAsync(companyId, null, showArchived, search);
+
+    // Multi-branch filtered query
+    public async Task<List<CustomerRowViewModel>> GetCustomersAsync(int companyId, int? branchId, bool showArchived, string search = "")
     {
         await using var db = _contextFactory();
 
-        // Strict row-level tenant discrimination
         var query = db.Customers
             .AsNoTracking()
+            .Include(c => c.Branch)
             .Where(c => c.CompanyId == companyId && c.IsActive == !showArchived);
+
+        // If a specific showroom is selected, filter strictly to that branch
+        if (branchId.HasValue)
+        {
+            query = query.Where(c => c.BranchId == branchId.Value);
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {

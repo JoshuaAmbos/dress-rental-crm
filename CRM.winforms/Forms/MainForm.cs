@@ -35,6 +35,7 @@ public partial class MainForm : Form
     private RentalBookingsView? _bookingsView;
     private CatalogView? _catalogView;
     private InquiriesView? _inquiriesView;
+    private ComplaintsView? _complaintsView;
     private LoyaltyAwardsView? _loyaltyAwardsView;
     private TermsAndConditionsView? _termsView;
     private UserAccountsView? _usersView;
@@ -53,6 +54,7 @@ public partial class MainForm : Form
     private Button _btnRentals = null!;
     private Button _btnCatalog = null!;
     private Button _btnInquiries = null!;
+    private Button _btnComplaints = null!;
     private Button _btnLoyalty = null!;
     private Button _btnAnalytics = null!;
     private Button _btnTerms = null!;
@@ -450,7 +452,8 @@ public partial class MainForm : Form
         _btnTerms = CreateNavButton("📜", "Terms & Conditions", (s, e) => ShowTermsView());
         _btnAnalytics = CreateNavButton("📊", "Analytics", (s, e) => ShowDashboardView());
         _btnLoyalty = CreateNavButton("🎗", "Loyalty Awards", (s, e) => ShowLoyaltyAwardsView());
-        _btnInquiries = CreateNavButton("💬", "Inquiries / Complaints", (s, e) => ShowInquiryView());
+        _btnInquiries = CreateNavButton("💬", "Inquiries", (s, e) => ShowInquiryView());
+        _btnComplaints = CreateNavButton("⚠️", "Complaints", (s, e) => ShowComplaintsView());
         _btnCatalog = CreateNavButton("👗", "Garment Catalog", (s, e) => ShowCatalogView());
         _btnRentals = CreateNavButton("📅", "Rental Pipeline", (s, e) => ShowRentalBookingsView());
         _btnCustomers = CreateNavButton("👤", "Client Directory", (s, e) => ShowCustomerProfiles());
@@ -462,6 +465,7 @@ public partial class MainForm : Form
             _btnTerms,
             _btnAnalytics,
             _btnLoyalty,
+            _btnComplaints, // <-- Added here
             _btnInquiries,
             _btnCatalog,
             _btnRentals,
@@ -501,6 +505,7 @@ public partial class MainForm : Form
         _btnRentals.Visible = hasFrontDeskAccess;
         _btnCatalog.Visible = hasFrontDeskAccess;
         _btnInquiries.Visible = hasFrontDeskAccess;
+        _btnComplaints.Visible = hasFrontDeskAccess;
         _btnLoyalty.Visible = hasFrontDeskAccess;
 
         // 3. Oversight & Analytics (Manager and Admin only)
@@ -546,6 +551,13 @@ public partial class MainForm : Form
         }
         catch { }
     }
+    public void ShowComplaintsView()
+    {
+        _complaintsView ??= new ComplaintsView(_contextFactory, () => _currentCompanyId, () => _currentBranchId);
+        SwitchView(_complaintsView);
+        _ = _complaintsView.LoadComplaintsAsync();
+        HighlightNavByText("Complaints");
+    }
 
     private void SelectBranch(int? branchId, string branchName, string initial)
     {
@@ -555,7 +567,17 @@ public partial class MainForm : Form
         lblTenantBadge.Text = initial;
         lblTenantName.Text = branchName.Length > 16 ? $"{branchName.Substring(0, 14)}... ▾" : $"{branchName} ▾";
 
-        if (_activeView is RentalBookingsView)
+        if (_activeView is ComplaintsView)
+        {
+            _complaintsView = null;
+            ShowComplaintsView();
+        }
+        else if (_activeView is CustomerProfilesView)
+        {
+            _customerProfilesView = null;
+            ShowCustomerProfiles();
+        }
+        else if (_activeView is RentalBookingsView)
         {
             _bookingsView = null;
             ShowRentalBookingsView();
@@ -569,6 +591,11 @@ public partial class MainForm : Form
         {
             _reportsView = null;
             ShowDashboardView();
+        }
+        else if (_activeView is LoyaltyAwardsView)
+        {
+            _loyaltyAwardsView = null;
+            ShowLoyaltyAwardsView();
         }
     }
 
@@ -632,7 +659,7 @@ public partial class MainForm : Form
 
     public void ShowCustomerProfiles()
     {
-        _customerProfilesView = new CustomerProfilesView(_contextFactory, () => _currentCompanyId);
+        _customerProfilesView = new CustomerProfilesView(_contextFactory, () => _currentCompanyId, () => _currentBranchId);
         SwitchView(_customerProfilesView);
         HighlightNavByText("Client Directory");
     }
@@ -661,7 +688,7 @@ public partial class MainForm : Form
 
     public void ShowDashboardView()
     {
-        _reportsView ??= new AnalyticsAndReportsView(_contextFactory, () => _currentCompanyId);
+        _reportsView ??= new AnalyticsAndReportsView(_contextFactory, () => _currentCompanyId, () => _currentBranchId);
         SwitchView(_reportsView);
         _ = _reportsView.LoadDashboardDataAsync();
         HighlightNavByText("Analytics");
@@ -669,7 +696,7 @@ public partial class MainForm : Form
 
     public void ShowLoyaltyAwardsView()
     {
-        _loyaltyAwardsView ??= new LoyaltyAwardsView(_contextFactory, () => _currentCompanyId);
+        _loyaltyAwardsView = new LoyaltyAwardsView(_contextFactory, () => _currentCompanyId, () => _currentBranchId);
         SwitchView(_loyaltyAwardsView);
         HighlightNavByText("Loyalty Awards");
     }

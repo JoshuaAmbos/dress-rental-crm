@@ -22,16 +22,23 @@ public class LoyaltyAwardController : ControllerBase
     }
 
     [HttpGet("overview")]
-    public async Task<ActionResult<LoyaltyOverviewDto>> GetOverview([FromQuery] int companyId = 1, [FromQuery] string search = "")
+    public async Task<ActionResult<LoyaltyOverviewDto>> GetOverview(
+        [FromQuery] int companyId = 1,
+        [FromQuery] int? branchId = null,
+        [FromQuery] string search = "")
     {
-        var overview = await _loyaltyService.GetLoyaltyOverviewAsync(companyId, search);
+        var overview = await _loyaltyService.GetLoyaltyOverviewAsync(companyId, branchId, search);
         return Ok(overview);
     }
 
     [HttpGet("discount")]
-    public async Task<ActionResult<LoyaltyDiscountCalculationDto>> CalculateDiscount([FromQuery] int companyId, [FromQuery] int customerId, [FromQuery] decimal rentalFee)
+    public async Task<ActionResult<LoyaltyDiscountCalculationDto>> CalculateDiscount(
+        [FromQuery] int companyId,
+        [FromQuery] int customerId,
+        [FromQuery] decimal rentalFee,
+        [FromQuery] int? branchId = null)
     {
-        var result = await _loyaltyService.CalculateCustomerDiscountAsync(companyId, customerId, rentalFee);
+        var result = await _loyaltyService.CalculateCustomerDiscountAsync(companyId, customerId, rentalFee, branchId);
         return Ok(result);
     }
 

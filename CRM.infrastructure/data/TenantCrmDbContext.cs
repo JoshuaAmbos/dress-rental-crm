@@ -15,6 +15,7 @@ public class TenantCrmDbContext : DbContext
     public DbSet<RentalBooking> RentalBookings => Set<RentalBooking>();
     public DbSet<BookingDetail> BookingDetails => Set<BookingDetail>();
     public DbSet<ServiceIncident> ServiceIncidents => Set<ServiceIncident>();
+    public DbSet<Complaint> Complaints => Set<Complaint>();
     public DbSet<Inquiry> Inquiries => Set<Inquiry>();
     public DbSet<LoyaltyAward> LoyaltyAwards => Set<LoyaltyAward>();
     public DbSet<RentalTerm> RentalTerms => Set<RentalTerm>();
@@ -122,6 +123,27 @@ public class TenantCrmDbContext : DbContext
                   .WithMany(x => x.ServiceIncidents)
                   .HasForeignKey(x => x.RentalBookingId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Complaint
+        builder.Entity<Complaint>(entity =>
+        {
+            entity.HasKey(e => e.ComplaintId);
+            entity.Property(e => e.ComplaintCode).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.ClientName).HasMaxLength(150).IsRequired();
+            entity.Property(e => e.ClientEmail).HasMaxLength(150);
+            entity.Property(e => e.ClientPhone).HasMaxLength(50);
+            entity.Property(e => e.Category).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Severity).HasMaxLength(50).HasDefaultValue("Medium");
+            entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("New");
+            entity.Property(e => e.Description).HasMaxLength(1000).IsRequired();
+            entity.Property(e => e.ResolutionNotes).HasMaxLength(1000);
+            entity.Property(e => e.CompensationAmount).HasPrecision(18, 2);
+
+            entity.HasOne(e => e.Branch)
+                  .WithMany()
+                  .HasForeignKey(e => e.BranchId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Inquiry

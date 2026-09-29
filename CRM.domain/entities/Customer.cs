@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+
 namespace CRM.domain.entities;
 
 public class Customer
@@ -5,6 +8,10 @@ public class Customer
     public int CustomerId { get; set; }
     public string CustomerCode { get; set; } = string.Empty;
     public int CompanyId { get; set; }
+
+    // Multi-Branch Showroom Scope
+    public int? BranchId { get; set; }
+
     public string FirstName { get; set; } = string.Empty;
     public string MiddleName { get; set; } = string.Empty; // Optional
     public string LastName { get; set; } = string.Empty;
@@ -12,7 +19,6 @@ public class Customer
     public string FullName => string.IsNullOrWhiteSpace(MiddleName)
         ? $"{FirstName} {LastName}".Trim()
         : $"{FirstName} {MiddleName} {LastName}".Trim();
-
 
     public string ContactNumber { get; set; } = string.Empty;
     public string EmailAddress { get; set; } = string.Empty;
@@ -25,6 +31,7 @@ public class Customer
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    // Nav properties
+    // Navigation properties
+    public Branch? Branch { get; set; }
     public ICollection<RentalBooking> RentalBookings { get; set; } = [];
 }

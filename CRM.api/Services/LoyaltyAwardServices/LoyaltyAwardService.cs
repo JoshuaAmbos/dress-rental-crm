@@ -14,11 +14,16 @@ public class LoyaltyAwardService
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
     }
 
-    public async Task<LoyaltyOverviewDto> GetLoyaltyOverviewAsync(int companyId, string searchTerm = "")
+    // Overload for backwards compatibility
+    public Task<LoyaltyOverviewDto> GetLoyaltyOverviewAsync(int companyId, string searchTerm = "")
+        => GetLoyaltyOverviewAsync(companyId, null, searchTerm);
+
+    // Multi-Branch Scoped Loyalty Overview
+    public async Task<LoyaltyOverviewDto> GetLoyaltyOverviewAsync(int companyId, int? branchId = null, string searchTerm = "")
     {
         await using var db = _contextFactory();
 
-        // Fetch defined tier rules ordered by threshold ascending
+        // 1. Fetch defined tier rules ordered by threshold ascending
         var tiers = await db.LoyaltyAwards
             .AsNoTracking()
             .OrderBy(t => t.MinLifetimeSpend)
@@ -34,19 +39,28 @@ public class LoyaltyAwardService
             ];
         }
 
-        // Query customers and non-cancelled bookings
+        // 2. Query customers scoped to the active showroom branch
         var customersQuery = db.Customers
             .AsNoTracking()
-            .Where(c => c.CompanyId == companyId && c.IsActive)
-            .Include(c => c.RentalBookings.Where(b => b.BookingStage != "Cancelled"));
+            .Where(c => c.CompanyId == companyId && c.IsActive);
+
+        if (branchId.HasValue)
+        {
+            customersQuery = customersQuery.Where(c => c.BranchId == branchId.Value);
+        }
+
+        customersQuery = customersQuery.Include(c => c.RentalBookings.Where(b => b.BookingStage != "Cancelled"));
 
         var customers = await customersQuery.ToListAsync();
-
         var customerLoyaltyList = new List<CustomerLoyaltyDto>();
 
         foreach (var c in customers)
         {
-            var validBookings = c.RentalBookings.ToList();
+            // Scope customer's booking spend to the branch if selected
+            var validBookings = branchId.HasValue
+                ? c.RentalBookings.Where(b => b.BranchId == branchId.Value).ToList()
+                : c.RentalBookings.ToList();
+
             decimal totalSpend = validBookings.Sum(b => b.RentalFee);
             int rentalCount = validBookings.Count;
 
@@ -104,7 +118,7 @@ public class LoyaltyAwardService
 
         customerLoyaltyList = [.. customerLoyaltyList.OrderByDescending(c => c.LifetimeSpend)];
 
-        // Assemble Tier DTOs with active enrolled counts
+        // Assemble Tier DTOs with enrolled counts for this branch
         var tierDtos = tiers.Select(t => new LoyaltyTierDto
         {
             LoyaltyAwardId = t.LoyaltyAwardId,
@@ -122,7 +136,7 @@ public class LoyaltyAwardService
             VipClientsCount = customerLoyaltyList.Count(c => c.CurrentTier.Equals("VIP", StringComparison.OrdinalIgnoreCase)),
             GoldClientsCount = customerLoyaltyList.Count(c => c.CurrentTier.Equals("Gold", StringComparison.OrdinalIgnoreCase)),
             StandardClientsCount = customerLoyaltyList.Count(c => c.CurrentTier.Equals("Standard", StringComparison.OrdinalIgnoreCase)),
-            AverageSpendPerClient = customers.Count > 0 ? customerLoyaltyList.Average(c => c.LifetimeSpend) : 0,
+            AverageSpendPerClient = customerLoyaltyList.Count > 0 ? customerLoyaltyList.Average(c => c.LifetimeSpend) : 0,
             Tiers = tierDtos,
             Customers = customerLoyaltyList
         };
@@ -131,7 +145,7 @@ public class LoyaltyAwardService
     /// <summary>
     /// Computes the automatic booking discount for a client based on their loyalty qualification.
     /// </summary>
-    public async Task<LoyaltyDiscountCalculationDto> CalculateCustomerDiscountAsync(int companyId, int customerId, decimal baseRentalFee)
+    public async Task<LoyaltyDiscountCalculationDto> CalculateCustomerDiscountAsync(int companyId, int customerId, decimal baseRentalFee, int? branchId = null)
     {
         await using var db = _contextFactory();
 
@@ -153,8 +167,12 @@ public class LoyaltyAwardService
             };
         }
 
-        decimal totalSpend = customer.RentalBookings.Sum(b => b.RentalFee);
-        int rentalCount = customer.RentalBookings.Count;
+        var validBookings = branchId.HasValue
+            ? customer.RentalBookings.Where(b => b.BranchId == branchId.Value).ToList()
+            : customer.RentalBookings.ToList();
+
+        decimal totalSpend = validBookings.Sum(b => b.RentalFee);
+        int rentalCount = validBookings.Count;
 
         var tiers = await db.LoyaltyAwards
             .AsNoTracking()

@@ -1,6 +1,6 @@
-﻿using CRM.infrastructure.data;
-using CRM.api.DTOs;
+﻿using CRM.api.DTOs;
 using CRM.api.Services;
+using CRM.infrastructure.data;
 
 namespace CRM.api.Controllers;
 
@@ -14,8 +14,11 @@ public class AnalyticsReportController
         _analyticsService = new AnalyticsReportService(contextFactory);
     }
 
-    public async Task<AnalyticsDashboardDto> LoadDashboardMetricsAsync(int companyId, DateTime? startDate = null, DateTime? endDate = null)
+    public Task<AnalyticsDashboardDto> LoadDashboardMetricsAsync(int companyId, DateTime? startDate = null, DateTime? endDate = null)
+        => LoadDashboardMetricsAsync(companyId, null, startDate, endDate);
+
+    public async Task<AnalyticsDashboardDto> LoadDashboardMetricsAsync(int companyId, int? branchId = null, DateTime? startDate = null, DateTime? endDate = null)
     {
-        return await _analyticsService.GetAnalyticsOverviewAsync(companyId, startDate, endDate);
+        return await _analyticsService.GetAnalyticsOverviewAsync(companyId, branchId, startDate, endDate);
     }
 }

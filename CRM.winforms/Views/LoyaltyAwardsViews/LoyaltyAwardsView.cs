@@ -10,6 +10,7 @@ public partial class LoyaltyAwardsView : UserControl
 {
     private readonly Func<TenantCrmDbContext> _contextFactory;
     private readonly Func<int> _getCompanyId;
+    private readonly Func<int?>? _getBranchId;
     private readonly LoyaltyAwardController _controller;
 
     // Atelier Color Palette
@@ -33,21 +34,28 @@ public partial class LoyaltyAwardsView : UserControl
     {
         _contextFactory = () =>
         {
-            var opt = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<TenantCrmDbContext>()
+            var opt = new DbContextOptionsBuilder<TenantCrmDbContext>()
                 .UseSqlServer("Server=10.0.2.2,1433;Database=DB_TenantCRM;User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;")
                 .Options;
             return new TenantCrmDbContext(opt);
         };
         _getCompanyId = () => 1;
+        _getBranchId = null;
         _controller = new LoyaltyAwardController(_contextFactory);
 
         InitializeLayout();
     }
 
     public LoyaltyAwardsView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId)
+        : this(contextFactory, getCompanyId, null)
+    {
+    }
+
+    public LoyaltyAwardsView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId, Func<int?>? getBranchId)
     {
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         _getCompanyId = getCompanyId ?? throw new ArgumentNullException(nameof(getCompanyId));
+        _getBranchId = getBranchId;
         _controller = new LoyaltyAwardController(_contextFactory);
 
         InitializeLayout();
@@ -60,7 +68,6 @@ public partial class LoyaltyAwardsView : UserControl
         Padding = new Padding(32, 24, 32, 24);
         Font = new Font("Segoe UI", 9f, FontStyle.Regular);
 
-        // Header Labels
         lblHeader = new Label
         {
             Text = "Client Loyalty & Tier Rewards",
@@ -79,7 +86,6 @@ public partial class LoyaltyAwardsView : UserControl
             AutoSize = true
         };
 
-        // Tier Summary Cards Container
         pnlTierCards = new FlowLayoutPanel
         {
             Location = new Point(32, 88),
@@ -90,7 +96,6 @@ public partial class LoyaltyAwardsView : UserControl
             BackColor = Color.Transparent
         };
 
-        // Search Bar & Actions Container
         var pnlActions = new Panel
         {
             Location = new Point(32, 215),
@@ -125,7 +130,6 @@ public partial class LoyaltyAwardsView : UserControl
 
         pnlActions.Controls.AddRange(new Control[] { txtSearch, btnRefresh });
 
-        // Client Progression DataGridView
         dgvClients = new DataGridView
         {
             Location = new Point(32, 265),
@@ -153,7 +157,6 @@ public partial class LoyaltyAwardsView : UserControl
                 Alignment = DataGridViewContentAlignment.MiddleLeft,
                 Padding = new Padding(8, 0, 0, 0)
             },
-
             DefaultCellStyle = new DataGridViewCellStyle
             {
                 BackColor = Color.White,
@@ -179,7 +182,6 @@ public partial class LoyaltyAwardsView : UserControl
     private void ConfigureGridColumns()
     {
         dgvClients.Columns.Clear();
-
         dgvClients.Columns.Add(new DataGridViewTextBoxColumn { Name = "CustomerCode", HeaderText = "CODE", Width = 110 });
         dgvClients.Columns.Add(new DataGridViewTextBoxColumn { Name = "FullName", HeaderText = "CLIENT NAME", Width = 220, AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill });
         dgvClients.Columns.Add(new DataGridViewTextBoxColumn { Name = "CurrentTier", HeaderText = "CURRENT TIER", Width = 140 });
@@ -195,7 +197,6 @@ public partial class LoyaltyAwardsView : UserControl
     {
         if (e.RowIndex < 0) return;
 
-        // Custom Tier Badge Rendering
         if (dgvClients.Columns[e.ColumnIndex].Name == "CurrentTier" && e.Value is string tier)
         {
             e.PaintBackground(e.ClipBounds, true);
@@ -231,7 +232,8 @@ public partial class LoyaltyAwardsView : UserControl
     {
         try
         {
-            var res = await _controller.GetOverview(_getCompanyId(), txtSearch.Text);
+            int? branchId = _getBranchId?.Invoke();
+            var res = await _controller.GetOverview(_getCompanyId(), branchId, txtSearch.Text);
             if (res.Result is not OkObjectResult ok || ok.Value is not LoyaltyOverviewDto overview)
                 return;
 

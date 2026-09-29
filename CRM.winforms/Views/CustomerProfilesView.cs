@@ -14,17 +14,19 @@ public partial class CustomerProfilesView : UserControl
     private readonly Func<TenantCrmDbContext> _contextFactory;
     private readonly CustomerProfileService _customerService;
     private readonly Func<int> _getCompanyId;
+    private readonly Func<int?>? _getBranchId;
 
     // Atelier Palette Consistency
     private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
     private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
     private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
 
-    // Primary constructor called by MainForm
-    public CustomerProfilesView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId)
+    // Primary constructor supporting branch filter
+    public CustomerProfilesView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId, Func<int?>? getBranchId = null)
     {
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         _getCompanyId = getCompanyId ?? (() => 1);
+        _getBranchId = getBranchId;
         _customerService = new CustomerProfileService(_contextFactory);
 
         InitializeComponent();
@@ -62,18 +64,21 @@ public partial class CustomerProfilesView : UserControl
         }
     }
 
-    // Secondary fallback constructor
+    public CustomerProfilesView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId)
+        : this(contextFactory, getCompanyId, null)
+    {
+    }
+
     public CustomerProfilesView(Func<int> getCompanyId) : this(() =>
     {
         var options = new DbContextOptionsBuilder<TenantCrmDbContext>()
             .UseSqlServer(ConnectionString)
             .Options;
         return new TenantCrmDbContext(options);
-    }, getCompanyId)
+    }, getCompanyId, null)
     {
     }
 
-    // Parameterless constructor for WinForms Designer
     public CustomerProfilesView() : this(() => 1)
     {
     }
@@ -192,7 +197,6 @@ public partial class CustomerProfilesView : UserControl
         dgvCustomers.Columns.Add(colEdit);
         dgvCustomers.Columns.Add(colArchive);
 
-        // Header style consistency
         dgvCustomers.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
         dgvCustomers.EnableHeadersVisualStyles = false;
         dgvCustomers.ColumnHeadersDefaultCellStyle.BackColor = Color.White;
@@ -245,7 +249,7 @@ public partial class CustomerProfilesView : UserControl
 
     private async void OnEditCustomer(Customer customer)
     {
-        using var dialog = new CustomerDialogForm(_contextFactory, _getCompanyId(), customer);
+        using var dialog = new CustomerDialogForm(_contextFactory, _getCompanyId(), customer, customer.BranchId);
 
         if (dialog.ShowDialog(this) == DialogResult.OK)
         {
@@ -309,9 +313,10 @@ public partial class CustomerProfilesView : UserControl
         try
         {
             int companyId = _getCompanyId();
+            int? branchId = _getBranchId?.Invoke();
             bool showArchived = chkShowArchived?.Checked ?? false;
 
-            var displayList = await _customerService.GetCustomersAsync(companyId, showArchived, search);
+            var displayList = await _customerService.GetCustomersAsync(companyId, branchId, showArchived, search);
 
             if (dgvCustomers != null)
             {
@@ -328,7 +333,8 @@ public partial class CustomerProfilesView : UserControl
 
     private async void BtnNewCustomer_Click(object? sender, EventArgs e)
     {
-        using var dialog = new CustomerDialogForm(_contextFactory, _getCompanyId());
+        int? currentBranchId = _getBranchId?.Invoke();
+        using var dialog = new CustomerDialogForm(_contextFactory, _getCompanyId(), null, currentBranchId);
 
         if (dialog.ShowDialog(this) == DialogResult.OK)
         {

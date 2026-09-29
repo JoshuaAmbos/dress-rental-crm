@@ -84,8 +84,9 @@ public class TenantCSeeder : ITenantSeeder
         await db.SaveChangesAsync();
 
         // Customer Profiles
+        // Customer Profiles
         var firstNames = new[] { "Jonalyn", "Margot", "Vivienne", "Celeste", "Joshua", "Janin", "Gwen Giesha", "Aurelia", "Serena", "Camille", "Fleur", "Dominique", "Isabella", "Beatrice", "Katrina", "Danica", "Patricia", "Eleanor", "Samantha", "Lucille", "Genevieve", "Roxanne", "Sophia", "Yvette", "Bianca", "Kassandra", "Natalie", "Marian", "Corazon", "Therese" };
-        var lastNames = new[] { "Gelay", "Ellison", "Hartwell", "Moreau", "Ambos", "Lagmay", "Goya", "Fontaine", "Blackwood", "Beaumont", "Delacroix", "Vanier", "Rosario", "Zobel", "Halili", "Reyes", "Tan", "Vance", "Lee", "Mercado", "Castillo", "Villanueva", "Soriano", "Salvador", "Perez", "Aquino", "Mendoza", "Santos", "Alcantara", "Valdez" };
+        var lastNames = new[] { "Hoshfield", "Ellison", "Hartwell", "Moreau", "Gatsby", "Lagmay", "Goya", "Fontaine", "Blackwood", "Beaumont", "Delacroix", "Vanier", "Rosario", "Zobel", "Halili", "Reyes", "Tan", "Vance", "Lee", "Mercado", "Castillo", "Villanueva", "Soriano", "Salvador", "Perez", "Aquino", "Mendoza", "Santos", "Alcantara", "Valdez" };
         var districts = new[] { "Lanang, Davao City", "Matina, Davao City", "Bajada, Davao City", "Buhangin, Davao City", "Toril, Davao City", "Ecoland, Davao City", "Tagum City", "Panacan, Davao City", "Obrero, Davao City", "Calinan, Davao City" };
 
         var customers = new List<Customer>();
@@ -93,9 +94,12 @@ public class TenantCSeeder : ITenantSeeder
 
         for (int i = 0; i < 30; i++)
         {
+            var assignedBranch = branches[i % branches.Count];
+
             customers.Add(new Customer
             {
                 CompanyId = activeCompanyId,
+                BranchId = assignedBranch.BranchId, // Distributed evenly: 10 Makati, 10 BGC, 10 Cebu
                 CustomerCode = $"CUST-{(i + 1):D4}",
                 FirstName = firstNames[i % firstNames.Length],
                 LastName = lastNames[i % lastNames.Length],

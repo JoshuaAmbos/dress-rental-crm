@@ -10,6 +10,7 @@ public partial class CustomerDialogForm : Form
     private readonly Func<TenantCrmDbContext> _dbFactory;
     private readonly int _companyId;
     private readonly int? _customerId;
+    private readonly int? _defaultBranchId;
     private readonly string _existingCustomerCode = string.Empty;
 
     public int? CreatedCustomerId { get; private set; }
@@ -21,6 +22,7 @@ public partial class CustomerDialogForm : Form
     private TextBox txtPhone = null!;
     private TextBox txtEmail = null!;
     private TextBox txtAddress = null!;
+    private ComboBox cmbBranch = null!;
     private NumericUpDown numBust = null!;
     private NumericUpDown numWaist = null!;
     private NumericUpDown numHips = null!;
@@ -32,32 +34,38 @@ public partial class CustomerDialogForm : Form
 
     private Point _dragStartPoint;
 
-    // Atelier Palette (High-Definition Borders)
+    // Atelier Palette
     private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
     private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
     private static readonly Color ColorDustyRoseHover = Color.FromArgb(171, 99, 108);
     private static readonly Color ColorSectionTag = Color.FromArgb(180, 95, 105);
     private static readonly Color ColorSubtext = Color.FromArgb(130, 120, 125);
-    private static readonly Color ColorFormBorder = Color.FromArgb(170, 150, 155); // Prominent dialog frame
-    private static readonly Color ColorInputBorder = Color.FromArgb(204, 188, 184); // Defined input outline
+    private static readonly Color ColorFormBorder = Color.FromArgb(170, 150, 155);
+    private static readonly Color ColorInputBorder = Color.FromArgb(204, 188, 184);
     private static readonly Color ColorDivider = Color.FromArgb(220, 208, 205);
     private static readonly Color ColorInputBg = Color.White;
     private static readonly Color ColorCloseBtnBg = Color.FromArgb(246, 240, 238);
 
     public CustomerDialogForm(Func<TenantCrmDbContext> dbFactory, int companyId)
-        : this(dbFactory, companyId, null)
+        : this(dbFactory, companyId, null, null)
     {
     }
 
     public CustomerDialogForm(Func<TenantCrmDbContext> dbFactory, int companyId, Customer? existingCustomer)
+        : this(dbFactory, companyId, existingCustomer, existingCustomer?.BranchId)
+    {
+    }
+
+    public CustomerDialogForm(Func<TenantCrmDbContext> dbFactory, int companyId, Customer? existingCustomer, int? defaultBranchId)
     {
         _dbFactory = dbFactory ?? throw new ArgumentNullException(nameof(dbFactory));
         _companyId = companyId;
         _customerId = existingCustomer?.CustomerId;
+        _defaultBranchId = defaultBranchId;
 
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterParent;
-        Size = new Size(580, 650);
+        Size = new Size(580, 680);
         BackColor = Color.White;
         Font = new Font("Segoe UI", 9.5f);
         DoubleBuffered = true;
@@ -69,6 +77,7 @@ public partial class CustomerDialogForm : Form
 
         ApplyFormBorderAndRegion();
         BuildModernForm();
+        _ = LoadBranchesAsync(existingCustomer?.BranchId ?? defaultBranchId);
 
         if (existingCustomer != null)
         {
@@ -96,7 +105,6 @@ public partial class CustomerDialogForm : Form
 
     private void BuildModernForm()
     {
-        // 1. Header (Inset 2px so border is never clipped)
         var pnlHeader = new Panel
         {
             Location = new Point(2, 2),
@@ -154,7 +162,7 @@ public partial class CustomerDialogForm : Form
             e.Graphics.DrawLine(p, 28, 77, pnlHeader.Width - 28, 77);
         };
 
-        pnlHeader.Controls.AddRange([lblTitle, lblSubtitle, btnClose]);
+        pnlHeader.Controls.AddRange(new Control[] { lblTitle, lblSubtitle, btnClose });
         Controls.Add(pnlHeader);
 
         // 2. Form Body
@@ -174,6 +182,10 @@ public partial class CustomerDialogForm : Form
 
         AddLabeledInput("Email Address", "name@email.com", col1X, y, colWidth, out txtEmail);
         AddLabeledInput("City / Location", "New York, NY", col2X, y, colWidth, out txtAddress);
+        y += 66;
+
+        // Showroom Branch Selection
+        AddLabeledComboBox("Home Showroom Branch", col1X, y, colWidth * 2 + 22, out cmbBranch);
         y += 76;
 
         AddSectionHeader("MEASUREMENTS (INCHES)", 28, ref y);
@@ -230,7 +242,7 @@ public partial class CustomerDialogForm : Form
         btnSave.MouseLeave += (s, e) => btnSave.BackColor = ColorDustyRose;
         btnSave.Click += async (s, e) => await SaveCustomerAsync();
 
-        pnlFooter.Controls.AddRange([btnCancel, btnSave]);
+        pnlFooter.Controls.AddRange(new Control[] { btnCancel, btnSave });
         Controls.Add(pnlFooter);
     }
 
@@ -285,7 +297,30 @@ public partial class CustomerDialogForm : Form
         };
 
         container.Controls.Add(textBox);
-        Controls.AddRange([lbl, container]);
+        Controls.AddRange(new Control[] { lbl, container });
+    }
+
+    private void AddLabeledComboBox(string labelText, int x, int y, int width, out ComboBox comboBox)
+    {
+        var lbl = new Label
+        {
+            Text = labelText,
+            Font = new Font("Segoe UI", 9f),
+            ForeColor = ColorSubtext,
+            Location = new Point(x, y),
+            AutoSize = true
+        };
+
+        comboBox = new ComboBox
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Font = new Font("Segoe UI", 9.5f),
+            ForeColor = ColorEspresso,
+            Location = new Point(x, y + 20),
+            Width = width
+        };
+
+        Controls.AddRange(new Control[] { lbl, comboBox });
     }
 
     private void AddLabeledNumericInput(string labelText, decimal defaultValue, int x, int y, int width, out NumericUpDown num)
@@ -329,7 +364,40 @@ public partial class CustomerDialogForm : Form
         };
 
         container.Controls.Add(num);
-        Controls.AddRange([lbl, container]);
+        Controls.AddRange(new Control[] { lbl, container });
+    }
+
+    private async Task LoadBranchesAsync(int? selectedBranchId)
+    {
+        try
+        {
+            await using var db = _dbFactory();
+            var branches = await db.Branches
+                .AsNoTracking()
+                .Where(b => b.CompanyId == _companyId && b.IsActive)
+                .OrderBy(b => b.BranchName)
+                .ToListAsync();
+
+            cmbBranch.Items.Clear();
+            cmbBranch.Items.Add(new BranchComboItem(null, "🌐 All Showrooms (Unassigned / Roving)"));
+
+            int selectedIndex = 0;
+            for (int i = 0; i < branches.Count; i++)
+            {
+                var b = branches[i];
+                cmbBranch.Items.Add(new BranchComboItem(b.BranchId, $"🏢 {b.BranchName} ({b.City})"));
+                if (selectedBranchId.HasValue && b.BranchId == selectedBranchId.Value)
+                {
+                    selectedIndex = i + 1;
+                }
+            }
+
+            if (cmbBranch.Items.Count > 0)
+            {
+                cmbBranch.SelectedIndex = selectedIndex;
+            }
+        }
+        catch { }
     }
 
     private void PopulateFields(Customer c)
@@ -366,6 +434,8 @@ public partial class CustomerDialogForm : Form
             return;
         }
 
+        int? chosenBranchId = (cmbBranch.SelectedItem is BranchComboItem item) ? item.BranchId : null;
+
         btnSave.Enabled = false;
 
         try
@@ -381,6 +451,7 @@ public partial class CustomerDialogForm : Form
                 targetCustomer = new Customer
                 {
                     CompanyId = _companyId,
+                    BranchId = chosenBranchId,
                     CustomerCode = newCode,
                     FirstName = fName,
                     MiddleName = txtMiddleName.Text.Trim(),
@@ -407,6 +478,7 @@ public partial class CustomerDialogForm : Form
                     return;
                 }
 
+                existing.BranchId = chosenBranchId;
                 existing.FirstName = fName;
                 existing.MiddleName = txtMiddleName.Text.Trim();
                 existing.LastName = lName;
@@ -443,5 +515,10 @@ public partial class CustomerDialogForm : Form
         path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
         path.CloseFigure();
         return path;
+    }
+
+    private record BranchComboItem(int? BranchId, string DisplayName)
+    {
+        public override string ToString() => DisplayName;
     }
 }
