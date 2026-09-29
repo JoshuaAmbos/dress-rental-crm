@@ -41,9 +41,8 @@ builder.Services.AddScoped<ITenantDbContextFactory, TenantDbContextFactory>();
 var app = builder.Build();
 
 // =============================================================
-// 2. DATABASE STARTUP INITIALIZATION & ROLE/TENANT SEEDING
+// 2. DATABASE STARTUP INITIALIZATION & ROLE/TENANT USER SEEDING
 // =============================================================
-
 using (var scope = app.Services.CreateScope())
 {
     var masterDb = scope.ServiceProvider.GetRequiredService<MasterCrmDbContext>();
@@ -55,7 +54,6 @@ using (var scope = app.Services.CreateScope())
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
 
-    // Seed roles
     foreach (var role in AppRoles.AllRoles)
     {
         if (!await roleManager.RoleExistsAsync(role))
@@ -64,8 +62,7 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
-    // Helper to seed users with Tenant Claims
-    async Task SeedTenantUserAsync(string username, string email, string password, string role, int companyId, string companyName)
+    async Task EnsureUserAsync(string username, string email, string password, string role, int companyId, string companyName)
     {
         var user = await userManager.FindByNameAsync(username);
         if (user == null)
@@ -81,36 +78,36 @@ using (var scope = app.Services.CreateScope())
         }
         else
         {
-            var existingClaims = await userManager.GetClaimsAsync(user);
-            foreach (var claim in existingClaims.Where(c => c.Type == "CompanyId" || c.Type == "CompanyName"))
+            if (!await userManager.IsInRoleAsync(user, role))
             {
-                await userManager.RemoveClaimAsync(user, claim);
+                await userManager.AddToRoleAsync(user, role);
             }
 
+            var claims = await userManager.GetClaimsAsync(user);
+            foreach (var c in claims.Where(c => c.Type == "CompanyId" || c.Type == "CompanyName"))
+            {
+                await userManager.RemoveClaimAsync(user, c);
+            }
             await userManager.AddClaimAsync(user, new Claim("CompanyId", companyId.ToString()));
             await userManager.AddClaimAsync(user, new Claim("CompanyName", companyName));
         }
     }
 
-    // Tenant 1 User: Atelier Haute Couture
-    await SeedTenantUserAsync(
-        username: "superadmin",
-        email: "superadmin@crm.local",
-        password: "SuperSecret123!",
-        role: AppRoles.Superadmin,
-        companyId: 1,
-        companyName: "Atelier Haute Couture"
-    );
+    // Tenant C Accounts: Atelier Haute Couture
+    await EnsureUserAsync("superadmin", "superadmin@crm.local", "SuperSecret123!", AppRoles.Superadmin, 1, "Atelier Haute Couture");
+    await EnsureUserAsync("atelier_admin", "admin@atelier.local", "SuperSecret123!", AppRoles.Admin, 1, "Atelier Haute Couture");
+    await EnsureUserAsync("atelier_manager", "manager@atelier.local", "SuperSecret123!", AppRoles.Manager, 1, "Atelier Haute Couture");
+    await EnsureUserAsync("atelier_staff", "staff@atelier.local", "SuperSecret123!", AppRoles.Staff, 1, "Atelier Haute Couture");
 
-    // Tenant 2 User: Maison Étoile Bridal
-    await SeedTenantUserAsync(
-        username: "maison_admin",
-        email: "admin@maisonetoile.local",
-        password: "SuperSecret123!",
-        role: AppRoles.Admin,
-        companyId: 2,
-        companyName: "Maison Étoile Bridal"
-    );
+    // Tenant B Accounts: Maison Étoile Bridal
+    await EnsureUserAsync("maison_admin", "admin@maisonetoile.local", "SuperSecret123!", AppRoles.Admin, 2, "Maison Étoile Bridal");
+    await EnsureUserAsync("maison_manager", "manager@maisonetoile.local", "SuperSecret123!", AppRoles.Manager, 2, "Maison Étoile Bridal");
+    await EnsureUserAsync("maison_staff", "staff@maisonetoile.local", "SuperSecret123!", AppRoles.Staff, 2, "Maison Étoile Bridal");
+
+    // Tenant A Accounts: Davao Haute Rentals
+    await EnsureUserAsync("davao_admin", "admin@davaohaute.local", "SuperSecret123!", AppRoles.Admin, 3, "Davao Haute Rentals");
+    await EnsureUserAsync("davao_manager", "manager@davaohaute.local", "SuperSecret123!", AppRoles.Manager, 3, "Davao Haute Rentals");
+    await EnsureUserAsync("davao_staff", "staff@davaohaute.local", "SuperSecret123!", AppRoles.Staff, 3, "Davao Haute Rentals");
 }
 
 // =============================================================
@@ -128,9 +125,13 @@ app.MapPost("/api/auth/login", async (
     }
 
     var roles = await userManager.GetRolesAsync(user);
+    var claims = await userManager.GetClaimsAsync(user);
 
-    int companyId = user.UserName.Equals("maison_admin", StringComparison.OrdinalIgnoreCase) ? 2 : 1;
-    string companyName = companyId == 2 ? "Maison Étoile Bridal" : "Atelier Haute Couture";
+    var companyIdClaim = claims.FirstOrDefault(c => c.Type == "CompanyId")?.Value;
+    var companyNameClaim = claims.FirstOrDefault(c => c.Type == "CompanyName")?.Value;
+
+    int companyId = int.TryParse(companyIdClaim, out var cid) ? cid : 1;
+    string companyName = companyNameClaim ?? "Boutique Atelier";
 
     return Results.Ok(new LoginResult
     {
