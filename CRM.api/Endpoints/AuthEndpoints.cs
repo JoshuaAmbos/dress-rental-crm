@@ -10,7 +10,9 @@ public static class AuthEndpoints
 {
     public static void MapAuthEndpoints(this IEndpointRouteBuilder routes)
     {
-        // 1. Auth Group
+        // -------------------------------------------------------------
+        // 1. AUTHENTICATION (/api/auth)
+        // -------------------------------------------------------------
         var authGroup = routes.MapGroup("/api/auth");
 
         authGroup.MapPost("/login", async (LoginRequestDto request, UserManager<IdentityUser> userManager) =>
@@ -41,7 +43,9 @@ public static class AuthEndpoints
             });
         });
 
-        // 2. User Registration Handler (Mapped on BOTH routes to prevent 404s)
+        // -------------------------------------------------------------
+        // 2. USER REGISTRATION
+        // -------------------------------------------------------------
         var registerDelegate = async (
             CreateUserRequestDto request,
             UserManager<IdentityUser> userManager) =>
@@ -105,8 +109,149 @@ public static class AuthEndpoints
             });
         };
 
-        // Registered under both paths
         routes.MapPost("/api/users/register", registerDelegate);
         routes.MapPost("/api/auth/register", registerDelegate);
+
+        // -------------------------------------------------------------
+        // 3. ASSIGN / MOVE USER TO SHOWROOM BRANCH
+        // -------------------------------------------------------------
+        routes.MapPut("/api/users/{userId}/branch", async (
+            string userId,
+            AssignBranchRequestDto request,
+            UserManager<IdentityUser> userManager) =>
+        {
+            var user = await userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return Results.NotFound(new { message = "User not found." });
+            }
+
+            if (user.UserName?.Equals("superadmin", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                return Results.BadRequest(new { message = "Superadmin showroom assignment cannot be altered." });
+            }
+
+            var claims = await userManager.GetClaimsAsync(user);
+
+            // Strip existing branch claims
+            var oldBranchClaims = claims.Where(c => c.Type is "BranchId" or "BranchName").ToList();
+            foreach (var c in oldBranchClaims)
+            {
+                await userManager.RemoveClaimAsync(user, c);
+            }
+
+            // Assign new branch claims if specified
+            if (request.BranchId.HasValue && !string.IsNullOrWhiteSpace(request.BranchName))
+            {
+                await userManager.AddClaimAsync(user, new Claim("BranchId", request.BranchId.Value.ToString()));
+                await userManager.AddClaimAsync(user, new Claim("BranchName", request.BranchName.Trim()));
+            }
+
+            return Results.Ok(new
+            {
+                message = request.BranchId.HasValue
+                    ? $"User moved to showroom '{request.BranchName}'."
+                    : "User reassigned to All Showrooms (Unassigned)."
+            });
+        });
+
+        // -------------------------------------------------------------
+        // 4. USER PROFILE CRUD (Edit, Reset Password, Delete)
+        // -------------------------------------------------------------
+        routes.MapPut("/api/users/{userId}", async (
+            string userId,
+            UpdateUserRequestDto request,
+            UserManager<IdentityUser> userManager) =>
+        {
+            var user = await userManager.FindByIdAsync(userId);
+            if (user == null) return Results.NotFound(new { message = "User not found." });
+
+            if (user.UserName?.Equals("superadmin", StringComparison.OrdinalIgnoreCase) == true)
+                return Results.BadRequest(new { message = "Superadmin account cannot be modified." });
+
+            if (!string.IsNullOrWhiteSpace(request.Email) && request.Email != user.Email)
+            {
+                user.Email = request.Email.Trim();
+                await userManager.UpdateAsync(user);
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Role) && new[] { AppRoles.Staff, AppRoles.Manager, AppRoles.Admin }.Contains(request.Role))
+            {
+                var currentRoles = await userManager.GetRolesAsync(user);
+                await userManager.RemoveFromRolesAsync(user, currentRoles);
+                await userManager.AddToRoleAsync(user, request.Role);
+            }
+
+            var claims = await userManager.GetClaimsAsync(user);
+            var oldTenantClaims = claims.Where(c => c.Type is "CompanyId" or "CompanyName").ToList();
+            foreach (var c in oldTenantClaims) await userManager.RemoveClaimAsync(user, c);
+
+            await userManager.AddClaimAsync(user, new Claim("CompanyId", request.CompanyId.ToString()));
+            await userManager.AddClaimAsync(user, new Claim("CompanyName", request.CompanyName));
+
+            return Results.Ok(new { message = "User updated successfully." });
+        });
+
+        routes.MapPost("/api/users/{userId}/reset-password", async (
+            string userId,
+            ResetPasswordRequestDto request,
+            UserManager<IdentityUser> userManager) =>
+        {
+            var user = await userManager.FindByIdAsync(userId);
+            if (user == null) return Results.NotFound(new { message = "User not found." });
+
+            var passwordRegex = new Regex(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).{8,}$");
+            if (!passwordRegex.IsMatch(request.NewPassword))
+            {
+                return Results.BadRequest(new { message = "Password must be at least 8 chars with 1 uppercase, 1 lowercase, 1 digit, and 1 special char." });
+            }
+
+            var token = await userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await userManager.ResetPasswordAsync(user, token, request.NewPassword);
+            if (!result.Succeeded)
+            {
+                return Results.BadRequest(new { message = string.Join("; ", result.Errors.Select(e => e.Description)) });
+            }
+
+            return Results.Ok(new { message = "Password reset successfully." });
+        });
+
+        routes.MapDelete("/api/users/{userId}", async (
+            string userId,
+            UserManager<IdentityUser> userManager) =>
+        {
+            var user = await userManager.FindByIdAsync(userId);
+            if (user == null) return Results.NotFound(new { message = "User not found." });
+
+            if (user.UserName?.Equals("superadmin", StringComparison.OrdinalIgnoreCase) == true)
+                return Results.BadRequest(new { message = "Superadmin account cannot be deleted." });
+
+            var result = await userManager.DeleteAsync(user);
+            if (!result.Succeeded)
+            {
+                return Results.BadRequest(new { message = string.Join("; ", result.Errors.Select(e => e.Description)) });
+            }
+
+            return Results.Ok(new { message = "User account deleted." });
+        });
     }
+}
+
+public class AssignBranchRequestDto
+{
+    public int? BranchId { get; set; }
+    public string? BranchName { get; set; }
+}
+
+public class UpdateUserRequestDto
+{
+    public string Email { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+    public int CompanyId { get; set; }
+    public string CompanyName { get; set; } = string.Empty;
+}
+
+public class ResetPasswordRequestDto
+{
+    public string NewPassword { get; set; } = string.Empty;
 }

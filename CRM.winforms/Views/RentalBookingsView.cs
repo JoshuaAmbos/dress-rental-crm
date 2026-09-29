@@ -1,8 +1,8 @@
-﻿using CRM.infrastructure.data;
+﻿using System.ComponentModel;
+using CRM.infrastructure.data;
 using CRM.winforms.Controls.RentalBookingControls;
 using CRM.winforms.Forms;
 using Microsoft.EntityFrameworkCore;
-using System.ComponentModel;
 
 namespace CRM.winforms.Views;
 
@@ -41,13 +41,19 @@ public partial class RentalBookingsView : UserControl
             return new TenantCrmDbContext(options);
         };
         _getCompanyId = () => 1;
+        _getBranchId = null;
         _controller = new RentalBookingController(_contextFactory);
 
         SetupFilterBar();
         WireGridEvents();
     }
 
-    public RentalBookingsView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId, Func<int?>? getBranchId = null)
+    public RentalBookingsView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId)
+        : this(contextFactory, getCompanyId, null)
+    {
+    }
+
+    public RentalBookingsView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId, Func<int?>? getBranchId)
     {
         InitializeComponent();
 
@@ -139,12 +145,9 @@ public partial class RentalBookingsView : UserControl
     {
         try
         {
-            // Propagate active branch filter into the controller call
-            _pipelineData = await _controller.LoadPipelineAsync(
-                _getCompanyId(),
-                _getBranchId?.Invoke(),
-                _currentStageFilter,
-                _currentSearchTerm);
+            // Propagate optional branch filter
+            int? branchId = _getBranchId?.Invoke();
+            _pipelineData = await _controller.LoadPipelineAsync(_getCompanyId(), branchId, _currentStageFilter, _currentSearchTerm);
 
             kpiCardControlActiveLeases?.SetData(
                 "ACTIVE LEASES",

@@ -2,13 +2,19 @@
 using CRM.winforms.Forms;
 using CRM.winforms.Services;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace CRM.winforms.Views;
 
 public partial class UserAccountsView : UserControl
 {
     private readonly Func<MasterCrmDbContext> _masterDbFactory;
+    private readonly Func<TenantCrmDbContext> _tenantDbFactory;
     private readonly int _currentCompanyId;
     private readonly string _currentCompanyName;
     private readonly bool _isSuperAdmin;
@@ -19,18 +25,26 @@ public partial class UserAccountsView : UserControl
     private Button btnEditUser = null!;
     private Button btnResetPassword = null!;
     private Button btnDeleteUser = null!;
+    private Button btnMoveBranch = null!;
     private TextBox txtSearch = null!;
 
-    private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
+    private static readonly Color ColorEspresso  = Color.FromArgb(38, 22, 24);
     private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
-    private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);
-    private static readonly Color ColorCardBg = Color.White;
-    private static readonly Color ColorViewBg = Color.FromArgb(250, 245, 245);
+    private static readonly Color ColorSubtext   = Color.FromArgb(145, 135, 140);
+    private static readonly Color ColorBorder    = Color.FromArgb(234, 223, 217);
+    private static readonly Color ColorCardBg    = Color.White;
+    private static readonly Color ColorViewBg    = Color.FromArgb(250, 245, 245);
 
-    public UserAccountsView(Func<MasterCrmDbContext> masterDbFactory, int currentCompanyId, string currentCompanyName, bool isSuperAdmin)
+    // Primary 5-parameter constructor
+    public UserAccountsView(
+        Func<MasterCrmDbContext> masterDbFactory,
+        Func<TenantCrmDbContext> tenantDbFactory,
+        int currentCompanyId,
+        string currentCompanyName,
+        bool isSuperAdmin)
     {
         _masterDbFactory = masterDbFactory ?? throw new ArgumentNullException(nameof(masterDbFactory));
+        _tenantDbFactory = tenantDbFactory ?? throw new ArgumentNullException(nameof(tenantDbFactory));
         _currentCompanyId = currentCompanyId;
         _currentCompanyName = currentCompanyName;
         _isSuperAdmin = isSuperAdmin;
@@ -38,6 +52,23 @@ public partial class UserAccountsView : UserControl
 
         BuildLayout();
         _ = LoadUsersAsync();
+    }
+
+    // Defensive 4-parameter chaining constructor (prevents compilation breakages)
+    public UserAccountsView(
+        Func<MasterCrmDbContext> masterDbFactory,
+        int currentCompanyId,
+        string currentCompanyName,
+        bool isSuperAdmin)
+        : this(
+            masterDbFactory,
+            () => new TenantCrmDbContext(new DbContextOptionsBuilder<TenantCrmDbContext>()
+                .UseSqlServer("Server=10.0.2.2,1433;Database=DB_TenantCRM;User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;")
+                .Options),
+            currentCompanyId,
+            currentCompanyName,
+            isSuperAdmin)
+    {
     }
 
     private void BuildLayout()
@@ -80,7 +111,7 @@ public partial class UserAccountsView : UserControl
 
         pnlHeader.Controls.AddRange(new Control[] { lblTitle, btnCreateUser });
 
-        // Action Toolbar (Edit, Reset Password, Delete)
+        // Action Toolbar
         var pnlToolbar = new Panel
         {
             Dock = DockStyle.Top,
@@ -90,18 +121,19 @@ public partial class UserAccountsView : UserControl
 
         txtSearch = new TextBox
         {
-            PlaceholderText = "Search by username, email, or role...",
+            PlaceholderText = "Search by username, email, role, or branch...",
             Location = new Point(0, 10),
-            Width = 300,
+            Width = 280,
             Font = new Font("Segoe UI", 9.5f)
         };
         txtSearch.TextChanged += async (s, e) => await LoadUsersAsync(txtSearch.Text.Trim());
 
-        btnEditUser = CreateActionButton("✏️ Edit User", 310, async (s, e) => await EditSelectedUserAsync());
-        btnResetPassword = CreateActionButton("🔑 Reset Password", 415, async (s, e) => await ResetSelectedPasswordAsync());
-        btnDeleteUser = CreateActionButton("🗑 Delete", 555, async (s, e) => await DeleteSelectedUserAsync());
+        btnEditUser = CreateActionButton("✏️ Edit User", 290, 96, async (s, e) => await EditSelectedUserAsync());
+        btnResetPassword = CreateActionButton("🔑 Reset Password", 392, 130, async (s, e) => await ResetSelectedPasswordAsync());
+        btnDeleteUser = CreateActionButton("🗑 Delete", 528, 86, async (s, e) => await DeleteSelectedUserAsync());
+        btnMoveBranch = CreateActionButton("🏢 Move Branch", 620, 120, async (s, e) => await MoveSelectedUserBranchAsync());
 
-        pnlToolbar.Controls.AddRange(new Control[] { txtSearch, btnEditUser, btnResetPassword, btnDeleteUser });
+        pnlToolbar.Controls.AddRange(new Control[] { txtSearch, btnEditUser, btnResetPassword, btnDeleteUser, btnMoveBranch });
 
         var pnlGrid = new Panel
         {
@@ -144,13 +176,13 @@ public partial class UserAccountsView : UserControl
         Controls.Add(pnlHeader);
     }
 
-    private Button CreateActionButton(string text, int left, EventHandler onClick)
+    private Button CreateActionButton(string text, int left, int width, EventHandler onClick)
     {
         var btn = new Button
         {
             Text = text,
             Location = new Point(left, 8),
-            Size = new Size(text.Contains("Reset") ? 130 : 96, 32),
+            Size = new Size(width, 32),
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI Semibold", 8.75f, FontStyle.Bold),
             ForeColor = ColorEspresso,
@@ -177,6 +209,8 @@ public partial class UserAccountsView : UserControl
                                   from uc in companyClaims.DefaultIfEmpty()
                                   join un in db.UserClaims.Where(c => c.ClaimType == "CompanyName") on u.Id equals un.UserId into nameClaims
                                   from un in nameClaims.DefaultIfEmpty()
+                                  join ub in db.UserClaims.Where(c => c.ClaimType == "BranchName") on u.Id equals ub.UserId into branchClaims
+                                  from ub in branchClaims.DefaultIfEmpty()
                                   select new
                                   {
                                       u.Id,
@@ -184,7 +218,8 @@ public partial class UserAccountsView : UserControl
                                       u.Email,
                                       Role = r != null ? r.Name : "Staff",
                                       CompanyId = uc != null ? uc.ClaimValue : "1",
-                                      CompanyName = un != null ? un.ClaimValue : "Atelier Haute Couture"
+                                      CompanyName = un != null ? un.ClaimValue : "Atelier Haute Couture",
+                                      Branch = ub != null ? ub.ClaimValue : "All Showrooms"
                                   }).ToListAsync();
 
             var list = rawUsers;
@@ -199,7 +234,8 @@ public partial class UserAccountsView : UserControl
                 list = list.Where(u =>
                     (u.UserName != null && u.UserName.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
                     (u.Email != null && u.Email.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
-                    (u.Role != null && u.Role.Contains(query, StringComparison.OrdinalIgnoreCase))).ToList();
+                    (u.Role != null && u.Role.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
+                    (u.Branch != null && u.Branch.Contains(query, StringComparison.OrdinalIgnoreCase))).ToList();
             }
 
             dgvUsers.DataSource = list.Select(x => new
@@ -208,6 +244,7 @@ public partial class UserAccountsView : UserControl
                 Username = x.UserName,
                 Email = x.Email,
                 Role = x.Role,
+                ShowroomBranch = x.Branch,
                 CompanyId = int.TryParse(x.CompanyId, out var cid) ? cid : 1,
                 CompanyName = x.CompanyName,
                 BoutiqueTenant = $"{x.CompanyName} (#{x.CompanyId})"
@@ -229,6 +266,59 @@ public partial class UserAccountsView : UserControl
         if (dialog.ShowDialog(this) == DialogResult.OK)
         {
             await LoadUsersAsync();
+        }
+    }
+
+    private async Task MoveSelectedUserBranchAsync()
+    {
+        if (dgvUsers.SelectedRows.Count == 0)
+        {
+            MessageBox.Show("Please select a user to move.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        var row = dgvUsers.SelectedRows[0];
+        string userId = row.Cells["UserId"].Value?.ToString() ?? "";
+        string username = row.Cells["Username"].Value?.ToString() ?? "";
+        string currentBranch = row.Cells["ShowroomBranch"].Value?.ToString() ?? "All Showrooms";
+        int companyId = row.Cells["CompanyId"].Value is int cid ? cid : _currentCompanyId;
+        string companyName = row.Cells["CompanyName"].Value?.ToString() ?? _currentCompanyName;
+
+        if (username.Equals("superadmin", StringComparison.OrdinalIgnoreCase))
+        {
+            MessageBox.Show("Superadmin does not belong to an individual showroom.", "Protected Account", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        try
+        {
+            // Query branches for this tenant
+            await using var db = _tenantDbFactory();
+            var branches = await db.Branches
+                .AsNoTracking()
+                .Where(b => b.CompanyId == companyId && b.IsActive)
+                .OrderBy(b => b.BranchName)
+                .ToListAsync();
+
+            if (branches.Count == 0)
+            {
+                MessageBox.Show(
+                    $"This boutique tenant ({companyName}) does not have any showroom branches configured in the database.",
+                    "No Branches Available",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            using var moveDialog = new MoveBranchDialogForm(userId, username, currentBranch, branches);
+            if (moveDialog.ShowDialog(this) == DialogResult.OK)
+            {
+                await LoadUsersAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Database error querying branches: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 

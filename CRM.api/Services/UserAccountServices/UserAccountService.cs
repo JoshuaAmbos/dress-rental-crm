@@ -108,4 +108,23 @@ public class UserAccountService
 
         return (false, $"Rejected ({response.StatusCode}): {rawError}");
     }
+
+    public async Task<(bool Success, string Message)> MoveUserBranchAsync(string userId, int? branchId, string? branchName)
+    {
+        try
+        {
+            var payload = new
+            {
+                BranchId = branchId,
+                BranchName = branchName
+            };
+
+            var response = await Http.PutAsJsonAsync($"/api/users/{userId}/branch", payload);
+            return await ParseResponseAsync(response, "Showroom branch reassigned successfully.");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Connection error: {ex.GetBaseException().Message}");
+        }
+    }
 }

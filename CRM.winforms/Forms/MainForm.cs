@@ -688,6 +688,7 @@ public partial class MainForm : Form
 
         _usersView ??= new UserAccountsView(
             _masterContextFactory,
+            _contextFactory, // <-- Passed here
             _currentCompanyId,
             string.IsNullOrWhiteSpace(_user.CompanyName) ? "Atelier Haute Couture" : _user.CompanyName,
             isSuperAdmin);
