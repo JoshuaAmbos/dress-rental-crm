@@ -21,6 +21,9 @@ public class BookingDraftModel
     public string LoyaltyTierName { get; set; } = "Standard";
     public decimal LoyaltyDiscountPercentage { get; set; } = 0m;
 
+    // --- Dynamic System Configuration Deposit Field ---
+    public decimal DepositPercentage { get; set; } = 50m;
+
     // Financial Computations
     public int RentalDurationDays => Math.Max(1, (RentalEndDate.Date - RentalStartDate.Date).Days);
 
@@ -30,7 +33,10 @@ public class BookingDraftModel
 
     public decimal TotalRentalFee => Math.Max(0, SubtotalRentalFee - LoyaltyDiscountAmount);
 
-    public decimal TotalSecurityDeposit => SelectedGarments.Sum(g => g.SecurityDeposit);
+    // Calculates deposit based on the configured percentage of SubtotalRentalFee
+    public decimal TotalSecurityDeposit => DepositPercentage > 0
+        ? Math.Round(SubtotalRentalFee * (DepositPercentage / 100m), 2)
+        : SelectedGarments.Sum(g => g.SecurityDeposit);
 
     public decimal TotalDue => TotalRentalFee + TotalSecurityDeposit;
 

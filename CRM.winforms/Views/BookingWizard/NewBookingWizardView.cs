@@ -1,5 +1,6 @@
 ﻿using CRM.infrastructure.data;
 using CRM.winforms.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace CRM.winforms.Views;
 
@@ -10,7 +11,7 @@ public partial class NewBookingWizardView : UserControl
     private readonly Action? _onCloseWizard;
 
     private readonly BookingDraftModel _draft = new();
-    private readonly List<IBookingWizardStep> _steps = [];
+    private readonly List<IBookingWizardStep> _steps = new();
     private int _currentStepIndex = 0;
 
     public NewBookingWizardView()
@@ -35,7 +36,29 @@ public partial class NewBookingWizardView : UserControl
         btnCancel.Click -= BtnCancel_Click;
         btnCancel.Click += BtnCancel_Click;
 
+        _ = LoadSystemConfigurationsAsync();
         InitializeSteps();
+    }
+
+    private async Task LoadSystemConfigurationsAsync()
+    {
+        if (_contextFactory == null) return;
+        try
+        {
+            await using var db = _contextFactory();
+            var config = await db.SystemConfigurations
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.ConfigKey == "StandardDepositPct");
+
+            if (config != null && decimal.TryParse(config.ConfigValue, out var pct))
+            {
+                _draft.DepositPercentage = pct;
+            }
+        }
+        catch
+        {
+            _draft.DepositPercentage = 50m;
+        }
     }
 
     private void InitializeSteps()
@@ -56,9 +79,7 @@ public partial class NewBookingWizardView : UserControl
         }
 
         _steps.Add(new Step3MeasurementsNotesView());
-
         _steps.Add(new Step4PaymentDepositView());
-
         _steps.Add(new Step5ConfirmationView());
 
         ShowStep(0);
@@ -102,9 +123,11 @@ public partial class NewBookingWizardView : UserControl
 
         step.OnStepLeave(_draft);
 
-        // When leaving Step 1 (Client Selection), calculate the client's loyalty tier
+        // When leaving Step 1 (Client Selection), refresh system deposit % and calculate loyalty tier
         if (_currentStepIndex == 0 && _draft.SelectedCustomer != null && _contextFactory != null)
         {
+            await LoadSystemConfigurationsAsync();
+
             try
             {
                 var loyaltyService = new LoyaltyAwardService(_contextFactory);
@@ -145,7 +168,7 @@ public partial class NewBookingWizardView : UserControl
             {
                 MessageBox.Show(
                     $"Failed to save rental booking: {ex.GetBaseException().Message}",
-                    "Database Error",
+                    "Booking Validation / Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
 

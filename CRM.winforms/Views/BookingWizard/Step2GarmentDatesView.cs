@@ -1,7 +1,6 @@
 ﻿using CRM.domain.entities;
 using CRM.infrastructure.data;
 using CRM.winforms.Models;
-using System.ComponentModel;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 
@@ -170,7 +169,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             _isUpdatingDates = true;
             if (dtpEndDate != null && dtpEndDate.Value.Date < dtpStartDate.Value.Date)
             {
-                dtpEndDate.Value = dtpStartDate.Value.Date.AddDays(3);
+                dtpEndDate.Value = dtpStartDate.Value.Date.AddDays(7);
             }
         }
         finally
@@ -189,20 +188,26 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
 
     public async Task LoadAvailableGarmentsAsync()
     {
-        if (DesignMode || LicenseManager.UsageMode == LicenseUsageMode.Designtime || _bookingService == null || _getCompanyId == null)
+        if (DesignMode || _bookingService == null || _getCompanyId == null)
             return;
 
         try
         {
             DateTime start = dtpStartDate?.Value.Date ?? DateTime.Today;
-            DateTime end = dtpEndDate?.Value.Date ?? DateTime.Today.AddDays(3);
+            DateTime end = dtpEndDate?.Value.Date ?? DateTime.Today.AddDays(7);
 
-            if (end < start) end = start.AddDays(3);
+            if (end < start) end = start.AddDays(7);
 
-            // Query only garments free of overlapping bookings in this exact date range
+            // 1. Query garments free of date overlaps (including cleaning turnaround buffer)
             _garments = await _bookingService.GetAvailableGarmentsAsync(_getCompanyId(), start, end);
 
-            // Prune any previously selected garments that are no longer available in this date range
+            // 2. Synchronize each garment's deposit to match the active configured percentage
+            decimal depPct = (_draft != null && _draft.DepositPercentage > 0) ? _draft.DepositPercentage : 50m;
+            foreach (var g in _garments)
+            {
+                g.SecurityDeposit = Math.Round(g.RentalRate * (depPct / 100m), 2);
+            }
+
             var availableIds = _garments.Select(g => g.GarmentId).ToHashSet();
             _selectedGarmentIds.IntersectWith(availableIds);
 
@@ -285,7 +290,6 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             }
         }
 
-        // Details
         int textLeft = boxX + boxSize + 18;
         int topY = cardRect.Top + 13;
 
@@ -297,12 +301,15 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             TextRenderer.DrawText(g, subtitle, subFont, new Point(textLeft, topY + 20), ColorSubtext);
         }
 
-        // Price & Deposit
+        // Price & Dynamic Deposit Display
         using (var priceFont = new Font("Segoe UI Semibold", 10.5f, FontStyle.Bold))
         using (var depFont = new Font("Segoe UI", 8.5f, FontStyle.Regular))
         {
+            decimal depPct = (_draft != null && _draft.DepositPercentage > 0) ? _draft.DepositPercentage : 50m;
+            decimal dynamicDep = Math.Round(item.RentalRate * (depPct / 100m), 2);
+
             string priceText = $"{CurrencySymbol}{item.RentalRate:N0}/lease";
-            string depText = $"dep. {CurrencySymbol}{item.SecurityDeposit:N0}";
+            string depText = $"dep. {CurrencySymbol}{dynamicDep:N0}";
 
             var priceSize = TextRenderer.MeasureText(g, priceText, priceFont);
             var depSize = TextRenderer.MeasureText(g, depText, depFont);
@@ -337,18 +344,19 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
 
         int selectedCount = _selectedGarmentIds.Count;
         int totalAvailable = _garments.Count;
+        const string turnaroundNote = " · includes turnaround buffer";
 
         if (totalAvailable == 0)
         {
-            lblAvailableGarments.Text = "AVAILABLE GARMENTS (0 available for selected dates)";
+            lblAvailableGarments.Text = $"AVAILABLE GARMENTS (0 available{turnaroundNote})";
         }
         else if (selectedCount > 0)
         {
-            lblAvailableGarments.Text = $"AVAILABLE GARMENTS ({selectedCount} of {totalAvailable} selected)";
+            lblAvailableGarments.Text = $"AVAILABLE GARMENTS ({selectedCount} of {totalAvailable} selected{turnaroundNote})";
         }
         else
         {
-            lblAvailableGarments.Text = $"AVAILABLE GARMENTS ({totalAvailable} available)";
+            lblAvailableGarments.Text = $"AVAILABLE GARMENTS ({totalAvailable} available{turnaroundNote})";
         }
     }
 
@@ -360,11 +368,10 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
         _isUpdatingDates = true;
         try
         {
-            // Ensure valid date ranges
             DateTime initialStart = (_draft.RentalStartDate > DateTime.MinValue) ? _draft.RentalStartDate : DateTime.Today;
-            DateTime initialEnd = (_draft.RentalEndDate > DateTime.MinValue) ? _draft.RentalEndDate : initialStart.AddDays(3);
+            DateTime initialEnd = (_draft.RentalEndDate > DateTime.MinValue) ? _draft.RentalEndDate : initialStart.AddDays(7);
 
-            if (initialEnd < initialStart) initialEnd = initialStart.AddDays(3);
+            if (initialEnd < initialStart) initialEnd = initialStart.AddDays(7);
 
             if (dtpStartDate != null) dtpStartDate.Value = initialStart;
             if (dtpEndDate != null) dtpEndDate.Value = initialEnd;
@@ -388,9 +395,16 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
         if (dtpStartDate != null) draft.RentalStartDate = dtpStartDate.Value.Date;
         if (dtpEndDate != null) draft.RentalEndDate = dtpEndDate.Value.Date;
 
+        decimal depPct = draft.DepositPercentage > 0 ? draft.DepositPercentage : 50m;
+
         draft.SelectedGarments = _garments
             .Where(g => _selectedGarmentIds.Contains(g.GarmentId))
-            .Select(g => g.GarmentEntity)
+            .Select(g =>
+            {
+                var entity = g.GarmentEntity;
+                entity.SecurityDeposit = Math.Round(entity.RentalRate * (depPct / 100m), 2);
+                return entity;
+            })
             .ToList();
     }
 

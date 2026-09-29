@@ -1,7 +1,11 @@
-﻿using CRM.api.DTOs;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using CRM.api.DTOs;
 using CRM.domain.entities;
 using CRM.infrastructure.data;
-using Microsoft.EntityFrameworkCore;
 
 namespace CRM.api.Services;
 
@@ -14,6 +18,30 @@ public class RentalBookingService
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
     }
 
+    // =========================================================================
+    // DYNAMIC CONFIGURATION HELPERS (With Resilient Default Fallbacks)
+    // =========================================================================
+    private static async Task<decimal> GetConfigDecimalAsync(TenantCrmDbContext db, string key, decimal fallback)
+    {
+        var cfg = await db.SystemConfigurations
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.ConfigKey == key);
+
+        return (cfg != null && decimal.TryParse(cfg.ConfigValue, out var val)) ? val : fallback;
+    }
+
+    private static async Task<int> GetConfigIntAsync(TenantCrmDbContext db, string key, int fallback)
+    {
+        var cfg = await db.SystemConfigurations
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.ConfigKey == key);
+
+        return (cfg != null && int.TryParse(cfg.ConfigValue, out var val)) ? val : fallback;
+    }
+
+    // =========================================================================
+    // 1. PIPELINE OVERVIEW QUERY (Multi-Branch & Stage Aware)
+    // =========================================================================
     public async Task<RentalPipelineDto> GetPipelineAsync(int companyId, int? branchId = null, string stageFilter = "All", string searchTerm = "")
     {
         await using var db = _contextFactory();
@@ -95,8 +123,12 @@ public class RentalBookingService
         };
     }
 
+    // =========================================================================
+    // 2. GARMENT AVAILABILITY (Enforces CleaningBufferDays)
+    // =========================================================================
     /// <summary>
-    /// Returns only garments that are active, not damaged/lost, and free of date overlaps.
+    /// Returns only garments that are active, not damaged/lost, and free of date overlaps
+    /// including the post-return dry-cleaning turnaround buffer.
     /// </summary>
     public async Task<List<GarmentPickerRowViewModel>> GetAvailableGarmentsAsync(int companyId, DateTime startDate, DateTime endDate, string search = "")
     {
@@ -104,19 +136,22 @@ public class RentalBookingService
         var reqStart = startDate.Date;
         var reqEnd = endDate.Date;
 
-        // 1. Identify all Garment IDs locked in overlapping bookings that are not Cancelled or Returned
+        // Dynamically retrieve configured dry-cleaning buffer days (default: 2)
+        int bufferDays = await GetConfigIntAsync(db, "CleaningBufferDays", 2);
+
+        // Identify all Garment IDs locked in overlapping bookings (including cleaning buffer)
         var bookedGarmentIds = await db.RentalBookings
             .AsNoTracking()
             .Where(b => b.CompanyId == companyId
                      && b.BookingStage != "Cancelled"
                      && b.BookingStage != "Returned"
                      && b.RentalStartDate.Date <= reqEnd
-                     && b.RentalEndDate.Date >= reqStart)
+                     && b.RentalEndDate.Date.AddDays(bufferDays) >= reqStart)
             .SelectMany(b => b.BookingDetails.Select(d => d.GarmentId))
             .Distinct()
             .ToListAsync();
 
-        // 2. Query garments matching search, active, in good repair, and not booked in range
+        // Query garments matching search, active, in good repair, and not booked in range
         var query = db.Garments
             .AsNoTracking()
             .Where(g => g.CompanyId == companyId
@@ -150,8 +185,12 @@ public class RentalBookingService
         }).ToList();
     }
 
+    // =========================================================================
+    // 3. BOOKING CREATION (Enforces MaxActiveRentalsPerClient & Turnaround Buffer)
+    // =========================================================================
     /// <summary>
-    /// Creates a new booking, enforces date conflict checks, and syncs Garment.Status to "Reserved".
+    /// Creates a new booking, enforces client active lease limits, checks date conflicts with buffers,
+    /// and synchronizes Garment.Status to "Reserved".
     /// </summary>
     public async Task<int> CreateBookingFromDraftAsync(int companyId, BookingDraftModel draft)
     {
@@ -162,18 +201,37 @@ public class RentalBookingService
             throw new InvalidOperationException("Cannot create a booking without at least one selected garment.");
 
         await using var db = _contextFactory();
+
+        // 1. Enforce Max Active Leases Rule from System Configurations (Default: 3)
+        int maxAllowedRentals = await GetConfigIntAsync(db, "MaxActiveRentalsPerClient", 3);
+
+        int currentActiveCount = await db.RentalBookings
+            .AsNoTracking()
+            .CountAsync(b => b.CustomerId == draft.SelectedCustomer.CustomerId
+                          && b.CompanyId == companyId
+                          && b.BookingStage != "Returned"
+                          && b.BookingStage != "Cancelled");
+
+        if (currentActiveCount >= maxAllowedRentals)
+        {
+            throw new InvalidOperationException(
+                $"Client '{draft.SelectedCustomer.FirstName} {draft.SelectedCustomer.LastName}' currently holds {currentActiveCount} active lease(s). " +
+                $"System configuration limits clients to a maximum of {maxAllowedRentals} concurrent active lease(s).");
+        }
+
+        // 2. Defensive validation: ensure no date conflicts including turnaround cleaning buffer
+        int bufferDays = await GetConfigIntAsync(db, "CleaningBufferDays", 2);
         var reqStart = draft.RentalStartDate.Date;
         var reqEnd = draft.RentalEndDate.Date;
         var selectedIds = draft.SelectedGarments.Select(g => g.GarmentId).Distinct().ToList();
 
-        // Validate overlapping bookings
         var conflictingStyles = await db.RentalBookings
             .AsNoTracking()
             .Where(b => b.CompanyId == companyId
                      && b.BookingStage != "Cancelled"
                      && b.BookingStage != "Returned"
                      && b.RentalStartDate.Date <= reqEnd
-                     && b.RentalEndDate.Date >= reqStart
+                     && b.RentalEndDate.Date.AddDays(bufferDays) >= reqStart
                      && b.BookingDetails.Any(d => selectedIds.Contains(d.GarmentId)))
             .SelectMany(b => b.BookingDetails
                 .Where(d => selectedIds.Contains(d.GarmentId) && d.Garment != null)
@@ -184,7 +242,7 @@ public class RentalBookingService
         if (conflictingStyles.Count > 0)
         {
             throw new InvalidOperationException(
-                $"The following garment(s) are already booked for the selected rental dates: {string.Join(", ", conflictingStyles)}");
+                $"The following garment(s) are unavailable for the selected dates (including {bufferDays}-day cleaning turnaround): {string.Join(", ", conflictingStyles)}");
         }
 
         string notes = draft.AlterationNotes ?? string.Empty;
@@ -193,15 +251,16 @@ public class RentalBookingService
             notes = $"{notes} [Loyalty perk applied: {draft.LoyaltyTierName} (-₱{draft.LoyaltyDiscountAmount:N2})]".Trim();
         }
 
+        // 3. Instantiate the RentalBooking parent entity
         var booking = new RentalBooking
         {
             CompanyId = companyId,
             CustomerId = draft.SelectedCustomer.CustomerId,
             RentalStartDate = reqStart,
             RentalEndDate = reqEnd,
-            RentalFee = draft.TotalRentalFee,             // Discounted fee
-            SecurityDeposit = draft.TotalSecurityDeposit, // 100% full deposit
-            TotalAmount = draft.TotalDue,                 // Discounted fee + Deposit
+            RentalFee = draft.TotalRentalFee,
+            SecurityDeposit = draft.TotalSecurityDeposit,
+            TotalAmount = draft.TotalDue,
             PaymentMethod = draft.SelectedPaymentMethod,
             AlterationNotes = notes,
             BookingStage = "Fitting",
@@ -209,6 +268,7 @@ public class RentalBookingService
             CreatedAt = DateTime.UtcNow
         };
 
+        // 4. Map selected garments into BookingDetail line items
         foreach (var garment in draft.SelectedGarments)
         {
             booking.BookingDetails.Add(new BookingDetail
@@ -219,6 +279,7 @@ public class RentalBookingService
             });
         }
 
+        // 5. Load garments and synchronize their physical status to 'Reserved'
         var garmentsToUpdate = await db.Garments
             .Where(g => selectedIds.Contains(g.GarmentId) && g.CompanyId == companyId)
             .ToListAsync();
@@ -234,9 +295,57 @@ public class RentalBookingService
         return booking.RentalBookingId;
     }
 
+    // =========================================================================
+    // 4. RETURN PROCESSING (Calculates DefaultLateFeePerDay)
+    // =========================================================================
     /// <summary>
-    /// Updates booking stage and transitions associated Garment.Status values accordingly.
+    /// Processes garment return, checks for overdue return status, dynamically computes penalty fees
+    /// using DefaultLateFeePerDay, appends audit notes, and transitions garments to 'In Cleaning'.
     /// </summary>
+    public async Task<(bool WasOverdue, int DaysLate, decimal LateFeeCharged)> ProcessReturnAsync(int bookingId)
+    {
+        await using var db = _contextFactory();
+        var booking = await db.RentalBookings
+            .Include(b => b.BookingDetails)
+                .ThenInclude(d => d.Garment)
+            .FirstOrDefaultAsync(b => b.RentalBookingId == bookingId);
+
+        if (booking == null) return (false, 0, 0m);
+
+        var today = DateTime.Today;
+        bool wasOverdue = booking.RentalEndDate.Date < today && booking.BookingStage != "Returned";
+        int daysLate = wasOverdue ? (today - booking.RentalEndDate.Date).Days : 0;
+        decimal lateFeeCharged = 0m;
+
+        if (wasOverdue && daysLate > 0)
+        {
+            // Dynamically load configured daily penalty rate (default: 500.00)
+            decimal dailyPenaltyRate = await GetConfigDecimalAsync(db, "DefaultLateFeePerDay", 500.00m);
+            lateFeeCharged = daysLate * dailyPenaltyRate;
+
+            string auditNote = $"[Return Audit: {daysLate} day(s) overdue. Penalty assessed: ₱{lateFeeCharged:N2} (@ ₱{dailyPenaltyRate:N2}/day)]";
+            booking.AlterationNotes = string.IsNullOrWhiteSpace(booking.AlterationNotes)
+                ? auditNote
+                : $"{booking.AlterationNotes} | {auditNote}";
+        }
+
+        booking.BookingStage = "Returned";
+
+        foreach (var detail in booking.BookingDetails)
+        {
+            if (detail.Garment != null)
+            {
+                detail.Garment.Status = "In Cleaning";
+            }
+        }
+
+        await db.SaveChangesAsync();
+        return (wasOverdue, daysLate, lateFeeCharged);
+    }
+
+    // =========================================================================
+    // 5. STAGE UPDATES, CLEANING TRANSITIONS & GARMENT STATUS SYNC
+    // =========================================================================
     public async Task UpdateBookingStageAsync(int bookingId, string newStage)
     {
         await using var db = _contextFactory();
@@ -278,29 +387,6 @@ public class RentalBookingService
             .Include(b => b.BookingDetails)
                 .ThenInclude(d => d.Garment)
             .FirstOrDefaultAsync(b => b.RentalBookingId == bookingId);
-    }
-
-    public async Task ProcessReturnAsync(int bookingId)
-    {
-        await using var db = _contextFactory();
-        var booking = await db.RentalBookings
-            .Include(b => b.BookingDetails)
-                .ThenInclude(d => d.Garment)
-            .FirstOrDefaultAsync(b => b.RentalBookingId == bookingId);
-
-        if (booking == null) return;
-
-        booking.BookingStage = "Returned";
-
-        foreach (var detail in booking.BookingDetails)
-        {
-            if (detail.Garment != null)
-            {
-                detail.Garment.Status = "In Cleaning";
-            }
-        }
-
-        await db.SaveChangesAsync();
     }
 
     /// <summary>

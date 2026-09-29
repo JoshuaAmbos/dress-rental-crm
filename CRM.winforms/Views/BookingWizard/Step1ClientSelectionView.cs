@@ -3,7 +3,6 @@ using CRM.infrastructure.data;
 using CRM.winforms.Controls;
 using CRM.winforms.Forms;
 using CRM.winforms.Models;
-using System.ComponentModel;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 
@@ -134,7 +133,7 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
 
     public async Task LoadClientsAsync(string search = "")
     {
-        if (DesignMode || LicenseManager.UsageMode == LicenseUsageMode.Designtime || _customerService == null || _getCompanyId == null)
+        if (DesignMode || _customerService == null || _getCompanyId == null)
             return;
 
         try
@@ -210,7 +209,6 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
         }
 
-        // Client Info
         int textX = avatarX + avatarDiameter + 14;
         int textY = bounds.Top + 14;
 
@@ -222,7 +220,6 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
             TextRenderer.DrawText(g, subtitle, subFont, new Point(textX, textY + 18), ColorSubtext);
         }
 
-        // Measurements & Selected Checkmark
         string sizeText = FormatMeasurements(item);
         using (var sizeFont = new Font("Segoe UI", 9f, FontStyle.Regular))
         using (var checkFont = new Font("Segoe UI Semibold", 10f, FontStyle.Bold))

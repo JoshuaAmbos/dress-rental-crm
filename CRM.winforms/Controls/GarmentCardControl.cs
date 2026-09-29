@@ -7,11 +7,11 @@ public class GarmentCardControl : UserControl
 {
     // Atelier Color Palette
     private static readonly Color ColorCardBg = Color.White;
-    private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);      // #EADFD9
-    private static readonly Color ColorBorderHover = Color.FromArgb(190, 110, 120); // #BE6E78 (Dusty Rose)
-    private static readonly Color ColorTextPrimary = Color.FromArgb(38, 22, 24);    // #261618 (Espresso Rose)
-    private static readonly Color ColorTextMuted = Color.FromArgb(140, 124, 126);   // #8C7C7E (Mineral Taupe)
-    private static readonly Color ColorImagePlaceholder = Color.FromArgb(249, 241, 241); // #F9F1F1 (Alabaster Blush)
+    private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);
+    private static readonly Color ColorBorderHover = Color.FromArgb(190, 110, 120);
+    private static readonly Color ColorTextPrimary = Color.FromArgb(38, 22, 24);
+    private static readonly Color ColorTextMuted = Color.FromArgb(140, 124, 126);
+    private static readonly Color ColorImagePlaceholder = Color.FromArgb(249, 241, 241);
 
     private bool _isHovered;
     private Image? _garmentImage;
@@ -21,9 +21,9 @@ public class GarmentCardControl : UserControl
     private string _category = "Evening Gown";
     private string _sizeLabel = "Size M";
     private decimal _rentalRate = 0.00m;
-    private string _status = "Available"; // "Available", "Rented", "In Cleaning", "Alterations"
+    private decimal _securityDeposit = 0.00m;
+    private string _status = "Available";
 
-    // Exposed click event that passes the ID or card reference
     public event EventHandler? CardClicked;
     public event EventHandler? ActionClicked;
 
@@ -69,6 +69,14 @@ public class GarmentCardControl : UserControl
     {
         get => _rentalRate;
         set { _rentalRate = value; Invalidate(); }
+    }
+
+    [Category("Garment Data")]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public decimal SecurityDeposit
+    {
+        get => _securityDeposit;
+        set { _securityDeposit = value; Invalidate(); }
     }
 
     [Category("Garment Data")]
@@ -126,7 +134,6 @@ public class GarmentCardControl : UserControl
 
         try
         {
-            // Load file into memory stream to prevent file lock
             using var stream = new MemoryStream(File.ReadAllBytes(path));
             _garmentImage = Image.FromStream(stream);
         }
@@ -222,10 +229,10 @@ public class GarmentCardControl : UserControl
             g.DrawPath(imgPen, imgPath);
         }
 
-        // 3. Status Badge (Top-Right overlay on image)
+        // 3. Status Badge
         DrawStatusBadge(g, imgRect.Right - 8, imgRect.Top + 8);
 
-        // 4. Garment ItemCode & Category (Subtext)
+        // 4. Garment ItemCode & Category
         int textY = 172;
         var subtextRect = new Rectangle(14, textY, Width - 28, 16);
         using (var subFont = new Font("Segoe UI", 8.25f, FontStyle.Bold))
@@ -267,10 +274,11 @@ public class GarmentCardControl : UserControl
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
         }
 
-        // 7. Rental Rate
+        // 7. Rental Rate (Left) & Dynamic Security Deposit (Right)
         textY += 24;
         var priceRect = new Rectangle(14, textY, Width - 28, 24);
-        using (var priceFont = new Font("Segoe UI Semibold", 12f, FontStyle.Bold))
+        using (var priceFont = new Font("Segoe UI Semibold", 11.25f, FontStyle.Bold))
+        using (var depFont = new Font("Segoe UI", 8.25f, FontStyle.Regular))
         {
             TextRenderer.DrawText(
                 g,
@@ -279,6 +287,17 @@ public class GarmentCardControl : UserControl
                 priceRect,
                 ColorBorderHover,
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
+
+            if (_securityDeposit > 0)
+            {
+                TextRenderer.DrawText(
+                    g,
+                    $"dep. ₱{_securityDeposit:N0}",
+                    depFont,
+                    priceRect,
+                    ColorTextMuted,
+                    TextFormatFlags.Right | TextFormatFlags.VerticalCenter);
+            }
         }
 
         // 8. Quick Action Button

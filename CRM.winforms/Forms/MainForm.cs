@@ -38,6 +38,7 @@ public partial class MainForm : Form
     private LoyaltyAwardsView? _loyaltyAwardsView;
     private TermsAndConditionsView? _termsView;
     private UserAccountsView? _usersView;
+    private SystemConfigurationView? _configView;
 
     // UI Structure Controls
     private Panel pnlSidebar = null!;
@@ -699,12 +700,19 @@ public partial class MainForm : Form
 
     public void ShowSystemConfigView()
     {
-        MessageBox.Show(
-            "System Configuration Management is reserved for the Superadmin.\n" +
-            "Platform routing, tenant database connection pooling, and multi-tenant schema provisioning are running normally.",
-            "System Configuration",
-            MessageBoxButtons.OK,
-            MessageBoxIcon.Information);
+        bool isSuperAdmin = _user.Roles.Any(r =>
+            r.Equals(AppRoles.Superadmin, StringComparison.OrdinalIgnoreCase) ||
+            r.Equals("Super Admin", StringComparison.OrdinalIgnoreCase));
+
+        if (!isSuperAdmin)
+        {
+            MessageBox.Show("Access Denied: System Configuration is restricted to Super Admin only.", "Unauthorized", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        _configView ??= new SystemConfigurationView(_contextFactory);
+        SwitchView(_configView);
+        HighlightNavByText("System Config");
     }
 
     private void HighlightNavByText(string labelSub)

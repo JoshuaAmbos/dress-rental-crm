@@ -221,27 +221,51 @@ public partial class Step4PaymentDepositView : UserControl, IBookingWizardStep
         _draft = draft;
 
         int itemCount = _draft.SelectedGarments.Count;
-        decimal baseRentalFee = _draft.SubtotalRentalFee;
-        decimal discountAmount = _draft.LoyaltyDiscountAmount;
+        decimal subtotal = _draft.SubtotalRentalFee;
+        decimal discount = _draft.LoyaltyDiscountAmount;
         decimal deposit = _draft.TotalSecurityDeposit;
         decimal totalDue = _draft.TotalDue;
 
-        lblRentalFeeTitle.Text = $"Base Rental Fee ({itemCount} item{(itemCount == 1 ? "" : "s")})";
-        lblRentalFeeAmount.Text = $"{CurrencySymbol}{baseRentalFee:N2}";
+        if (lblRentalFeeTitle != null)
+            lblRentalFeeTitle.Text = $"Rental Fee ({itemCount} item{(itemCount == 1 ? "" : "s")} · Lease)";
 
-        lblDiscountTitle.Text = $"Loyalty Perk ({_draft.LoyaltyTierName} – {_draft.LoyaltyDiscountPercentage:0.#}%)";
-        lblDiscountAmount.Text = discountAmount > 0 ? $"-{CurrencySymbol}{discountAmount:N2}" : $"{CurrencySymbol}0.00";
-        lblDiscountTitle.Visible = discountAmount > 0;
-        lblDiscountAmount.Visible = discountAmount > 0;
+        if (lblRentalFeeAmount != null)
+            lblRentalFeeAmount.Text = $"₱{subtotal:N2}";
 
-        lblDepositAmount.Text = $"{CurrencySymbol}{deposit:N2}";
-        lblTotalDueAmount.Text = $"{CurrencySymbol}{totalDue:N2}";
-        lblDepositNote.Text = $"Deposit of {CurrencySymbol}{deposit:N2} is refundable upon return in good condition.";
+        bool hasDiscount = discount > 0;
+
+        if (lblDiscountAmount != null)
+            lblDiscountAmount.Visible = hasDiscount;
+
+        if (lblDiscountTitle != null)
+        {
+            lblDiscountTitle.Text = $"Loyalty Perk ({_draft.LoyaltyTierName} · {_draft.LoyaltyDiscountPercentage:0.#}%)";
+            lblDiscountTitle.Visible = hasDiscount;
+        }
+
+        if (lblDiscountAmount != null)
+        {
+            lblDiscountAmount.Text = $"-₱{discount:N2}";
+            lblDiscountAmount.Visible = hasDiscount;
+        }
+
+        if (lblDepositAmount != null)
+            lblDepositAmount.Text = $"₱{deposit:N2}";
+
+        if (lblDepositNote != null)
+            lblDepositNote.Text = $"Refundable security deposit ({_draft.DepositPercentage:0.#}%) returned upon good condition.";
+
+        if (lblTotalDueAmount != null)
+            lblTotalDueAmount.Text = $"₱{totalDue:N2}";
 
         if (!string.IsNullOrWhiteSpace(_draft.SelectedPaymentMethod))
         {
-            int index = _paymentMethods.IndexOf(_draft.SelectedPaymentMethod);
-            if (index >= 0) listBoxPaymentMethods.SelectedIndex = index;
+            _selectedPaymentMethod = _draft.SelectedPaymentMethod;
+            if (listBoxPaymentMethods != null)
+            {
+                int index = _paymentMethods.IndexOf(_selectedPaymentMethod);
+                if (index >= 0) listBoxPaymentMethods.SelectedIndex = index;
+            }
         }
     }
 

@@ -78,7 +78,7 @@ partial class CatalogView
         secondaryButtonAll.TabIndex = 4;
         secondaryButtonAll.Text = "All";
         secondaryButtonAll.UseVisualStyleBackColor = false;
-        secondaryButtonAll.Click += secondaryButtonAll_Click;
+        //secondaryButtonAll.Click += secondaryButtonAll_Click;
         // 
         // secondaryButtonAvailable
         // 
@@ -107,7 +107,7 @@ partial class CatalogView
         secondaryButtonRented.TabIndex = 6;
         secondaryButtonRented.Text = "Rented Out";
         secondaryButtonRented.UseVisualStyleBackColor = false;
-        secondaryButtonRented.Click += secondaryButtonRented_Click;
+        //secondaryButtonRented.Click += secondaryButtonRented_Click;
         // 
         // secondaryButtonCleaning
         // 

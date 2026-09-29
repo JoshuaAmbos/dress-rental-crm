@@ -186,7 +186,7 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
             lblLoyaltyDiscountVal.Text = "₱0.00 (Standard Tier)";
         }
 
-        lblDepositVal.Text = $"{CurrencySymbol}{_draft.TotalSecurityDeposit:N2}";
+        lblDepositVal.Text = $"{CurrencySymbol}{_draft.TotalSecurityDeposit:N2} ({_draft.DepositPercentage:0.#}%)";
         lblTotalVal.Text = $"{CurrencySymbol}{_draft.TotalDue:N2}";
         lblPaymentMethodVal.Text = string.IsNullOrWhiteSpace(_draft.SelectedPaymentMethod) ? "Not specified" : _draft.SelectedPaymentMethod;
 

@@ -10,10 +10,12 @@ public partial class CatalogView : UserControl
 {
     private readonly Func<TenantCrmDbContext> _contextFactory;
     private readonly Func<int> _getCompanyId;
+    private readonly Func<int?>? _getBranchId;
     private readonly RentalBookingService _bookingService;
 
     private string _currentStatusFilter = "All";
     private string _currentSearchTerm = string.Empty;
+    private decimal _currentDepositPct = 50m;
 
     private FlowLayoutPanel pnlFilterTabs = null!;
     private readonly List<Button> _filterButtons = new();
@@ -37,16 +39,18 @@ public partial class CatalogView : UserControl
             return new TenantCrmDbContext(options);
         };
         _getCompanyId = () => 1;
+        _getBranchId = null;
         _bookingService = new RentalBookingService(_contextFactory);
 
         ConfigureView();
     }
 
-    public CatalogView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId, Func<int?> value)
+    public CatalogView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId, Func<int?>? getBranchId = null)
     {
         InitializeComponent();
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         _getCompanyId = getCompanyId ?? throw new ArgumentNullException(nameof(getCompanyId));
+        _getBranchId = getBranchId;
         _bookingService = new RentalBookingService(_contextFactory);
 
         ConfigureView();
@@ -131,11 +135,32 @@ public partial class CatalogView : UserControl
             await using var db = _contextFactory();
             int companyId = _getCompanyId();
 
-            var allGarments = await db.Garments
+            // 1. Load active deposit % from SystemConfigurations
+            try
+            {
+                var depCfg = await db.SystemConfigurations
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.ConfigKey == "StandardDepositPct");
+
+                if (depCfg != null && decimal.TryParse(depCfg.ConfigValue, out var pct))
+                {
+                    _currentDepositPct = pct;
+                }
+            }
+            catch { }
+
+            // 2. Query garments with multi-branch awareness
+            var query = db.Garments
                 .AsNoTracking()
-                .Where(g => g.CompanyId == companyId && g.IsActive)
-                .OrderBy(g => g.ItemCode)
-                .ToListAsync();
+                .Where(g => g.CompanyId == companyId && g.IsActive);
+
+            int? branchId = _getBranchId?.Invoke();
+            if (branchId.HasValue)
+            {
+                query = query.Where(g => g.BranchId == branchId.Value);
+            }
+
+            var allGarments = await query.OrderBy(g => g.ItemCode).ToListAsync();
 
             RenderFilterButtons(allGarments);
 
@@ -164,6 +189,9 @@ public partial class CatalogView : UserControl
             var cardList = new List<Control>();
             foreach (var garment in filtered)
             {
+                // Dynamic deposit calculation matching system configuration
+                decimal calculatedDeposit = Math.Round(garment.RentalRate * (_currentDepositPct / 100m), 2);
+
                 var card = new GarmentCardControl
                 {
                     RentalItemId = garment.GarmentId,
@@ -172,6 +200,7 @@ public partial class CatalogView : UserControl
                     Category = garment.Category,
                     SizeLabel = $"Size {garment.Size} ({garment.BustSize:0.#}\" - {garment.WaistSize:0.#}\" - {garment.HipSize:0.#}\")",
                     RentalRate = garment.RentalRate,
+                    SecurityDeposit = calculatedDeposit,
                     Status = garment.Status,
                     ImagePath = garment.ImagePath
                 };
@@ -258,19 +287,18 @@ public partial class CatalogView : UserControl
         await LoadGarmentsAsync();
     }
 
-    /// <summary>
-    /// Interactive details sheet allowing staff to view and transition garment statuses.
-    /// </summary>
     private async Task OpenGarmentDetailsAsync(int garmentId)
     {
         await using var db = _contextFactory();
         var garment = await db.Garments.FirstOrDefaultAsync(g => g.GarmentId == garmentId);
         if (garment == null) return;
 
+        decimal calculatedDeposit = Math.Round(garment.RentalRate * (_currentDepositPct / 100m), 2);
+
         string info = $"Garment: {garment.StyleName} ({garment.ItemCode})\n" +
                       $"Category: {garment.Category} | Size: {garment.Size}\n" +
                       $"Rental Rate: ₱{garment.RentalRate:N2}\n" +
-                      $"Security Deposit: ₱{garment.SecurityDeposit:N2}\n" +
+                      $"Security Deposit ({_currentDepositPct:0.#}%): ₱{calculatedDeposit:N2}\n" +
                       $"Current Status: {garment.Status}\n\n";
 
         if (garment.Status == "In Cleaning")
@@ -310,18 +338,5 @@ public partial class CatalogView : UserControl
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
         }
-    }
-    
-    // Designer event handler stubs to satisfy CatalogView.Designer.cs
-    private async void secondaryButtonAll_Click(object? sender, EventArgs e)
-    {
-        _currentStatusFilter = "All";
-        await LoadGarmentsAsync();
-    }
-
-    private async void secondaryButtonRented_Click(object? sender, EventArgs e)
-    {
-        _currentStatusFilter = "Rented";
-        await LoadGarmentsAsync();
     }
 }

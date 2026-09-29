@@ -263,7 +263,22 @@ public partial class RentalBookingsView : UserControl
 
                 if (confirm == DialogResult.Yes)
                 {
-                    await _controller.ProcessReturnAsync(item.BookingId);
+                    var result = await _controller.ProcessReturnAsync(item.BookingId);
+
+                    if (result.WasOverdue)
+                    {
+                        MessageBox.Show(
+                            $"Garment returned successfully.\n\n⚠️ OVERDUE NOTICE:\nThis lease was {result.DaysLate} day(s) overdue.\n" +
+                            $"A penalty fee of ₱{result.LateFeeCharged:N2} was automatically assessed based on the system configuration rate and logged to the incident ledger.",
+                            "Overdue Return Penalty Assessed",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                    }
+                    else
+                    {
+                        MessageBox.Show("Garment returned successfully and transferred to sanitization queue.", "Return Processed", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+
                     await LoadBookingsAsync();
                 }
             }

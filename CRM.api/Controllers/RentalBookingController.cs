@@ -15,7 +15,6 @@ public class RentalBookingController
         _bookingService = new RentalBookingService(contextFactory);
     }
 
-    // 1. Pipeline Queries
     public async Task<RentalPipelineDto> LoadPipelineAsync(int companyId, int? branchId = null, string stageFilter = "All", string searchTerm = "")
     {
         return await _bookingService.GetPipelineAsync(companyId, branchId, stageFilter, searchTerm);
@@ -26,7 +25,6 @@ public class RentalBookingController
         return await _bookingService.GetAvailableGarmentsAsync(companyId, start, end, search);
     }
 
-    // 2. Booking Actions
     public async Task<int> ConfirmBookingAsync(int companyId, BookingDraftModel draft)
     {
         ArgumentNullException.ThrowIfNull(draft);
@@ -53,8 +51,9 @@ public class RentalBookingController
         await _bookingService.UpdateBookingStageAsync(bookingId, newStage);
     }
 
-    public async Task ProcessReturnAsync(int bookingId)
+    // Now returns the late fee computation from the live configuration
+    public async Task<(bool WasOverdue, int DaysLate, decimal LateFeeCharged)> ProcessReturnAsync(int bookingId)
     {
-        await _bookingService.ProcessReturnAsync(bookingId);
+        return await _bookingService.ProcessReturnAsync(bookingId);
     }
 }
