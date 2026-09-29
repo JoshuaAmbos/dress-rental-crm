@@ -41,7 +41,7 @@ builder.Services.AddScoped<ITenantDbContextFactory, TenantDbContextFactory>();
 var app = builder.Build();
 
 // =============================================================
-// 2. DATABASE STARTUP INITIALIZATION & ROLE SEEDING
+// 2. DATABASE STARTUP INITIALIZATION & ROLE/TENANT SEEDING
 // =============================================================
 
 using (var scope = app.Services.CreateScope())
