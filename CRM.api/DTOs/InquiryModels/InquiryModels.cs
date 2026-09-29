@@ -6,6 +6,7 @@ public class InquiryRowViewModel
     public string InquiryCode { get; set; } = string.Empty;
     public string ClientName { get; set; } = string.Empty;
     public string ClientEmail { get; set; } = string.Empty;
+    public string ClientPhone { get; set; } = string.Empty;
     public string EventType { get; set; } = string.Empty;
     public DateTime? EventDate { get; set; }
     public string EventDateFormatted => EventDate?.ToString("MMM dd, yyyy") ?? "Flexible";
@@ -13,6 +14,8 @@ public class InquiryRowViewModel
     public string BudgetRange { get; set; } = string.Empty;
     public string Priority { get; set; } = "Medium";
     public string Status { get; set; } = "New";
+    public string BranchName { get; set; } = "All Showrooms";
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 public class InquiryPipelineDto

@@ -9,64 +9,57 @@ public partial class InquiryDialogForm : Form
 {
     private readonly Func<TenantCrmDbContext> _contextFactory;
     private readonly int _companyId;
+    public Inquiry InquiryModel { get; }
 
-    public Inquiry InquiryModel { get; private set; }
-
-    // Client Selector & Inputs
-    private ComboBox cmbExistingCustomer = null!;
-    private Button btnAddNewCustomer = null!;
-    private TextBox txtName = null!;
-    private TextBox txtPhone = null!;
-    private TextBox txtEmail = null!;
-    private TextBox txtBudget = null!;
-    private TextBox txtEvent = null!;
-    private DateTimePicker dtpEvent = null!;
-    private TextBox txtGarment = null!;
+    private TextBox txtClientName = null!;
+    private TextBox txtClientPhone = null!;
+    private TextBox txtClientEmail = null!;
+    private ComboBox cmbBranch = null!;
+    private ComboBox cmbEventType = null!;
+    private DateTimePicker dtpEventDate = null!;
+    private TextBox txtGarmentRequest = null!;
+    private ComboBox cmbBudgetRange = null!;
     private ComboBox cmbPriority = null!;
     private ComboBox cmbStatus = null!;
+    private TextBox txtNotes = null!;
 
-    // Action Buttons
     private Button btnSave = null!;
     private Button btnCancel = null!;
     private Button btnClose = null!;
-
     private Point _dragStartPoint;
-    private List<Customer> _customers = new();
 
-    // Atelier Palette (High-Definition Borders)
     private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
     private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorDustyRoseHover = Color.FromArgb(171, 99, 108);
-    private static readonly Color ColorSectionTag = Color.FromArgb(180, 95, 105);
     private static readonly Color ColorSubtext = Color.FromArgb(130, 120, 125);
-    private static readonly Color ColorFormBorder = Color.FromArgb(170, 150, 155);
-    private static readonly Color ColorInputBorder = Color.FromArgb(204, 188, 184);
+    private static readonly Color ColorBorder = Color.FromArgb(204, 188, 184);
     private static readonly Color ColorDivider = Color.FromArgb(220, 208, 205);
-    private static readonly Color ColorInputBg = Color.White;
-    private static readonly Color ColorDisabledInputBg = Color.FromArgb(249, 246, 246);
-    private static readonly Color ColorCloseBtnBg = Color.FromArgb(246, 240, 238);
 
-    public InquiryDialogForm(Func<TenantCrmDbContext> contextFactory, int companyId, Inquiry? existing = null)
+    public InquiryDialogForm(Func<TenantCrmDbContext> contextFactory, int companyId, Inquiry? existing = null, int? defaultBranchId = null)
     {
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         _companyId = companyId;
-        InquiryModel = existing ?? new Inquiry { CompanyId = companyId };
+        InquiryModel = existing ?? new Inquiry
+        {
+            CompanyId = companyId,
+            BranchId = defaultBranchId,
+            Status = "New",
+            Priority = "Medium",
+            EventType = "Wedding",
+            EventDate = DateTime.Today.AddDays(14)
+        };
 
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterParent;
-        Size = new Size(580, 750);
+        Size = new Size(620, 680);
         BackColor = Color.White;
-        Font = new Font("Segoe UI", 9.5f);
         DoubleBuffered = true;
 
-        ApplyFormBorderAndRegion();
-        BuildModernForm();
-        BindData();
-
-        Load += async (s, e) => await LoadCustomersAsync();
+        BuildFormLayout();
+        _ = LoadBranchesAsync(InquiryModel.BranchId ?? defaultBranchId);
+        PopulateExisting();
     }
 
-    private void ApplyFormBorderAndRegion()
+    private void BuildFormLayout()
     {
         Resize += (s, e) =>
         {
@@ -78,47 +71,34 @@ public partial class InquiryDialogForm : Form
         Paint += (s, e) =>
         {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            using var pen = new Pen(ColorFormBorder, 2f);
+            using var pen = new Pen(Color.FromArgb(170, 150, 155), 2f);
             using var path = CreateRoundedRectangle(new Rectangle(1, 1, Width - 3, Height - 3), 16);
             e.Graphics.DrawPath(pen, path);
         };
-    }
 
-    private void BuildModernForm()
-    {
-        // 1. Header (Inset 2px)
-        var pnlHeader = new Panel
-        {
-            Location = new Point(2, 2),
-            Size = new Size(Width - 4, 78),
-            BackColor = Color.White
-        };
-
+        // Header
+        var pnlHeader = new Panel { Location = new Point(2, 2), Size = new Size(Width - 4, 76), BackColor = Color.White };
         pnlHeader.MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) _dragStartPoint = e.Location; };
         pnlHeader.MouseMove += (s, e) =>
         {
-            if (e.Button == MouseButtons.Left)
-            {
-                Left += e.X - _dragStartPoint.X;
-                Top += e.Y - _dragStartPoint.Y;
-            }
+            if (e.Button == MouseButtons.Left) { Left += e.X - _dragStartPoint.X; Top += e.Y - _dragStartPoint.Y; }
         };
 
         var lblTitle = new Label
         {
-            Text = string.IsNullOrEmpty(InquiryModel.InquiryCode) ? "New Inquiry Intake" : $"Edit Inquiry • {InquiryModel.InquiryCode}",
-            Font = new Font("Segoe UI", 15.5f, FontStyle.Bold),
+            Text = InquiryModel.InquiryId > 0 ? $"Edit Inquiry ({InquiryModel.InquiryCode})" : "Log Inbound Inquiry",
+            Font = new Font("Segoe UI", 15f, FontStyle.Bold),
             ForeColor = ColorEspresso,
-            Location = new Point(28, 18),
+            Location = new Point(28, 16),
             AutoSize = true
         };
 
-        var lblSubtitle = new Label
+        var lblSub = new Label
         {
-            Text = "Track lead details, event requirements, and wardrobe preferences",
-            Font = new Font("Segoe UI", 9f),
+            Text = "Capture client event preferences, budget guidelines, and garment requests",
+            Font = new Font("Segoe UI", 8.5f),
             ForeColor = ColorSubtext,
-            Location = new Point(30, 48),
+            Location = new Point(30, 46),
             AutoSize = true
         };
 
@@ -128,9 +108,9 @@ public partial class InquiryDialogForm : Form
             Font = new Font("Segoe UI", 9f),
             ForeColor = ColorSubtext,
             Size = new Size(32, 32),
-            Location = new Point(pnlHeader.Width - 48, 18),
+            Location = new Point(pnlHeader.Width - 46, 16),
             FlatStyle = FlatStyle.Flat,
-            BackColor = ColorCloseBtnBg,
+            BackColor = Color.FromArgb(246, 240, 238),
             Cursor = Cursors.Hand
         };
         btnClose.FlatAppearance.BorderSize = 0;
@@ -139,105 +119,53 @@ public partial class InquiryDialogForm : Form
         pnlHeader.Paint += (s, e) =>
         {
             using var p = new Pen(ColorDivider, 1f);
-            e.Graphics.DrawLine(p, 28, 77, pnlHeader.Width - 28, 77);
+            e.Graphics.DrawLine(p, 28, 75, pnlHeader.Width - 28, 75);
         };
 
-        pnlHeader.Controls.AddRange([lblTitle, lblSubtitle, btnClose]);
+        pnlHeader.Controls.AddRange(new Control[] { lblTitle, lblSub, btnClose });
         Controls.Add(pnlHeader);
 
-        // 2. Scrollable Body
-        var pnlBody = new Panel
-        {
-            Location = new Point(2, 80),
-            Size = new Size(Width - 4, Height - 154),
-            AutoScroll = true,
-            BackColor = Color.White
-        };
-
-        int y = 14;
+        // Body Inputs
+        int y = 92;
         int col1X = 28;
-        int col2X = 295;
-        int colWidth = 245;
+        int col2X = 320;
+        int inputWidth = 270;
 
-        // SECTION: CLIENT SELECTION & PROFILE
-        AddSectionHeader("CLIENT INFORMATION", col1X, ref y, pnlBody);
+        AddLabeledInput("Client Full Name *", col1X, y, inputWidth, out txtClientName);
+        AddLabeledInput("Contact Phone Number *", col2X, y, inputWidth, out txtClientPhone);
+        y += 62;
 
-        var lblExisting = new Label
-        {
-            Text = "Select Registered Client (Optional)",
-            Font = new Font("Segoe UI", 9f),
-            ForeColor = ColorSubtext,
-            Location = new Point(col1X, y),
-            AutoSize = true
-        };
-        pnlBody.Controls.Add(lblExisting);
-        y += 20;
+        AddLabeledInput("Email Address", col1X, y, inputWidth, out txtClientEmail);
+        AddLabeledComboBox("Target Showroom Branch", col2X, y, inputWidth, out cmbBranch);
+        y += 62;
 
-        var pnlCustBox = new Panel { Location = new Point(col1X, y), Size = new Size(385, 36), BackColor = Color.White };
-        ApplyPillBorder(pnlCustBox);
+        AddLabeledComboBox("Event Type *", col1X, y, inputWidth, out cmbEventType);
+        cmbEventType.Items.AddRange(new object[] { "Wedding", "Gala", "Prom / Debut", "Black Tie Awards", "Cocktail Party", "Fashion Editorial", "Anniversary" });
+        cmbEventType.SelectedIndex = 0;
 
-        cmbExistingCustomer = new ComboBox
-        {
-            DropDownStyle = ComboBoxStyle.DropDownList,
-            FlatStyle = FlatStyle.Flat,
-            Font = new Font("Segoe UI", 9.5f),
-            ForeColor = ColorEspresso,
-            Location = new Point(8, 6),
-            Width = 369
-        };
-        cmbExistingCustomer.SelectedIndexChanged += CmbExistingCustomer_SelectedIndexChanged;
-        pnlCustBox.Controls.Add(cmbExistingCustomer);
+        AddLabeledDatePicker("Estimated Event Date", col2X, y, inputWidth, out dtpEventDate);
+        y += 62;
 
-        btnAddNewCustomer = new Button
-        {
-            Text = "+ New Client",
-            Location = new Point(col1X + 395, y),
-            Size = new Size(117, 36),
-            BackColor = Color.White,
-            ForeColor = ColorDustyRose,
-            FlatStyle = FlatStyle.Flat,
-            Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
-            Cursor = Cursors.Hand
-        };
-        btnAddNewCustomer.FlatAppearance.BorderColor = ColorDustyRose;
-        btnAddNewCustomer.FlatAppearance.BorderSize = 1;
-        btnAddNewCustomer.Click += BtnAddNewCustomer_Click;
+        AddLabeledInput("Garment Style Request *", col1X, y, inputWidth, out txtGarmentRequest);
 
-        pnlBody.Controls.AddRange([pnlCustBox, btnAddNewCustomer]);
-        y += 50;
+        AddLabeledComboBox("Budget Range", col2X, y, inputWidth, out cmbBudgetRange);
+        cmbBudgetRange.Items.AddRange(new object[] { "₱3,000–₱5,000", "₱5,000–₱8,000", "₱8,000–₱12,000", "₱12,000+" });
+        cmbBudgetRange.SelectedIndex = 0;
+        y += 62;
 
-        AddLabeledInput("Full Name *", "e.g. Isabella Rosario", col1X, y, colWidth, out txtName, pnlBody);
-        AddLabeledInput("Phone Number", "+1 (212) 555-0000", col2X, y, colWidth, out txtPhone, pnlBody);
-        y += 66;
+        AddLabeledComboBox("Priority Level", col1X, y, inputWidth, out cmbPriority);
+        cmbPriority.Items.AddRange(new object[] { "Low", "Medium", "High" });
+        cmbPriority.SelectedIndex = 1;
 
-        AddLabeledInput("Email Address", "name@email.com", col1X, y, colWidth, out txtEmail, pnlBody);
-        AddLabeledInput("Budget Range", "e.g. $400–$600", col2X, y, colWidth, out txtBudget, pnlBody);
-        y += 76;
+        AddLabeledComboBox("Status", col2X, y, inputWidth, out cmbStatus);
+        cmbStatus.Items.AddRange(new object[] { "New", "In Review", "Quoted", "Converted", "Closed" });
+        cmbStatus.SelectedIndex = 0;
+        y += 62;
 
-        // SECTION: EVENT & GARMENT REQUEST
-        AddSectionHeader("EVENT & GARMENT REQUEST", col1X, ref y, pnlBody);
-        AddLabeledInput("Event Type", "e.g. Gala, Wedding, Black-Tie", col1X, y, colWidth, out txtEvent, pnlBody);
-        AddLabeledDatePicker("Event Date", col2X, y, colWidth, out dtpEvent, pnlBody);
-        y += 66;
+        AddLabeledMultiline("Consultation & Preference Notes", col1X, y, Width - 56, 75, out txtNotes);
 
-        AddLabeledInput("Garment Request / Style Notes", "Floor-length gown, navy or silk velvet...", col1X, y, Width - 58, out txtGarment, pnlBody);
-        y += 76;
-
-        // SECTION: PIPELINE STATUS
-        AddSectionHeader("PIPELINE & PRIORITY", col1X, ref y, pnlBody);
-        AddLabeledComboBox("Priority", ["Low", "Medium", "High"], col1X, y, colWidth, out cmbPriority, pnlBody);
-        AddLabeledComboBox("Pipeline Stage", ["New", "In Review", "Quoted", "Converted", "Closed"], col2X, y, colWidth, out cmbStatus, pnlBody);
-
-        Controls.Add(pnlBody);
-
-        // 3. Footer Action Bar
-        var pnlFooter = new Panel
-        {
-            Location = new Point(2, Height - 74),
-            Size = new Size(Width - 4, 72),
-            BackColor = Color.White
-        };
-
+        // Footer
+        var pnlFooter = new Panel { Location = new Point(2, Height - 68), Size = new Size(Width - 4, 66), BackColor = Color.White };
         pnlFooter.Paint += (s, e) =>
         {
             using var p = new Pen(ColorDivider, 1f);
@@ -247,272 +175,125 @@ public partial class InquiryDialogForm : Form
         btnCancel = new Button
         {
             Text = "Cancel",
-            Size = new Size(100, 38),
-            Location = new Point(pnlFooter.Width - 250, 16),
+            Size = new Size(95, 36),
+            Location = new Point(pnlFooter.Width - 245, 14),
             BackColor = Color.White,
             ForeColor = ColorEspresso,
             FlatStyle = FlatStyle.Flat,
-            Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
+            Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
             Cursor = Cursors.Hand
         };
-        btnCancel.FlatAppearance.BorderColor = ColorInputBorder;
-        btnCancel.FlatAppearance.BorderSize = 1;
+        btnCancel.FlatAppearance.BorderColor = ColorBorder;
         btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
 
         btnSave = new Button
         {
-            Text = string.IsNullOrEmpty(InquiryModel.InquiryCode) ? "Create Inquiry" : "Save Changes",
-            Size = new Size(130, 38),
-            Location = new Point(pnlFooter.Width - 140, 16),
+            Text = InquiryModel.InquiryId > 0 ? "Update Inquiry" : "Save Inquiry",
+            Size = new Size(135, 36),
+            Location = new Point(pnlFooter.Width - 140, 14),
             BackColor = ColorDustyRose,
             ForeColor = Color.White,
             FlatStyle = FlatStyle.Flat,
-            Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
+            Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
             Cursor = Cursors.Hand
         };
         btnSave.FlatAppearance.BorderSize = 0;
-        btnSave.MouseEnter += (s, e) => btnSave.BackColor = ColorDustyRoseHover;
-        btnSave.MouseLeave += (s, e) => btnSave.BackColor = ColorDustyRose;
-        btnSave.Click += BtnSave_Click;
+        btnSave.Click += SaveData;
 
-        pnlFooter.Controls.AddRange([btnCancel, btnSave]);
+        pnlFooter.Controls.AddRange(new Control[] { btnCancel, btnSave });
         Controls.Add(pnlFooter);
     }
 
-    private void AddSectionHeader(string text, int x, ref int y, Panel parent)
+    private void AddLabeledInput(string label, int x, int y, int width, out TextBox tb)
     {
-        var lbl = new Label
-        {
-            Text = text,
-            Font = new Font("Segoe UI Semibold", 8.25f, FontStyle.Bold),
-            ForeColor = ColorSectionTag,
-            Location = new Point(x, y),
-            AutoSize = true
-        };
-        parent.Controls.Add(lbl);
-        y += 24;
+        var lbl = new Label { Text = label, Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold), ForeColor = ColorSubtext, Location = new Point(x, y), AutoSize = true };
+        var pnl = new Panel { Location = new Point(x, y + 18), Size = new Size(width, 34), BackColor = Color.White };
+        pnl.Paint += (s, e) => { using var p = new Pen(ColorBorder, 1.25f); e.Graphics.DrawRectangle(p, 0, 0, pnl.Width - 1, pnl.Height - 1); };
+
+        tb = new TextBox { BorderStyle = BorderStyle.None, Font = new Font("Segoe UI", 9.5f), Location = new Point(8, 7), Width = width - 16, ForeColor = ColorEspresso };
+        pnl.Controls.Add(tb);
+        Controls.AddRange(new Control[] { lbl, pnl });
     }
 
-    private void AddLabeledInput(string labelText, string placeholder, int x, int y, int width, out TextBox textBox, Panel parent)
+    private void AddLabeledComboBox(string label, int x, int y, int width, out ComboBox cb)
     {
-        var lbl = new Label
-        {
-            Text = labelText,
-            Font = new Font("Segoe UI", 9f),
-            ForeColor = ColorSubtext,
-            Location = new Point(x, y),
-            AutoSize = true
-        };
-
-        var container = new Panel
-        {
-            Location = new Point(x, y + 20),
-            Size = new Size(width, 36),
-            BackColor = ColorInputBg
-        };
-        ApplyPillBorder(container);
-
-        textBox = new TextBox
-        {
-            BorderStyle = BorderStyle.None,
-            Font = new Font("Segoe UI", 9.5f),
-            ForeColor = ColorEspresso,
-            PlaceholderText = placeholder,
-            Location = new Point(10, 8),
-            Width = width - 20
-        };
-
-        container.Controls.Add(textBox);
-        parent.Controls.AddRange([lbl, container]);
+        var lbl = new Label { Text = label, Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold), ForeColor = ColorSubtext, Location = new Point(x, y), AutoSize = true };
+        cb = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 9.5f), Location = new Point(x, y + 18), Width = width, ForeColor = ColorEspresso };
+        Controls.AddRange(new Control[] { lbl, cb });
     }
 
-    private void AddLabeledDatePicker(string labelText, int x, int y, int width, out DateTimePicker dtp, Panel parent)
+    private void AddLabeledDatePicker(string label, int x, int y, int width, out DateTimePicker dtp)
     {
-        var lbl = new Label
-        {
-            Text = labelText,
-            Font = new Font("Segoe UI", 9f),
-            ForeColor = ColorSubtext,
-            Location = new Point(x, y),
-            AutoSize = true
-        };
-
-        var container = new Panel
-        {
-            Location = new Point(x, y + 20),
-            Size = new Size(width, 36),
-            BackColor = ColorInputBg
-        };
-        ApplyPillBorder(container);
-
-        dtp = new DateTimePicker
-        {
-            Format = DateTimePickerFormat.Short,
-            Font = new Font("Segoe UI", 9.5f),
-            CalendarForeColor = ColorEspresso,
-            Location = new Point(8, 6),
-            Width = width - 16
-        };
-
-        container.Controls.Add(dtp);
-        parent.Controls.AddRange([lbl, container]);
+        var lbl = new Label { Text = label, Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold), ForeColor = ColorSubtext, Location = new Point(x, y), AutoSize = true };
+        dtp = new DateTimePicker { Format = DateTimePickerFormat.Short, Font = new Font("Segoe UI", 9.5f), Location = new Point(x, y + 18), Width = width, CalendarForeColor = ColorEspresso };
+        Controls.AddRange(new Control[] { lbl, dtp });
     }
 
-    private void AddLabeledComboBox(string labelText, string[] items, int x, int y, int width, out ComboBox cmb, Panel parent)
+    private void AddLabeledMultiline(string label, int x, int y, int width, int height, out TextBox tb)
     {
-        var lbl = new Label
-        {
-            Text = labelText,
-            Font = new Font("Segoe UI", 9f),
-            ForeColor = ColorSubtext,
-            Location = new Point(x, y),
-            AutoSize = true
-        };
+        var lbl = new Label { Text = label, Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold), ForeColor = ColorSubtext, Location = new Point(x, y), AutoSize = true };
+        var pnl = new Panel { Location = new Point(x, y + 18), Size = new Size(width, height), BackColor = Color.White };
+        pnl.Paint += (s, e) => { using var p = new Pen(ColorBorder, 1.25f); e.Graphics.DrawRectangle(p, 0, 0, pnl.Width - 1, pnl.Height - 1); };
 
-        var container = new Panel
-        {
-            Location = new Point(x, y + 20),
-            Size = new Size(width, 36),
-            BackColor = ColorInputBg
-        };
-        ApplyPillBorder(container);
-
-        cmb = new ComboBox
-        {
-            DropDownStyle = ComboBoxStyle.DropDownList,
-            FlatStyle = FlatStyle.Flat,
-            Font = new Font("Segoe UI", 9.5f),
-            ForeColor = ColorEspresso,
-            Location = new Point(8, 6),
-            Width = width - 16
-        };
-        cmb.Items.AddRange(items);
-
-        container.Controls.Add(cmb);
-        parent.Controls.AddRange([lbl, container]);
+        tb = new TextBox { BorderStyle = BorderStyle.None, Multiline = true, ScrollBars = ScrollBars.Vertical, Font = new Font("Segoe UI", 9f), Location = new Point(8, 6), Size = new Size(width - 16, height - 12), ForeColor = ColorEspresso };
+        pnl.Controls.Add(tb);
+        Controls.AddRange(new Control[] { lbl, pnl });
     }
 
-    private static void ApplyPillBorder(Panel panel)
-    {
-        panel.Paint += (s, e) =>
-        {
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            using var pen = new Pen(ColorInputBorder, 1.5f);
-            using var path = CreateRoundedRectangle(new Rectangle(0, 0, panel.Width - 1, panel.Height - 1), 6);
-            e.Graphics.DrawPath(pen, path);
-        };
-    }
-
-    private async Task LoadCustomersAsync(int? selectedCustomerId = null)
+    private async Task LoadBranchesAsync(int? selectedBranchId)
     {
         try
         {
             await using var db = _contextFactory();
-            _customers = await db.Customers
-                .AsNoTracking()
-                .Where(c => c.CompanyId == _companyId && c.IsActive)
-                .OrderBy(c => c.LastName)
-                .ThenBy(c => c.FirstName)
-                .ToListAsync();
+            var branches = await db.Branches.AsNoTracking().Where(b => b.CompanyId == _companyId && b.IsActive).OrderBy(b => b.BranchName).ToListAsync();
+            cmbBranch.Items.Clear();
+            cmbBranch.Items.Add(new BranchComboItem(null, "🌐 All Showrooms (Central)"));
 
-            cmbExistingCustomer.Items.Clear();
-            cmbExistingCustomer.Items.Add("-- New / Unregistered Prospect --");
-
-            int selectIndex = 0;
-            for (int i = 0; i < _customers.Count; i++)
+            int idx = 0;
+            for (int i = 0; i < branches.Count; i++)
             {
-                var c = _customers[i];
-                cmbExistingCustomer.Items.Add($"{c.LastName}, {c.FirstName} ({c.ContactNumber})");
-
-                if (selectedCustomerId.HasValue && c.CustomerId == selectedCustomerId.Value)
-                {
-                    selectIndex = i + 1;
-                }
-                else if (!selectedCustomerId.HasValue && !string.IsNullOrEmpty(InquiryModel.ClientName) &&
-                         $"{c.FirstName} {c.LastName}".Equals(InquiryModel.ClientName, StringComparison.OrdinalIgnoreCase))
-                {
-                    selectIndex = i + 1;
-                }
+                cmbBranch.Items.Add(new BranchComboItem(branches[i].BranchId, $"🏢 {branches[i].BranchName}"));
+                if (selectedBranchId.HasValue && branches[i].BranchId == selectedBranchId.Value) idx = i + 1;
             }
-
-            cmbExistingCustomer.SelectedIndex = selectIndex;
+            if (cmbBranch.Items.Count > 0) cmbBranch.SelectedIndex = idx;
         }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Failed to load customers: {ex.GetBaseException().Message}", "Load Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-        }
+        catch { }
     }
 
-    private void CmbExistingCustomer_SelectedIndexChanged(object? sender, EventArgs e)
+    private void PopulateExisting()
     {
-        if (cmbExistingCustomer.SelectedIndex > 0 && cmbExistingCustomer.SelectedIndex - 1 < _customers.Count)
-        {
-            var customer = _customers[cmbExistingCustomer.SelectedIndex - 1];
-            txtName.Text = $"{customer.FirstName} {customer.LastName}".Trim();
-            txtPhone.Text = customer.ContactNumber ?? string.Empty;
-            txtEmail.Text = customer.EmailAddress ?? string.Empty;
+        txtClientName.Text = InquiryModel.ClientName;
+        txtClientPhone.Text = InquiryModel.ClientPhone;
+        txtClientEmail.Text = InquiryModel.ClientEmail;
+        txtGarmentRequest.Text = InquiryModel.GarmentRequest;
+        txtNotes.Text = InquiryModel.Notes ?? string.Empty;
 
-            // Lock fields when prefilled from customer database
-            txtName.ReadOnly = true;
-            txtName.Parent!.BackColor = ColorDisabledInputBg;
-            txtPhone.ReadOnly = true;
-            txtPhone.Parent!.BackColor = ColorDisabledInputBg;
-            txtEmail.ReadOnly = true;
-            txtEmail.Parent!.BackColor = ColorDisabledInputBg;
-        }
-        else
-        {
-            // Unlock fields for manual prospect entry
-            txtName.ReadOnly = false;
-            txtName.Parent!.BackColor = ColorInputBg;
-            txtPhone.ReadOnly = false;
-            txtPhone.Parent!.BackColor = ColorInputBg;
-            txtEmail.ReadOnly = false;
-            txtEmail.Parent!.BackColor = ColorInputBg;
-        }
+        if (InquiryModel.EventDate.HasValue) dtpEventDate.Value = InquiryModel.EventDate.Value;
+        if (!string.IsNullOrEmpty(InquiryModel.EventType)) cmbEventType.SelectedItem = InquiryModel.EventType;
+        if (!string.IsNullOrEmpty(InquiryModel.BudgetRange)) cmbBudgetRange.SelectedItem = InquiryModel.BudgetRange;
+        if (!string.IsNullOrEmpty(InquiryModel.Priority)) cmbPriority.SelectedItem = InquiryModel.Priority;
+        if (!string.IsNullOrEmpty(InquiryModel.Status)) cmbStatus.SelectedItem = InquiryModel.Status;
     }
 
-    private async void BtnAddNewCustomer_Click(object? sender, EventArgs e)
+    private void SaveData(object? sender, EventArgs e)
     {
-        using var custDlg = new CustomerDialogForm(_contextFactory, _companyId);
-        if (custDlg.ShowDialog(this) == DialogResult.OK)
+        if (string.IsNullOrWhiteSpace(txtClientName.Text) || string.IsNullOrWhiteSpace(txtGarmentRequest.Text))
         {
-            await LoadCustomersAsync(custDlg.CreatedCustomerId);
-        }
-    }
-
-    private void BindData()
-    {
-        txtName.Text = InquiryModel.ClientName ?? string.Empty;
-        txtPhone.Text = InquiryModel.ClientPhone ?? string.Empty;
-        txtEmail.Text = InquiryModel.ClientEmail ?? string.Empty;
-        txtBudget.Text = InquiryModel.BudgetRange ?? string.Empty;
-        txtEvent.Text = InquiryModel.EventType ?? string.Empty;
-        if (InquiryModel.EventDate.HasValue) dtpEvent.Value = InquiryModel.EventDate.Value;
-        txtGarment.Text = InquiryModel.GarmentRequest ?? string.Empty;
-
-        cmbPriority.SelectedItem = string.IsNullOrEmpty(InquiryModel.Priority) ? "Medium" : InquiryModel.Priority;
-        cmbStatus.SelectedItem = string.IsNullOrEmpty(InquiryModel.Status) ? "New" : InquiryModel.Status;
-    }
-
-    private void BtnSave_Click(object? sender, EventArgs e)
-    {
-        if (string.IsNullOrWhiteSpace(txtName.Text))
-        {
-            MessageBox.Show("Client Name is required.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            txtName.Focus();
+            MessageBox.Show("Please enter the client's name and garment style request.", "Validation Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
-        InquiryModel.ClientName = txtName.Text.Trim();
-        InquiryModel.ClientPhone = txtPhone.Text.Trim();
-        InquiryModel.ClientEmail = txtEmail.Text.Trim();
-        InquiryModel.BudgetRange = txtBudget.Text.Trim();
-        InquiryModel.EventType = txtEvent.Text.Trim();
-        InquiryModel.EventDate = dtpEvent.Value.Date;
-        InquiryModel.GarmentRequest = txtGarment.Text.Trim();
+        InquiryModel.ClientName = txtClientName.Text.Trim();
+        InquiryModel.ClientPhone = txtClientPhone.Text.Trim();
+        InquiryModel.ClientEmail = txtClientEmail.Text.Trim();
+        InquiryModel.BranchId = (cmbBranch.SelectedItem is BranchComboItem item) ? item.BranchId : null;
+        InquiryModel.EventType = cmbEventType.SelectedItem?.ToString() ?? "Wedding";
+        InquiryModel.EventDate = dtpEventDate.Value.Date;
+        InquiryModel.GarmentRequest = txtGarmentRequest.Text.Trim();
+        InquiryModel.BudgetRange = cmbBudgetRange.SelectedItem?.ToString() ?? "₱3,000–₱5,000";
         InquiryModel.Priority = cmbPriority.SelectedItem?.ToString() ?? "Medium";
         InquiryModel.Status = cmbStatus.SelectedItem?.ToString() ?? "New";
+        InquiryModel.Notes = string.IsNullOrWhiteSpace(txtNotes.Text) ? null : txtNotes.Text.Trim();
 
         DialogResult = DialogResult.OK;
         Close();
@@ -529,4 +310,6 @@ public partial class InquiryDialogForm : Form
         path.CloseFigure();
         return path;
     }
+
+    private record BranchComboItem(int? BranchId, string Name) { public override string ToString() => Name; }
 }

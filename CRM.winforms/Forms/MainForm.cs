@@ -567,7 +567,12 @@ public partial class MainForm : Form
         lblTenantBadge.Text = initial;
         lblTenantName.Text = branchName.Length > 16 ? $"{branchName.Substring(0, 14)}... ▾" : $"{branchName} ▾";
 
-        if (_activeView is ComplaintsView)
+        if (_activeView is InquiriesView)
+        {
+            _inquiriesView = null;
+            ShowInquiryView();
+        }
+        else if (_activeView is ComplaintsView)
         {
             _complaintsView = null;
             ShowComplaintsView();
@@ -680,9 +685,8 @@ public partial class MainForm : Form
 
     public void ShowInquiryView()
     {
-        _inquiriesView ??= new InquiriesView(_contextFactory, () => _currentCompanyId);
+        _inquiriesView = new InquiriesView(_contextFactory, () => _currentCompanyId, () => _currentBranchId);
         SwitchView(_inquiriesView);
-        _ = _inquiriesView.LoadInquiriesAsync();
         HighlightNavByText("Inquiries");
     }
 

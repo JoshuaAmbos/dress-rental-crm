@@ -157,6 +157,11 @@ public class TenantCrmDbContext : DbContext
             entity.Property(e => e.ClientPhone).HasMaxLength(50);
             entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("New");
             entity.Property(e => e.Priority).HasMaxLength(50).HasDefaultValue("Medium");
+
+            entity.HasOne(e => e.Branch)
+                  .WithMany()
+                  .HasForeignKey(e => e.BranchId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // LoyaltyAward
