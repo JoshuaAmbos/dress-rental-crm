@@ -700,7 +700,12 @@ public partial class MainForm : Form
 
     public void ShowLoyaltyAwardsView()
     {
-        _loyaltyAwardsView ??= new LoyaltyAwardsView(_contextFactory, () => _currentCompanyId, () => _currentBranchId);
+        _loyaltyAwardsView ??= new LoyaltyAwardsView(
+            _contextFactory,
+            () => _currentCompanyId,
+            () => _currentBranchId,
+            _user.Roles);
+
         SwitchView(_loyaltyAwardsView);
         HighlightNavByText("Loyalty Awards");
     }

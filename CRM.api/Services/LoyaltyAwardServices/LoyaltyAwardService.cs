@@ -16,32 +16,46 @@ public class LoyaltyAwardService
         _emailService = new EmailNotificationService(_contextFactory);
     }
 
-    // Overload for backwards compatibility
     public Task<LoyaltyOverviewDto> GetLoyaltyOverviewAsync(int companyId, string searchTerm = "")
-        => GetLoyaltyOverviewAsync(companyId, null, searchTerm);
+        => GetLoyaltyOverviewAsync(companyId, null, searchTerm, false);
 
-    // Multi-Branch Scoped Loyalty Overview
-    public async Task<LoyaltyOverviewDto> GetLoyaltyOverviewAsync(int companyId, int? branchId = null, string searchTerm = "")
+    public async Task<LoyaltyOverviewDto> GetLoyaltyOverviewAsync(
+        int companyId,
+        int? branchId = null,
+        string searchTerm = "",
+        bool includeArchivedTiers = false)
     {
         await using var db = _contextFactory();
 
-        // 1. Fetch defined tier rules ordered by threshold ascending
-        var tiers = await db.LoyaltyAwards
-            .AsNoTracking()
+        // 1. Fetch tier rules (filtered by active status unless admin toggled archive view)
+        var tiersQuery = db.LoyaltyAwards.AsNoTracking();
+        if (!includeArchivedTiers)
+        {
+            tiersQuery = tiersQuery.Where(t => t.IsActive);
+        }
+
+        var tiers = await tiersQuery
             .OrderBy(t => t.MinLifetimeSpend)
             .ToListAsync();
 
-        if (tiers.Count == 0)
+        // Auto-seed baseline tiers if the tenant's isolated table is completely empty
+        if (tiers.Count == 0 && !includeArchivedTiers)
         {
             tiers =
             [
-                new() { TierName = "Standard", MinLifetimeSpend = 0, MinRentalCount = 0, DiscountPercentage = 0m, RewardDescription = "Standard membership and new arrival notifications" },
-                new() { TierName = "Gold", MinLifetimeSpend = 8000, MinRentalCount = 2, DiscountPercentage = 5m, RewardDescription = "5% off leases and complimentary fitting reservations" },
-                new() { TierName = "VIP", MinLifetimeSpend = 15000, MinRentalCount = 3, DiscountPercentage = 10m, RewardDescription = "10% off leases, free alterations, and priority access" }
+                new() { TierName = "Standard", MinLifetimeSpend = 0, MinRentalCount = 0, DiscountPercentage = 0m, RewardDescription = "Standard membership and new arrival notifications", IsActive = true },
+                new() { TierName = "Gold", MinLifetimeSpend = 8000, MinRentalCount = 2, DiscountPercentage = 5m, RewardDescription = "5% off leases and complimentary fitting reservations", IsActive = true },
+                new() { TierName = "VIP", MinLifetimeSpend = 15000, MinRentalCount = 3, DiscountPercentage = 10m, RewardDescription = "10% off leases, free alterations, and priority access", IsActive = true }
             ];
+
+            db.LoyaltyAwards.AddRange(tiers);
+            await db.SaveChangesAsync();
         }
 
-        // 2. Query customers scoped to the active showroom branch
+        // Active tiers used for customer rank calculations
+        var activeTiers = tiers.Where(t => t.IsActive).OrderBy(t => t.MinLifetimeSpend).ToList();
+
+        // 2. Query customers scoped to the active boutique and showroom branch
         var customersQuery = db.Customers
             .AsNoTracking()
             .Where(c => c.CompanyId == companyId && c.IsActive);
@@ -58,7 +72,6 @@ public class LoyaltyAwardService
 
         foreach (var c in customers)
         {
-            // Scope customer's booking spend to the branch if selected
             var validBookings = branchId.HasValue
                 ? c.RentalBookings.Where(b => b.BranchId == branchId.Value).ToList()
                 : [.. c.RentalBookings];
@@ -66,14 +79,14 @@ public class LoyaltyAwardService
             decimal totalSpend = validBookings.Sum(b => b.RentalFee);
             int rentalCount = validBookings.Count;
 
-            // Determine matching tier (highest threshold met)
-            var currentTier = tiers
+            // Match highest active tier threshold met
+            var currentTier = activeTiers
                 .Where(t => totalSpend >= t.MinLifetimeSpend && rentalCount >= t.MinRentalCount)
                 .OrderByDescending(t => t.MinLifetimeSpend)
-                .FirstOrDefault() ?? tiers.First();
+                .FirstOrDefault() ?? activeTiers.FirstOrDefault() ?? new LoyaltyAward { TierName = "Standard" };
 
-            // Next tier progression
-            var nextTier = tiers
+            // Determine next active tier progression
+            var nextTier = activeTiers
                 .Where(t => t.MinLifetimeSpend > currentTier.MinLifetimeSpend)
                 .OrderBy(t => t.MinLifetimeSpend)
                 .FirstOrDefault();
@@ -108,7 +121,6 @@ public class LoyaltyAwardService
             });
         }
 
-        // Apply client search filter
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             string term = searchTerm.Trim().ToLower();
@@ -120,7 +132,6 @@ public class LoyaltyAwardService
 
         customerLoyaltyList = [.. customerLoyaltyList.OrderByDescending(c => c.LifetimeSpend)];
 
-        // Assemble Tier DTOs with enrolled counts for this branch
         var tierDtos = tiers.Select(t => new LoyaltyTierDto
         {
             LoyaltyAwardId = t.LoyaltyAwardId,
@@ -144,11 +155,75 @@ public class LoyaltyAwardService
         };
     }
 
-    /// <summary>
-    /// Computes the automatic booking discount for a client based on their loyalty qualification
-    /// and dispatches milestone congratulations for VIP / Gold tier members.
-    /// </summary>
-    public async Task<LoyaltyDiscountCalculationDto> CalculateCustomerDiscountAsync(int companyId, int customerId, decimal baseRentalFee, int? branchId = null)
+    public async Task<List<LoyaltyAward>> GetAllTiersAsync(bool includeArchived = false)
+    {
+        await using var db = _contextFactory();
+        var query = db.LoyaltyAwards.AsNoTracking();
+        if (!includeArchived) query = query.Where(t => t.IsActive);
+        return await query.OrderBy(t => t.MinLifetimeSpend).ToListAsync();
+    }
+
+    public async Task CreateTierAsync(LoyaltyAward tier)
+    {
+        await using var db = _contextFactory();
+
+        var duplicate = await db.LoyaltyAwards
+            .AnyAsync(t => t.IsActive && t.TierName.ToLower() == tier.TierName.Trim().ToLower());
+
+        if (duplicate)
+            throw new InvalidOperationException($"An active loyalty tier named '{tier.TierName}' already exists.");
+
+        tier.TierName = tier.TierName.Trim();
+        tier.RewardDescription = tier.RewardDescription.Trim();
+        tier.IsActive = true;
+        tier.CreatedAt = DateTime.UtcNow;
+
+        db.LoyaltyAwards.Add(tier);
+        await db.SaveChangesAsync();
+    }
+
+    public async Task UpdateTierAsync(LoyaltyAward updated)
+    {
+        await using var db = _contextFactory();
+        var existing = await db.LoyaltyAwards.FindAsync(updated.LoyaltyAwardId);
+        if (existing == null) throw new KeyNotFoundException("Loyalty tier not found.");
+
+        var duplicate = await db.LoyaltyAwards
+            .AnyAsync(t => t.LoyaltyAwardId != updated.LoyaltyAwardId &&
+                           t.IsActive &&
+                           t.TierName.ToLower() == updated.TierName.Trim().ToLower());
+
+        if (duplicate)
+            throw new InvalidOperationException($"Another active tier is already named '{updated.TierName}'.");
+
+        existing.TierName = updated.TierName.Trim();
+        existing.MinLifetimeSpend = updated.MinLifetimeSpend;
+        existing.MinRentalCount = updated.MinRentalCount;
+        existing.DiscountPercentage = updated.DiscountPercentage;
+        existing.RewardDescription = updated.RewardDescription.Trim();
+        existing.IsActive = updated.IsActive;
+
+        await db.SaveChangesAsync();
+    }
+
+    public async Task ToggleTierStatusAsync(int loyaltyAwardId)
+    {
+        await using var db = _contextFactory();
+        var tier = await db.LoyaltyAwards.FindAsync(loyaltyAwardId);
+        if (tier == null) return;
+
+        // Guard the foundational Standard tier
+        if (tier.TierName.Equals("Standard", StringComparison.OrdinalIgnoreCase) && tier.IsActive)
+        {
+            throw new InvalidOperationException("The baseline 'Standard' tier cannot be archived as it serves as the zero-threshold tier.");
+        }
+
+        tier.IsActive = !tier.IsActive;
+        await db.SaveChangesAsync();
+    }
+
+    public async Task<LoyaltyDiscountCalculationDto> CalculateCustomerDiscountAsync(
+        int companyId, int customerId, decimal baseRentalFee, int? branchId = null)
     {
         await using var db = _contextFactory();
 
@@ -177,8 +252,10 @@ public class LoyaltyAwardService
         decimal totalSpend = validBookings.Sum(b => b.RentalFee);
         int rentalCount = validBookings.Count;
 
+        // Query only active tiers for discounting
         var tiers = await db.LoyaltyAwards
             .AsNoTracking()
+            .Where(t => t.IsActive)
             .OrderByDescending(t => t.MinLifetimeSpend)
             .ToListAsync();
 
@@ -186,22 +263,6 @@ public class LoyaltyAwardService
 
         decimal discountPct = matchedTier?.DiscountPercentage ?? 0m;
         decimal discountAmount = Math.Round(baseRentalFee * (discountPct / 100m), 2);
-
-        // Dispatch VIP / Gold Tier Upgrade Email
-        if (matchedTier != null && matchedTier.TierName != "Standard" && !string.IsNullOrWhiteSpace(customer.EmailAddress))
-        {
-            string clientName = $"{customer.FirstName} {customer.LastName}".Trim();
-            _ = _emailService.SendNotificationAsync(
-                companyId,
-                branchId ?? customer.BranchId,
-                customer.CustomerId,
-                customer.EmailAddress,
-                clientName,
-                $"Congratulations! You unlocked {matchedTier.TierName} Status",
-                "Loyalty Awards",
-                $"Thank you for your patronage. Your cumulative spend has elevated you to the <strong>{matchedTier.TierName}</strong> tier, " +
-                $"entitling you to an automatic <strong>{matchedTier.DiscountPercentage:0.#}% discount</strong> on all future leases.");
-        }
 
         return new LoyaltyDiscountCalculationDto
         {
@@ -215,33 +276,34 @@ public class LoyaltyAwardService
     }
 
     /// <summary>
-    /// Updates or creates a loyalty tier rule configuration.
+    /// Saves or updates a loyalty tier from a DTO, routing to Create or Update accordingly.
     /// </summary>
     public async Task SaveTierRuleAsync(LoyaltyTierDto tierDto)
     {
-        await using var db = _contextFactory();
-
-        var existing = await db.LoyaltyAwards.FirstOrDefaultAsync(t => t.LoyaltyAwardId == tierDto.LoyaltyAwardId);
-        if (existing != null)
+        if (tierDto.LoyaltyAwardId > 0)
         {
-            existing.TierName = tierDto.TierName;
-            existing.MinLifetimeSpend = tierDto.MinLifetimeSpend;
-            existing.MinRentalCount = tierDto.MinRentalCount;
-            existing.DiscountPercentage = tierDto.DiscountPercentage;
-            existing.RewardDescription = tierDto.RewardDescription;
+            await UpdateTierAsync(new LoyaltyAward
+            {
+                LoyaltyAwardId = tierDto.LoyaltyAwardId,
+                TierName = tierDto.TierName,
+                MinLifetimeSpend = tierDto.MinLifetimeSpend,
+                MinRentalCount = tierDto.MinRentalCount,
+                DiscountPercentage = tierDto.DiscountPercentage,
+                RewardDescription = tierDto.RewardDescription,
+                IsActive = true
+            });
         }
         else
         {
-            db.LoyaltyAwards.Add(new LoyaltyAward
+            await CreateTierAsync(new LoyaltyAward
             {
                 TierName = tierDto.TierName,
                 MinLifetimeSpend = tierDto.MinLifetimeSpend,
                 MinRentalCount = tierDto.MinRentalCount,
                 DiscountPercentage = tierDto.DiscountPercentage,
-                RewardDescription = tierDto.RewardDescription
+                RewardDescription = tierDto.RewardDescription,
+                IsActive = true
             });
         }
-
-        await db.SaveChangesAsync();
     }
 }
