@@ -1,7 +1,8 @@
-﻿using CRM.infrastructure.data;
+﻿using CRM.domain.entities;
+using CRM.infrastructure.data;
 using CRM.infrastructure.services;
-using CRM.winforms.Controls;
 using Microsoft.EntityFrameworkCore;
+using System.Drawing.Drawing2D;
 using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Forms;
@@ -11,124 +12,301 @@ public class TenantDialogForm : Form
     private readonly Func<MasterCrmDbContext> _masterDbFactory;
     private readonly TenantProvisioningService _provisioningService;
 
-    private TextBox txtCode = null!;
-    private TextBox txtName = null!;
-    private ComboBox cboPackage = null!;
-    private TextBox txtBranch = null!;
+    private TextBox txtCompanyCode = null!;
+    private TextBox txtCompanyName = null!;
+    private ComboBox cboPackages = null!;
+    private Label lblPackageDetails = null!;
+    private TextBox txtBranchName = null!;
     private TextBox txtCity = null!;
-    private PrimaryButton btnSave = null!;
+    private Button btnProvision = null!;
+    private Button btnCancel = null!;
+    private Label lblStatus = null!;
+
+    private List<SubscriptionPackage> _packages = [];
 
     public TenantDialogForm(
         Func<MasterCrmDbContext> masterDbFactory,
         TenantProvisioningService provisioningService)
     {
-        _masterDbFactory = masterDbFactory;
-        _provisioningService = provisioningService;
+        _masterDbFactory = masterDbFactory ?? throw new ArgumentNullException(nameof(masterDbFactory));
+        _provisioningService = provisioningService ?? throw new ArgumentNullException(nameof(provisioningService));
 
-        Text = "Provision New Tenant Boutique";
-        Size = new Size(460, 480);
+        BuildLayout();
+        Load += async (s, e) => await LoadPackagesAsync();
+    }
+
+    private void BuildLayout()
+    {
+        Text = "Provision New Boutique Tenant";
+        Size = new Size(500, 600);
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
-        BackColor = ColorDialogBg;
+        BackColor = ColorViewBg;
         Font = new Font("Segoe UI", 9.5f);
+        Padding = new Padding(28, 20, 28, 20);
 
-        BuildControls();
-        _ = LoadPackagesAsync();
-    }
-
-    private void BuildControls()
-    {
-        var lblHeader = new Label
+        var lblTitle = new Label
         {
             Text = "New Boutique Tenant",
-            Font = new Font("Segoe UI", 13f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
-            Location = new Point(24, 20),
+            Font = new Font("Segoe UI", 15f, FontStyle.Bold),
+            ForeColor = ColorPrimary,
+            Location = new Point(28, 16),
             AutoSize = true
         };
 
         var lblSub = new Label
         {
-            Text = "Creates an isolated SQL database and seeds default showroom.",
+            Text = "Creates an isolated SQL database, seeds default showroom, and binds CRM package.",
+            Font = new Font("Segoe UI", 9f),
             ForeColor = ColorSubtext,
-            Location = new Point(26, 46),
+            Location = new Point(28, 44),
+            Size = new Size(428, 36)
+        };
+        Controls.AddRange(new Control[] { lblTitle, lblSub });
+
+        int y = 88;
+
+        // 1. Company Code
+        txtCompanyCode = CreateField("COMPANY CODE (e.g., CEBU, DAVAO) *", ref y, "CEBU");
+
+        // 2. Company Name
+        txtCompanyName = CreateField("BOUTIQUE / COMPANY NAME *", ref y, "Cebu Bridal & Haute Couture");
+
+        // 3. Subscription Package Selection
+        var lblPkg = new Label
+        {
+            Text = "CRM SUBSCRIPTION PACKAGE *",
+            Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold),
+            ForeColor = ColorMutedLabel,
+            Location = new Point(28, y),
             AutoSize = true
         };
 
-        int y = 84;
-        AddFormField("Company Code (e.g., CEBU01):", ref txtCode, ref y);
-        AddFormField("Boutique Legal Name:", ref txtName, ref y);
-
-        // Package Combo
-        var lblPkg = new Label { Text = "Subscription Package:", Location = new Point(26, y), AutoSize = true, ForeColor = ColorEspresso };
-        cboPackage = new ComboBox { Location = new Point(26, y + 22), Width = 390, DropDownStyle = ComboBoxStyle.DropDownList };
-        Controls.AddRange(new Control[] { lblPkg, cboPackage });
-        y += 56;
-
-        AddFormField("Flagship Showroom Name:", ref txtBranch, ref y, "Flagship Atelier");
-        AddFormField("City / Location:", ref txtCity, ref y, "Metro Manila");
-
-        btnSave = new PrimaryButton
+        cboPackages = new ComboBox
         {
-            Text = "Provision Database & Register",
-            Location = new Point(26, y + 10),
-            Size = new Size(390, 40)
+            Location = new Point(28, y + 20),
+            Width = 428,
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Font = new Font("Segoe UI", 9.5f),
+            BackColor = ColorCardBg
         };
-        btnSave.Click += async (s, e) => await HandleProvisionAsync();
+        cboPackages.SelectedIndexChanged += (s, e) => UpdatePackageDetailsLabel();
 
-        Controls.AddRange(new Control[] { lblHeader, lblSub, btnSave });
+        lblPackageDetails = new Label
+        {
+            Text = "Loading packages...",
+            Font = new Font("Segoe UI", 8.25f),
+            ForeColor = ColorAccent,
+            Location = new Point(28, y + 54),
+            Size = new Size(428, 18)
+        };
+
+        Controls.AddRange(new Control[] { lblPkg, cboPackages, lblPackageDetails });
+        y += 78;
+
+        // 4. Initial Branch Name
+        txtBranchName = CreateField("INITIAL SHOWROOM BRANCH NAME *", ref y, "Main Flagship Studio");
+
+        // 5. Initial Branch City
+        txtCity = CreateField("CITY / LOCATION *", ref y, "Cebu City");
+
+        // Status Label
+        lblStatus = new Label
+        {
+            Text = "",
+            ForeColor = ColorAccent,
+            Font = new Font("Segoe UI", 9f),
+            Location = new Point(28, y),
+            Size = new Size(428, 22),
+            TextAlign = ContentAlignment.MiddleLeft
+        };
+        Controls.Add(lblStatus);
+
+        // Action Toolbar
+        var pnlActions = new Panel { Dock = DockStyle.Bottom, Height = 48, BackColor = Color.Transparent };
+
+        btnCancel = new Button
+        {
+            Text = "Cancel",
+            DialogResult = DialogResult.Cancel,
+            Size = new Size(95, 36),
+            Location = new Point(pnlActions.Width - 265, 6),
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+            FlatStyle = FlatStyle.Flat,
+            BackColor = ColorCardBg,
+            ForeColor = ColorNavInactiveText,
+            Font = new Font("Segoe UI Semibold", 9.25f, FontStyle.Bold),
+            Cursor = Cursors.Hand
+        };
+        btnCancel.FlatAppearance.BorderSize = 1;
+        btnCancel.FlatAppearance.BorderColor = ColorBorder;
+
+        btnProvision = new Button
+        {
+            Text = "Provision Database",
+            Size = new Size(160, 36),
+            Location = new Point(pnlActions.Width - 160, 6),
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+            FlatStyle = FlatStyle.Flat,
+            BackColor = ColorAccent,
+            ForeColor = Color.White,
+            Font = new Font("Segoe UI Semibold", 9.25f, FontStyle.Bold),
+            Cursor = Cursors.Hand
+        };
+        btnProvision.FlatAppearance.BorderSize = 0;
+        btnProvision.Click += async (s, e) => await ExecuteProvisioningAsync();
+
+        pnlActions.Controls.AddRange(new Control[] { btnCancel, btnProvision });
+        Controls.Add(pnlActions);
+
+        AcceptButton = btnProvision;
+        CancelButton = btnCancel;
     }
 
-    private void AddFormField(string labelText, ref TextBox tb, ref int y, string defaultValue = "")
+    private TextBox CreateField(string label, ref int yPos, string placeholder)
     {
-        var lbl = new Label { Text = labelText, Location = new Point(26, y), AutoSize = true, ForeColor = ColorEspresso };
-        tb = new TextBox { Location = new Point(26, y + 22), Width = 390, Text = defaultValue };
-        Controls.AddRange(new Control[] { lbl, tb });
-        y += 56;
+        var lbl = new Label
+        {
+            Text = label,
+            Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold),
+            ForeColor = ColorMutedLabel,
+            Location = new Point(28, yPos),
+            AutoSize = true
+        };
+
+        var pnl = new Panel
+        {
+            Location = new Point(28, yPos + 20),
+            Size = new Size(428, 34),
+            BackColor = ColorCardBg,
+            Padding = new Padding(8, 6, 8, 4)
+        };
+        pnl.Paint += (s, e) =>
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            using var pen = new Pen(ColorBorder, 1.2f);
+            using var path = CreateRoundedRectangle(new Rectangle(0, 0, pnl.Width - 1, pnl.Height - 1), 4);
+            e.Graphics.DrawPath(pen, path);
+        };
+
+        var txt = new TextBox
+        {
+            Dock = DockStyle.Fill,
+            BorderStyle = BorderStyle.None,
+            Font = new Font("Segoe UI", 9.5f),
+            ForeColor = ColorBrandDark,
+            BackColor = ColorCardBg,
+            PlaceholderText = placeholder
+        };
+
+        pnl.Controls.Add(txt);
+        Controls.AddRange(new Control[] { lbl, pnl });
+
+        yPos += 62;
+        return txt;
     }
 
     private async Task LoadPackagesAsync()
     {
-        await using var db = _masterDbFactory();
-        var pkgs = await db.SubscriptionPackages.Where(p => p.IsActive).ToListAsync();
-        cboPackage.DataSource = pkgs;
-        cboPackage.DisplayMember = "PackageName";
-        cboPackage.ValueMember = "SubscriptionPackageId";
+        try
+        {
+            await using var db = _masterDbFactory();
+            _packages = await db.SubscriptionPackages
+                .AsNoTracking()
+                .OrderBy(p => p.MonthlyFee)
+                .ToListAsync();
+
+            cboPackages.DataSource = _packages;
+            cboPackages.DisplayMember = "PackageName";
+            cboPackages.ValueMember = "SubscriptionPackageId";
+
+            UpdatePackageDetailsLabel();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to load subscription tiers: {ex.Message}", "Catalog Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
     }
 
-    private async Task HandleProvisionAsync()
+    private void UpdatePackageDetailsLabel()
     {
-        if (string.IsNullOrWhiteSpace(txtCode.Text) || string.IsNullOrWhiteSpace(txtName.Text))
+        if (cboPackages.SelectedItem is not SubscriptionPackage pkg) return;
+
+        var feats = new List<string>();
+        if (pkg.HasLoyalty) feats.Add("Loyalty");
+        if (pkg.HasAnalytics) feats.Add("Analytics");
+        if (pkg.HasMultiBranch) feats.Add("Multi-Branch");
+
+        lblPackageDetails.Text = $"₱{pkg.MonthlyFee:N0}/mo • Max {pkg.MaxBranches} branch(es) • Features: {(feats.Count > 0 ? string.Join(", ", feats) : "Core only")}";
+    }
+
+    private async Task ExecuteProvisioningAsync()
+    {
+        if (string.IsNullOrWhiteSpace(txtCompanyCode.Text) ||
+            string.IsNullOrWhiteSpace(txtCompanyName.Text) ||
+            string.IsNullOrWhiteSpace(txtBranchName.Text) ||
+            string.IsNullOrWhiteSpace(txtCity.Text))
         {
-            MessageBox.Show("Please fill out both the Company Code and Company Name.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show("Please fill out all required fields marked with *.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
-        btnSave.Enabled = false;
-        btnSave.Text = "Creating SQL Database... Please wait...";
+        if (cboPackages.SelectedValue is not int selectedPkgId)
+        {
+            MessageBox.Show("Please select an active CRM subscription package.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
 
         try
         {
-            int pkgId = (int)(cboPackage.SelectedValue ?? 1);
-            await _provisioningService.ProvisionTenantAsync(
-                txtCode.Text.Trim(),
-                txtName.Text.Trim(),
-                pkgId,
-                string.IsNullOrWhiteSpace(txtBranch.Text) ? "Flagship Atelier" : txtBranch.Text.Trim(),
-                string.IsNullOrWhiteSpace(txtCity.Text) ? "Main City" : txtCity.Text.Trim()
-            );
+            btnProvision.Enabled = false;
+            btnCancel.Enabled = false;
+            btnProvision.Text = "Creating SQL DB...";
+            lblStatus.Text = "Allocating SQL Database & executing schema...";
 
-            MessageBox.Show("Tenant provisioned successfully with isolated database and initial showroom.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            await _provisioningService.ProvisionTenantAsync(
+                txtCompanyCode.Text.Trim(),
+                txtCompanyName.Text.Trim(),
+                selectedPkgId,
+                txtBranchName.Text.Trim(),
+                txtCity.Text.Trim());
+
+            lblStatus.Text = "Boutique tenant successfully provisioned!";
+            MessageBox.Show(
+                $"Tenant '{txtCompanyName.Text.Trim()}' provisioned successfully!\n\n" +
+                $"• Database: DB_Tenant_{txtCompanyCode.Text.Trim().ToUpperInvariant()}\n" +
+                $"• Assigned Plan: {((SubscriptionPackage)cboPackages.SelectedItem).PackageName}",
+                "Provisioning Complete",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+
             DialogResult = DialogResult.OK;
             Close();
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Provisioning failed: {ex.Message}", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            btnSave.Enabled = true;
-            btnSave.Text = "Provision Database & Register";
+            MessageBox.Show($"Provisioning failed: {ex.GetBaseException().Message}", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+        finally
+        {
+            btnProvision.Enabled = true;
+            btnCancel.Enabled = true;
+            btnProvision.Text = "Provision Database";
+            lblStatus.Text = "";
+        }
+    }
+
+    private static GraphicsPath CreateRoundedRectangle(Rectangle rect, int radius)
+    {
+        var path = new GraphicsPath();
+        int d = radius * 2;
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 }

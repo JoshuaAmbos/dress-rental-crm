@@ -188,7 +188,7 @@ public partial class LoginForm : Form
         pnlFormArea.Resize += (s, e) => CenterCard();
 
         const int cardWidth = 480;
-        const int cardHeight = 540;
+        const int cardHeight = 550;
         const int pad = 40;
         int fieldWidth = cardWidth - (pad * 2);
 
@@ -214,7 +214,7 @@ public partial class LoginForm : Form
             Font = new Font("Segoe UI Semibold", 20f, FontStyle.Bold),
             ForeColor = ColorBrandDark,
             AutoSize = false,
-            Location = new Point(pad, 36),
+            Location = new Point(pad, 32),
             Size = new Size(fieldWidth, 34)
         };
 
@@ -224,14 +224,14 @@ public partial class LoginForm : Form
             Font = new Font("Segoe UI", 10.5f),
             ForeColor = ColorSubtext,
             AutoSize = false,
-            Location = new Point(pad, 74),
+            Location = new Point(pad, 68),
             Size = new Size(fieldWidth, 24)
         };
 
         var lblUser = new Label
         {
             Text = "Username",
-            Location = new Point(pad, 118),
+            Location = new Point(pad, 108),
             AutoSize = true,
             ForeColor = ColorBrandDark,
             Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold)
@@ -246,12 +246,12 @@ public partial class LoginForm : Form
             Width = fieldWidth - 28,
             BackColor = Color.White
         };
-        var pnlUserBox = CreateInputContainer(pad, 144, fieldWidth, 46, txtUsername);
+        var pnlUserBox = CreateInputContainer(pad, 132, fieldWidth, 46, txtUsername);
 
         var lblPass = new Label
         {
             Text = "Password",
-            Location = new Point(pad, 204),
+            Location = new Point(pad, 190),
             AutoSize = true,
             ForeColor = ColorBrandDark,
             Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold)
@@ -267,14 +267,14 @@ public partial class LoginForm : Form
             Width = fieldWidth - 28,
             BackColor = Color.White
         };
-        var pnlPassBox = CreateInputContainer(pad, 230, fieldWidth, 46, txtPassword);
+        var pnlPassBox = CreateInputContainer(pad, 214, fieldWidth, 46, txtPassword);
 
         chkShowPassword = new CheckBox
         {
             Text = "Show password",
-            Location = new Point(pad, 288),
+            Location = new Point(pad, 268),
             AutoSize = true,
-            Font = new Font("Segoe UI", 10f),
+            Font = new Font("Segoe UI", 9.5f),
             ForeColor = ColorSubtext,
             Cursor = Cursors.Hand
         };
@@ -283,12 +283,13 @@ public partial class LoginForm : Form
             txtPassword.UseSystemPasswordChar = !chkShowPassword.Checked;
         };
 
+        // Multi-line status label with auto-wrapping for lockout feedback
         lblStatus = new Label
         {
-            Location = new Point(pad, 324),
-            Size = new Size(fieldWidth, 32),
+            Location = new Point(pad, 298),
+            Size = new Size(fieldWidth, 54),
             ForeColor = Color.Firebrick,
-            Font = new Font("Segoe UI", 9.5f),
+            Font = new Font("Segoe UI Semibold", 8.75f, FontStyle.Bold),
             TextAlign = ContentAlignment.MiddleCenter,
             Text = ""
         };
@@ -296,7 +297,7 @@ public partial class LoginForm : Form
         btnLogin = new Button
         {
             Text = "Sign In",
-            Location = new Point(pad, 364),
+            Location = new Point(pad, 360),
             Size = new Size(fieldWidth, 48),
             BackColor = ColorAccent,
             ForeColor = Color.White,
@@ -406,7 +407,10 @@ public partial class LoginForm : Form
         else
         {
             lblStatus.ForeColor = Color.Firebrick;
-            lblStatus.Text = result.Message;
+            lblStatus.Text = string.IsNullOrWhiteSpace(result.Message)
+                ? "Invalid username or password."
+                : result.Message;
+
             if (!this.IsDisposed)
             {
                 SetFormBusy(false);

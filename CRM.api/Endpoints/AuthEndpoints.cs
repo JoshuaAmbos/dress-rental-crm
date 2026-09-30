@@ -1,10 +1,10 @@
-﻿using System.Security.Claims;
-using System.Text.RegularExpressions;
-using CRM.api.DTOs;
+﻿using CRM.api.DTOs;
 using CRM.domain.Constants;
 using CRM.infrastructure.data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+using System.Text.RegularExpressions;
 
 namespace CRM.api.Endpoints;
 
@@ -18,7 +18,7 @@ public static class AuthEndpoints
         var authGroup = routes.MapGroup("/api/auth");
 
         authGroup.MapPost("/login", async (
-            LoginRequestDto request, 
+            LoginRequestDto request,
             UserManager<IdentityUser> userManager,
             MasterCrmDbContext masterDb) =>
         {
@@ -43,6 +43,24 @@ public static class AuthEndpoints
                 .Include(c => c.CompanyDatabases)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.CompanyId == companyId);
+
+            // =========================================================================
+            // DEACTIVATED TENANT LOCKOUT GATE
+            // =========================================================================
+            bool isSuperAdmin = roles.Any(r =>
+                r.Equals(AppRoles.Superadmin, StringComparison.OrdinalIgnoreCase) ||
+                r.Equals("Super Admin", StringComparison.OrdinalIgnoreCase));
+
+            // Non-Superadmin users (Admin, Manager, Staff) cannot access deactivated boutiques
+            if (!isSuperAdmin)
+            {
+                if (company == null || !company.IsActive)
+                {
+                    return Results.Json(
+                        new { message = "Access Denied: This boutique tenant is currently deactivated. Please contact platform administration." },
+                        statusCode: StatusCodes.Status403Forbidden);
+                }
+            }
 
             var pkg = company?.SubscriptionPackage;
             var activeDb = company?.CompanyDatabases.FirstOrDefault(d => d.IsActive);

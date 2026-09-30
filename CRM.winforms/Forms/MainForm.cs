@@ -21,6 +21,10 @@ public partial class MainForm : Form
     private readonly Func<TenantCrmDbContext> _contextFactory;
     private readonly Func<MasterCrmDbContext> _masterContextFactory;
     private readonly int _currentCompanyId;
+    private readonly bool _isSuperAdmin;
+    private bool IsSuperAdmin => _user.Roles.Any(r =>
+        r.Equals(AppRoles.Superadmin, StringComparison.OrdinalIgnoreCase) ||
+        r.Equals("Super Admin", StringComparison.OrdinalIgnoreCase));
     private ContextMenuStrip _userAccountMenu = null!;
 
     // Multi-Branch State Tracking
@@ -116,19 +120,13 @@ public partial class MainForm : Form
     {
         if (LicenseManager.UsageMode != LicenseUsageMode.Designtime)
         {
-            await LoadBranchDropdownMenuAsync();
-
-            bool isSuperAdmin = _user.Roles.Any(r =>
-                r.Equals(AppRoles.Superadmin, StringComparison.OrdinalIgnoreCase) ||
-                r.Equals("Super Admin", StringComparison.OrdinalIgnoreCase));
-
-            // Super Admin lands on User Accounts; store roles land on Customer Profiles
-            if (isSuperAdmin)
+            if (IsSuperAdmin)
             {
-                ShowUsersView();
+                ShowTenantsManagementView();
             }
             else
             {
+                await LoadBranchDropdownMenuAsync();
                 ShowCustomerProfiles();
             }
         }
@@ -226,7 +224,7 @@ public partial class MainForm : Form
 
         var lblBrandName = new Label
         {
-            Text = string.IsNullOrWhiteSpace(_user.CompanyName) ? "Atelier" : _user.CompanyName,
+            Text = IsSuperAdmin ? "Atelier Platform" : (string.IsNullOrWhiteSpace(_user.CompanyName) ? "Atelier" : _user.CompanyName),
             Font = new Font("Segoe UI", 12f, FontStyle.Bold),
             ForeColor = ColorPrimary,
             Location = new Point(50, 2),
@@ -493,43 +491,42 @@ public partial class MainForm : Form
 
     private void ApplyRolePermissions()
     {
-        bool isSuperAdmin = _user.Roles.Any(r =>
-            r.Equals(AppRoles.Superadmin, StringComparison.OrdinalIgnoreCase) ||
-            r.Equals("Super Admin", StringComparison.OrdinalIgnoreCase));
-
         bool isAdmin = _user.Roles.Any(r => r.Equals(AppRoles.Admin, StringComparison.OrdinalIgnoreCase));
         bool isManager = _user.Roles.Any(r => r.Equals(AppRoles.Manager, StringComparison.OrdinalIgnoreCase));
         bool isStaff = _user.Roles.Any(r => r.Equals(AppRoles.Staff, StringComparison.OrdinalIgnoreCase));
 
-        bool hasFrontDeskAccess = isStaff || isManager || isAdmin;
-        _btnCustomers.Visible = hasFrontDeskAccess;
-        _btnRentals.Visible = hasFrontDeskAccess;
-        _btnCatalog.Visible = hasFrontDeskAccess;
-        _btnInquiries.Visible = hasFrontDeskAccess;
-        _btnComplaints.Visible = hasFrontDeskAccess;
-        _btnLoyalty.Visible = hasFrontDeskAccess;
-        _btnAnalytics.Visible = isManager || isAdmin;
-        _btnTerms.Visible = true;
-        _btnUsers.Visible = isAdmin || isSuperAdmin;
-        _btnBranches.Visible = isManager || isAdmin || isSuperAdmin;
+        // Store-level actions: Staff, Managers, and Admins only (Superadmin locked out of store data)
+        bool hasStoreStaffAccess = (isStaff || isManager || isAdmin) && !IsSuperAdmin;
 
-        // Super Admin Exclusive Tools
-        _btnSettings.Visible = isSuperAdmin;
-        _btnTenants.Visible = isSuperAdmin;
-        _btnSystemReports.Visible = isSuperAdmin;
+        _btnCustomers.Visible = hasStoreStaffAccess;
+        _btnRentals.Visible = hasStoreStaffAccess;
+        _btnCatalog.Visible = hasStoreStaffAccess;
+        _btnInquiries.Visible = hasStoreStaffAccess;
+        _btnComplaints.Visible = hasStoreStaffAccess;
+        _btnLoyalty.Visible = hasStoreStaffAccess;
+        _btnAnalytics.Visible = (isManager || isAdmin) && !IsSuperAdmin;
+        _btnBranches.Visible = (isManager || isAdmin) && !IsSuperAdmin;
+
+        // Platform control plane actions: Superadmin only
+        _btnTenants.Visible = IsSuperAdmin;
+        _btnSettings.Visible = IsSuperAdmin;
+        _btnSystemReports.Visible = IsSuperAdmin;
+
+        // Shared views
+        _btnTerms.Visible = true;
+        _btnUsers.Visible = isAdmin || IsSuperAdmin;
+
+        // Hide branch selector for Superadmin
+        pnlTenant.Visible = !IsSuperAdmin && _user.HasMultiBranch;
     }
 
     private void ApplySubscriptionPackageGating()
     {
-        if (_user.Roles.Any(r => r.Equals(AppRoles.Superadmin, StringComparison.OrdinalIgnoreCase)))
-            return;
+        if (IsSuperAdmin) return;
 
         if (!_user.HasAnalytics) _btnAnalytics.Visible = false;
         if (!_user.HasLoyalty) _btnLoyalty.Visible = false;
-        if (!_user.HasMultiBranch)
-        {
-            _btnBranches.Visible = false;
-        }
+        if (!_user.HasMultiBranch) _btnBranches.Visible = false;
 
         pnlTenant.Visible = _user.HasMultiBranch;
         pnlTenant.Enabled = _user.HasMultiBranch;
