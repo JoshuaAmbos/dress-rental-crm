@@ -69,59 +69,83 @@ public static class DatabaseSeeder
 
     private static async Task SeedTenantSpecificDataAsync(TenantCrmDbContext db, int companyId, string companyCode)
     {
-        if (await db.Branches.AnyAsync(b => b.CompanyId == companyId)) return;
-
-        // Tenant 1 (Atelier Haute Couture - Package A): Multi-Branch
-        if (companyId == 1)
+        // 1. Seed Showroom Branches and Inventory only if not already present
+        if (!await db.Branches.AnyAsync())
         {
-            var b1 = new Branch { CompanyId = 1, BranchCode = "ATELIER-HQ", BranchName = "Flagship Atelier (Makati)", City = "Makati City", Address = "Paseo de Roxas, Legazpi Village", ContactPhone = "+63 2 8812 3456", IsActive = true };
-            var b2 = new Branch { CompanyId = 1, BranchCode = "ATELIER-BGC", BranchName = "BGC Design Studio", City = "Taguig", Address = "High Street South, BGC", ContactPhone = "+63 2 8890 1234", IsActive = true };
-            var b3 = new Branch { CompanyId = 1, BranchCode = "ATELIER-CEB", BranchName = "Cebu Pop-Up Showroom", City = "Cebu City", Address = "IT Park, Lahug", ContactPhone = "+63 32 411 9876", IsActive = true };
-            db.Branches.AddRange(b1, b2, b3);
-            await db.SaveChangesAsync();
+            if (companyId == 1 || companyCode.Equals("ATELIER", StringComparison.OrdinalIgnoreCase))
+            {
+                var b1 = new Branch { CompanyId = companyId, BranchCode = "ATELIER-HQ", BranchName = "Flagship Atelier (Makati)", City = "Makati City", Address = "Paseo de Roxas, Legazpi Village", ContactPhone = "+63 2 8812 3456", IsActive = true };
+                var b2 = new Branch { CompanyId = companyId, BranchCode = "ATELIER-BGC", BranchName = "BGC Design Studio", City = "Taguig", Address = "High Street South, BGC", ContactPhone = "+63 2 8890 1234", IsActive = true };
+                var b3 = new Branch { CompanyId = companyId, BranchCode = "ATELIER-CEB", BranchName = "Cebu Pop-Up Showroom", City = "Cebu City", Address = "IT Park, Lahug", ContactPhone = "+63 32 411 9876", IsActive = true };
+                db.Branches.AddRange(b1, b2, b3);
+                await db.SaveChangesAsync();
 
-            db.Garments.AddRange(
-                new() { CompanyId = 1, BranchId = b1.BranchId, ItemCode = "GOW-001", StyleName = "Blush Silk A-Line Gown", Category = "Evening Gown", Color = "Dusty Rose", Size = "M", RentalRate = 4500m, SecurityDeposit = 2500m, ReplacementValue = 18000m, Status = "Available" },
-                new() { CompanyId = 1, BranchId = b2.BranchId, ItemCode = "FIL-001", StyleName = "Modern Embroidered Filipiniana", Category = "Filipiniana", Color = "Alabaster White", Size = "L", RentalRate = 6000m, SecurityDeposit = 3500m, ReplacementValue = 25000m, Status = "Available" },
-                new() { CompanyId = 1, BranchId = b3.BranchId, ItemCode = "BAL-001", StyleName = "Midnight Velvet Corset Gown", Category = "Ball Gown", Color = "Midnight Blue", Size = "S", RentalRate = 6800m, SecurityDeposit = 4000m, ReplacementValue = 30000m, Status = "Available" }
-            );
+                db.Garments.AddRange(
+                    new() { CompanyId = companyId, BranchId = b1.BranchId, ItemCode = "GOW-001", StyleName = "Blush Silk A-Line Gown", Category = "Evening Gown", Color = "Dusty Rose", Size = "M", RentalRate = 4500m, SecurityDeposit = 2500m, ReplacementValue = 18000m, Status = "Available" },
+                    new() { CompanyId = companyId, BranchId = b2.BranchId, ItemCode = "FIL-001", StyleName = "Modern Embroidered Filipiniana", Category = "Filipiniana", Color = "Alabaster White", Size = "L", RentalRate = 6000m, SecurityDeposit = 3500m, ReplacementValue = 25000m, Status = "Available" },
+                    new() { CompanyId = companyId, BranchId = b3.BranchId, ItemCode = "BAL-001", StyleName = "Midnight Velvet Corset Gown", Category = "Ball Gown", Color = "Midnight Blue", Size = "S", RentalRate = 6800m, SecurityDeposit = 4000m, ReplacementValue = 30000m, Status = "Available" }
+                );
 
-            db.Customers.AddRange(
-                new() { CompanyId = 1, BranchId = b1.BranchId, CustomerCode = "CUST-001", FirstName = "Elena", LastName = "Reyes", ContactNumber = "+63 917 111 2222", EmailAddress = "elena.reyes@example.com", Address = "Makati City" },
-                new() { CompanyId = 1, BranchId = b2.BranchId, CustomerCode = "CUST-002", FirstName = "Camille", LastName = "Santos", ContactNumber = "+63 918 333 4444", EmailAddress = "camille.santos@example.com", Address = "Taguig City" }
-            );
+                db.Customers.AddRange(
+                    new() { CompanyId = companyId, BranchId = b1.BranchId, CustomerCode = "CUST-001", FirstName = "Elena", LastName = "Reyes", ContactNumber = "+63 917 111 2222", EmailAddress = "elena.reyes@example.com", Address = "Makati City" },
+                    new() { CompanyId = companyId, BranchId = b2.BranchId, CustomerCode = "CUST-002", FirstName = "Camille", LastName = "Santos", ContactNumber = "+63 918 333 4444", EmailAddress = "camille.santos@example.com", Address = "Taguig City" }
+                );
+                await db.SaveChangesAsync();
+            }
+            else if (companyId == 2 || companyCode.Equals("MAISON", StringComparison.OrdinalIgnoreCase))
+            {
+                var b1 = new Branch { CompanyId = companyId, BranchCode = "ME-MAIN", BranchName = "Maison Étoile Atelier", City = "Pasig City", Address = "Ortigas Center", ContactPhone = "+63 2 8631 0000", IsActive = true };
+                db.Branches.Add(b1);
+                await db.SaveChangesAsync();
+
+                db.Garments.AddRange(
+                    new() { CompanyId = companyId, BranchId = b1.BranchId, ItemCode = "BRD-101", StyleName = "Celestial Silk Bridal Gown", Category = "Bridal", Color = "Off-White", Size = "S", RentalRate = 12000m, SecurityDeposit = 6000m, ReplacementValue = 75000m, Status = "Available" },
+                    new() { CompanyId = companyId, BranchId = b1.BranchId, ItemCode = "BRD-102", StyleName = "Chantilly Lace Veil Ensemble", Category = "Bridal", Color = "Pure White", Size = "M", RentalRate = 15000m, SecurityDeposit = 7500m, ReplacementValue = 90000m, Status = "Available" }
+                );
+
+                db.Customers.Add(new() { CompanyId = companyId, BranchId = b1.BranchId, CustomerCode = "CUST-M01", FirstName = "Adrianna", LastName = "Vanderbilt", ContactNumber = "+63 917 555 1234", EmailAddress = "adrianna@vanderbilt.com", Address = "Pasig City" });
+                await db.SaveChangesAsync();
+            }
+            else if (companyId == 3 || companyCode.Equals("DAVAO", StringComparison.OrdinalIgnoreCase))
+            {
+                var b1 = new Branch { CompanyId = companyId, BranchCode = "DVO-MAIN", BranchName = "Davao Haute Flagship", City = "Davao City", Address = "F. Torres St., Poblacion", ContactPhone = "+63 82 221 4500", IsActive = true };
+                db.Branches.Add(b1);
+                await db.SaveChangesAsync();
+
+                db.Garments.Add(new() { CompanyId = companyId, BranchId = b1.BranchId, ItemCode = "EVN-301", StyleName = "Emerald Pleated Midi", Category = "Cocktail", Color = "Emerald", Size = "M", RentalRate = 3200m, SecurityDeposit = 2000m, ReplacementValue = 14000m, Status = "Available" });
+                db.Customers.Add(new() { CompanyId = companyId, BranchId = b1.BranchId, CustomerCode = "CUST-D01", FirstName = "Patricia", LastName = "Lim", ContactNumber = "+63 920 888 9999", EmailAddress = "patricia.lim@example.com", Address = "Davao City" });
+                await db.SaveChangesAsync();
+            }
         }
-        // Tenant 2 (Maison Étoile - Package B): Single Branch
-        else if (companyId == 2)
+
+        // 2. Seed System Configurations safely by checking if keys exist
+        bool hasChanges = false;
+
+        if (!await db.SystemConfigurations.AnyAsync(s => s.ConfigKey == "DefaultLateFeePerDay"))
         {
-            var b1 = new Branch { CompanyId = 2, BranchCode = "ME-MAIN", BranchName = "Maison Étoile Atelier", City = "Pasig City", Address = "Ortigas Center", ContactPhone = "+63 2 8631 0000", IsActive = true };
-            db.Branches.Add(b1);
-            await db.SaveChangesAsync();
-
-            db.Garments.AddRange(
-                new() { CompanyId = 2, BranchId = b1.BranchId, ItemCode = "BRD-101", StyleName = "Celestial Silk Bridal Gown", Category = "Bridal", Color = "Off-White", Size = "S", RentalRate = 12000m, SecurityDeposit = 6000m, ReplacementValue = 75000m, Status = "Available" },
-                new() { CompanyId = 2, BranchId = b1.BranchId, ItemCode = "BRD-102", StyleName = "Chantilly Lace Veil Ensemble", Category = "Bridal", Color = "Pure White", Size = "M", RentalRate = 15000m, SecurityDeposit = 7500m, ReplacementValue = 90000m, Status = "Available" }
-            );
-
-            db.Customers.Add(new() { CompanyId = 2, BranchId = b1.BranchId, CustomerCode = "CUST-M01", FirstName = "Adrianna", LastName = "Vanderbilt", ContactNumber = "+63 917 555 1234", EmailAddress = "adrianna@vanderbilt.com", Address = "Pasig City" });
+            db.SystemConfigurations.Add(new()
+            {
+                ConfigKey = "DefaultLateFeePerDay",
+                ConfigValue = "500.00",
+                Description = "Daily penalty for overdue returns"
+            });
+            hasChanges = true;
         }
-        // Tenant 3 (Davao Haute - Package C): Single Branch
-        else if (companyId == 3)
+
+        if (!await db.SystemConfigurations.AnyAsync(s => s.ConfigKey == "StandardDepositPercentage"))
         {
-            var b1 = new Branch { CompanyId = 3, BranchCode = "DVO-MAIN", BranchName = "Davao Haute Flagship", City = "Davao City", Address = "F. Torres St., Poblacion", ContactPhone = "+63 82 221 4500", IsActive = true };
-            db.Branches.Add(b1);
-            await db.SaveChangesAsync();
-
-            db.Garments.Add(new() { CompanyId = 3, BranchId = b1.BranchId, ItemCode = "EVN-301", StyleName = "Emerald Pleated Midi", Category = "Cocktail", Color = "Emerald", Size = "M", RentalRate = 3200m, SecurityDeposit = 2000m, ReplacementValue = 14000m, Status = "Available" });
-            db.Customers.Add(new() { CompanyId = 3, BranchId = b1.BranchId, CustomerCode = "CUST-D01", FirstName = "Patricia", LastName = "Lim", ContactNumber = "+63 920 888 9999", EmailAddress = "patricia.lim@example.com", Address = "Davao City" });
+            db.SystemConfigurations.Add(new()
+            {
+                ConfigKey = "StandardDepositPercentage",
+                ConfigValue = "50",
+                Description = "Security deposit percentage"
+            });
+            hasChanges = true;
         }
 
-        // Shared baseline configs
-        db.SystemConfigurations.AddRange(
-            new() { ConfigKey = "DefaultLateFeePerDay", ConfigValue = "500.00", Description = "Daily penalty for overdue returns" },
-            new() { ConfigKey = "StandardDepositPercentage", ConfigValue = "50", Description = "Security deposit percentage" }
-        );
-
-        await db.SaveChangesAsync();
+        if (hasChanges)
+        {
+            await db.SaveChangesAsync();
+        }
     }
 }
