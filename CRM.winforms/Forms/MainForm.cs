@@ -3,6 +3,7 @@ using CRM.domain.entities;
 using CRM.infrastructure.data;
 using CRM.infrastructure.services;
 using CRM.winforms.Configuration;
+using CRM.winforms.Services;
 using CRM.winforms.Views;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -44,6 +45,9 @@ public partial class MainForm : Form
     private UserAccountsView? _usersView;
     private SystemConfigurationView? _configView;
 
+    private SuperadminReportsView? _superadminReportsView;
+
+
     // UI Structure Controls
     private Panel pnlSidebar = null!;
     private Panel pnlTopBar = null!;
@@ -65,6 +69,7 @@ public partial class MainForm : Form
     private Button _btnSettings = null!;
     private Button _btnTenants = null!;
     private Button _btnBranches = null!;
+    private Button _btnSystemReports = null!;
     private TenantsManagementView? _tenantsView;
     private BranchesView? _branchesView;
 
@@ -448,7 +453,7 @@ public partial class MainForm : Form
 
         _btnTenants = CreateNavButton("🏢", "Boutique Tenants", (s, e) => ShowTenantsManagementView());
         _btnSettings = CreateNavButton("⚙️", "System Config", (s, e) => ShowSystemConfigView());
-        _btnSettings = CreateNavButton("⚙️", "System Config", (s, e) => ShowSystemConfigView());
+        _btnSystemReports = CreateNavButton("📑", "System Audit Reports", (s, e) => ShowSuperadminReportsView());
         _btnUsers = CreateNavButton("👥", "User Accounts", (s, e) => ShowUsersView());
         _btnBranches = CreateNavButton("🏢", "Showrooms", (s, e) => ShowBranchesView());
         _btnTerms = CreateNavButton("📜", "Terms and Conditions", (s, e) => ShowTermsView());
@@ -464,6 +469,7 @@ public partial class MainForm : Form
         {
             _btnTenants,
             _btnSettings,
+            _btnSystemReports,
             _btnUsers,
             _btnBranches,
             _btnTerms,
@@ -510,6 +516,7 @@ public partial class MainForm : Form
         // Super Admin Exclusive Tools
         _btnSettings.Visible = isSuperAdmin;
         _btnTenants.Visible = isSuperAdmin;
+        _btnSystemReports.Visible = isSuperAdmin;
     }
 
     private void ApplySubscriptionPackageGating()
@@ -768,6 +775,28 @@ public partial class MainForm : Form
         _configView ??= new SystemConfigurationView(_contextFactory);
         SwitchView(_configView);
         HighlightNavByText("System Config");
+    }
+
+    public void ShowSuperadminReportsView()
+    {
+        bool isSuperAdmin = _user.Roles.Any(r =>
+            r.Equals(AppRoles.Superadmin, StringComparison.OrdinalIgnoreCase) ||
+            r.Equals("Super Admin", StringComparison.OrdinalIgnoreCase));
+
+        if (!isSuperAdmin)
+        {
+            MessageBox.Show("Access Denied: Platform Analytics is restricted to Super Admin only.", "Unauthorized", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        _superadminReportsView ??= new SuperadminReportsView(
+            _masterContextFactory,
+            _contextFactory,
+            _user.Username);
+
+        SwitchView(_superadminReportsView);
+        _ = _superadminReportsView.LoadPlatformMetricsAsync();
+        HighlightNavByText("System Audit Reports");
     }
 
     private void HighlightNavByText(string labelSub)
