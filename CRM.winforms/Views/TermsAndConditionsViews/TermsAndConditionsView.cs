@@ -2,6 +2,7 @@
 using CRM.domain.entities;
 using CRM.infrastructure.data;
 using CRM.winforms.Controllers;
+using Microsoft.EntityFrameworkCore;
 using System.Drawing.Drawing2D;
 using static CRM.winforms.Assets.Themes.ColorThemes;
 
@@ -9,6 +10,9 @@ namespace CRM.winforms.Views;
 
 public partial class TermsAndConditionsView : UserControl
 {
+    private const string ConnectionString =
+        "Server=10.0.2.2,1433;Database=DB_TenantCRM;User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;";
+
     private readonly TermsController _controller;
     private readonly string[] _userRoles;
 
@@ -27,9 +31,20 @@ public partial class TermsAndConditionsView : UserControl
     private RentalTerm? _selectedTerm;
     private readonly bool _canEdit;
 
+    // Parameterless constructor for WinForms Designer
+    public TermsAndConditionsView() : this(() =>
+    {
+        var opt = new DbContextOptionsBuilder<TenantCrmDbContext>()
+            .UseSqlServer(ConnectionString)
+            .Options;
+        return new TenantCrmDbContext(opt);
+    }, new[] { "Admin" })
+    {
+    }
+
     public TermsAndConditionsView(Func<TenantCrmDbContext> contextFactory, string[] userRoles)
     {
-        _controller = new TermsController(contextFactory);
+        _controller = new TermsController(contextFactory ?? throw new ArgumentNullException(nameof(contextFactory)));
         _userRoles = userRoles ?? Array.Empty<string>();
 
         _canEdit = _userRoles.Any(r =>
@@ -37,29 +52,31 @@ public partial class TermsAndConditionsView : UserControl
             r.Equals("Super Admin", StringComparison.OrdinalIgnoreCase) ||
             r.Equals(AppRoles.Admin, StringComparison.OrdinalIgnoreCase));
 
-        BuildUI();
+        InitializeLayout();
         _ = RefreshDataAsync();
     }
 
-    private void BuildUI()
+    private void InitializeLayout()
     {
+        DoubleBuffered = true;
         Dock = DockStyle.Fill;
         BackColor = ColorViewBg;
-        Padding = new Padding(28, 20, 28, 20);
+        Padding = new Padding(32, 24, 32, 24);
         Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
-        // Header Panel
+        // 1. Header Section
         var pnlHeader = new Panel
         {
             Dock = DockStyle.Top,
-            Height = 44,
+            Height = 64,
             BackColor = Color.Transparent
         };
 
         var lblHeading = new Label
         {
             Text = "Rental Terms & Liability Policies",
-            Font = new Font("Segoe UI Semibold", 15f, FontStyle.Bold),
+            UseMnemonic = false,
+            Font = new Font("Segoe UI", 18f, FontStyle.Bold),
             ForeColor = ColorPrimary,
             Location = new Point(0, 0),
             AutoSize = true
@@ -67,77 +84,120 @@ public partial class TermsAndConditionsView : UserControl
 
         lblStatusBadge = new Label
         {
-            Text = "Loading policy...",
-            Font = new Font("Segoe UI", 8.5f),
+            Text = "Loading policy details...",
+            UseMnemonic = false,
+            Font = new Font("Segoe UI", 9.5f),
             ForeColor = ColorSubtext,
-            Location = new Point(2, 24),
+            Location = new Point(0, 34),
             AutoSize = true
         };
 
         pnlHeader.Controls.AddRange(new Control[] { lblHeading, lblStatusBadge });
 
+        // 2. Main Content Split (Left: History Archive, Right: Editor / Reader)
         var pnlContainer = new Panel
         {
             Dock = DockStyle.Fill,
             BackColor = Color.Transparent,
-            Padding = new Padding(0, 12, 0, 0)
+            Padding = new Padding(0, 10, 0, 0)
         };
 
         var split = new SplitContainer
         {
             Dock = DockStyle.Fill,
             Orientation = Orientation.Vertical,
-            SplitterDistance = 380,
-            SplitterWidth = 12,
+            SplitterDistance = 410,
+            SplitterWidth = 14,
             BackColor = Color.Transparent
         };
 
-        // --- Left: Policy History & Action Column ---
+        // --- LEFT PANEL: REVISION ARCHIVE ---
         var pnlLeftCard = CreateCardPanel();
         pnlLeftCard.Dock = DockStyle.Fill;
 
         var lblHistTitle = new Label
         {
             Text = "POLICY REVISION ARCHIVE",
-            Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold),
+            UseMnemonic = false,
+            Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
             ForeColor = ColorSubtext,
             Dock = DockStyle.Top,
-            Height = 26
+            Height = 28
         };
 
         dgvHistory = new DataGridView
         {
             Dock = DockStyle.Fill,
-            BackgroundColor = Color.White,
+            BackgroundColor = ColorCardBg,
             BorderStyle = BorderStyle.None,
             CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
-            GridColor = Color.FromArgb(242, 235, 235),
+            GridColor = ColorDivider,
             RowHeadersVisible = false,
             AllowUserToAddRows = false,
+            AllowUserToDeleteRows = false,
+            AllowUserToResizeRows = false,
             ReadOnly = true,
+            AutoGenerateColumns = false,
             SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+            MultiSelect = false,
             AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-            RowTemplate = { Height = 36 }
+            RowTemplate = { Height = 42 },
+            ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing,
+            ColumnHeadersHeight = 38,
+            EnableHeadersVisualStyles = false,
+            ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
         };
-        dgvHistory.EnableHeadersVisualStyles = false;
-        dgvHistory.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(253, 248, 248);
-        dgvHistory.ColumnHeadersDefaultCellStyle.ForeColor = ColorPrimary;
-        dgvHistory.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold);
+
+        dgvHistory.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
+        {
+            BackColor = ColorCardBg,
+            ForeColor = ColorMutedLabel,
+            SelectionBackColor = ColorCardBg,
+            SelectionForeColor = ColorMutedLabel,
+            Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
+            Padding = new Padding(8, 0, 8, 0)
+        };
+
+        dgvHistory.DefaultCellStyle = new DataGridViewCellStyle
+        {
+            BackColor = ColorCardBg,
+            ForeColor = ColorBrandDark,
+            SelectionBackColor = ColorRowSelected,
+            SelectionForeColor = ColorRowSelectedText,
+            Font = new Font("Segoe UI", 9.25f),
+            Padding = new Padding(8, 0, 8, 0)
+        };
+
+        dgvHistory.AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle
+        {
+            BackColor = ColorRowAlt,
+            ForeColor = ColorBrandDark,
+            SelectionBackColor = ColorRowSelected,
+            SelectionForeColor = ColorRowSelectedText,
+            Font = new Font("Segoe UI", 9.25f),
+            Padding = new Padding(8, 0, 8, 0)
+        };
+
+        ConfigureHistoryGridColumns();
         dgvHistory.SelectionChanged += DgvHistory_SelectionChanged;
+        dgvHistory.CellPainting += DgvHistory_CellPainting;
 
         btnActivate = new Button
         {
-            Text = "Set Selected as Active",
+            Text = "Set Selected as Active Agreement",
             Dock = DockStyle.Bottom,
-            Height = 34,
+            Height = 38,
             BackColor = ColorActivePill,
             ForeColor = ColorAccent,
             FlatStyle = FlatStyle.Flat,
-            Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
+            Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
             Cursor = Cursors.Hand,
             Visible = _canEdit
         };
-        btnActivate.FlatAppearance.BorderSize = 0;
+        btnActivate.FlatAppearance.BorderSize = 1;
+        btnActivate.FlatAppearance.BorderColor = ColorBorder;
+        btnActivate.MouseEnter += (s, e) => btnActivate.BackColor = ColorSelectedBg;
+        btnActivate.MouseLeave += (s, e) => btnActivate.BackColor = ColorActivePill;
         btnActivate.Click += async (s, e) => await ActivateSelectedVersionAsync();
 
         pnlLeftCard.Controls.Add(dgvHistory);
@@ -145,14 +205,15 @@ public partial class TermsAndConditionsView : UserControl
         pnlLeftCard.Controls.Add(lblHistTitle);
         split.Panel1.Controls.Add(pnlLeftCard);
 
-        // --- Right: Agreement Editor & Actions ---
+        // --- RIGHT PANEL: AGREEMENT EDITOR & ACTIONS ---
         var pnlRightCard = CreateCardPanel();
         pnlRightCard.Dock = DockStyle.Fill;
 
         lblEditorMode = new Label
         {
             Text = "MODE: VIEWING AGREEMENT",
-            Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold),
+            UseMnemonic = false,
+            Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
             ForeColor = ColorSubtext,
             Location = new Point(20, 16),
             AutoSize = true
@@ -161,24 +222,28 @@ public partial class TermsAndConditionsView : UserControl
         btnNew = new Button
         {
             Text = "+ New Draft",
-            Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
-            ForeColor = ColorPrimary,
-            BackColor = Color.FromArgb(245, 240, 240),
+            Font = new Font("Segoe UI Semibold", 8.75f, FontStyle.Bold),
+            ForeColor = ColorAccent,
+            BackColor = ColorActivePill,
             FlatStyle = FlatStyle.Flat,
-            Size = new Size(110, 28),
+            Size = new Size(110, 32),
             Anchor = AnchorStyles.Top | AnchorStyles.Right,
             Location = new Point(pnlRightCard.Width - 130, 12),
             Cursor = Cursors.Hand,
             Visible = _canEdit
         };
-        btnNew.FlatAppearance.BorderSize = 0;
+        btnNew.FlatAppearance.BorderSize = 1;
+        btnNew.FlatAppearance.BorderColor = ColorBorder;
+        btnNew.MouseEnter += (s, e) => btnNew.BackColor = ColorSelectedBg;
+        btnNew.MouseLeave += (s, e) => btnNew.BackColor = ColorActivePill;
         btnNew.Click += (s, e) => PrepareNewDraft();
 
         var lblTitleTag = new Label
         {
-            Text = "POLICY TITLE",
+            Text = "POLICY DOCUMENT TITLE",
+            UseMnemonic = false,
             Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold),
-            ForeColor = ColorSubtext,
+            ForeColor = ColorMutedLabel,
             Location = new Point(20, 48),
             AutoSize = true
         };
@@ -188,15 +253,16 @@ public partial class TermsAndConditionsView : UserControl
             Location = new Point(20, 68),
             Width = 380,
             Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold),
-            ForeColor = ColorPrimary,
+            ForeColor = ColorBrandDark,
             ReadOnly = !_canEdit
         };
 
         var lblVerTag = new Label
         {
             Text = "VERSION",
+            UseMnemonic = false,
             Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold),
-            ForeColor = ColorSubtext,
+            ForeColor = ColorMutedLabel,
             Location = new Point(415, 48),
             AutoSize = true
         };
@@ -204,17 +270,18 @@ public partial class TermsAndConditionsView : UserControl
         txtVersion = new TextBox
         {
             Location = new Point(415, 68),
-            Width = 90,
+            Width = 100,
             Font = new Font("Segoe UI", 9.5f),
-            ForeColor = ColorPrimary,
+            ForeColor = ColorBrandDark,
             ReadOnly = !_canEdit
         };
 
         var lblContentTag = new Label
         {
             Text = "AGREEMENT TERMS & CONDITIONS",
+            UseMnemonic = false,
             Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold),
-            ForeColor = ColorSubtext,
+            ForeColor = ColorMutedLabel,
             Location = new Point(20, 102),
             AutoSize = true
         };
@@ -222,7 +289,8 @@ public partial class TermsAndConditionsView : UserControl
         lblWordCount = new Label
         {
             Text = "0 words",
-            Font = new Font("Segoe UI", 8f),
+            UseMnemonic = false,
+            Font = new Font("Segoe UI", 8.5f),
             ForeColor = ColorSubtext,
             Anchor = AnchorStyles.Top | AnchorStyles.Right,
             Location = new Point(pnlRightCard.Width - 120, 102),
@@ -236,7 +304,7 @@ public partial class TermsAndConditionsView : UserControl
             ScrollBars = ScrollBars.Vertical,
             Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
             Font = new Font("Segoe UI", 9.5f),
-            ForeColor = ColorPrimary,
+            ForeColor = ColorBrandDark,
             Height = pnlRightCard.Height - 190,
             Width = pnlRightCard.Width - 40,
             ReadOnly = !_canEdit
@@ -249,18 +317,21 @@ public partial class TermsAndConditionsView : UserControl
             Text = "Save Changes",
             Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
             ForeColor = ColorPrimary,
-            BackColor = Color.FromArgb(244, 238, 238),
+            BackColor = ColorCloseBtnBg,
             FlatStyle = FlatStyle.Flat,
             Size = new Size(130, 36),
             Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
-            Location = new Point(pnlRightCard.Width - 310, pnlRightCard.Height - 48),
+            Location = new Point(pnlRightCard.Width - 320, pnlRightCard.Height - 48),
             Cursor = Cursors.Hand,
             Visible = _canEdit
         };
-        btnSaveEdit.FlatAppearance.BorderSize = 0;
+        btnSaveEdit.FlatAppearance.BorderSize = 1;
+        btnSaveEdit.FlatAppearance.BorderColor = ColorBorder;
+        btnSaveEdit.MouseEnter += (s, e) => btnSaveEdit.BackColor = ColorActivePill;
+        btnSaveEdit.MouseLeave += (s, e) => btnSaveEdit.BackColor = ColorCloseBtnBg;
         btnSaveEdit.Click += async (s, e) => await SaveChangesInPlaceAsync();
 
-        // Publish as New Version
+        // Publish as New Version (Primary Accent Action)
         btnPublish = new Button
         {
             Text = "Publish as New Version",
@@ -268,13 +339,15 @@ public partial class TermsAndConditionsView : UserControl
             ForeColor = Color.White,
             BackColor = ColorAccent,
             FlatStyle = FlatStyle.Flat,
-            Size = new Size(160, 36),
+            Size = new Size(170, 36),
             Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
-            Location = new Point(pnlRightCard.Width - 170, pnlRightCard.Height - 48),
+            Location = new Point(pnlRightCard.Width - 180, pnlRightCard.Height - 48),
             Cursor = Cursors.Hand,
             Visible = _canEdit
         };
         btnPublish.FlatAppearance.BorderSize = 0;
+        btnPublish.MouseEnter += (s, e) => btnPublish.BackColor = ColorAccentHover;
+        btnPublish.MouseLeave += (s, e) => btnPublish.BackColor = ColorAccent;
         btnPublish.Click += async (s, e) => await PublishRevisionAsync();
 
         pnlRightCard.Controls.AddRange(new Control[]
@@ -293,6 +366,89 @@ public partial class TermsAndConditionsView : UserControl
         Controls.Add(pnlHeader);
     }
 
+    private void ConfigureHistoryGridColumns()
+    {
+        dgvHistory.Columns.Clear();
+
+        dgvHistory.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            Name = "RentalTermId",
+            DataPropertyName = "RentalTermId",
+            Visible = false
+        });
+
+        dgvHistory.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            Name = "Version",
+            DataPropertyName = "Version",
+            HeaderText = "VER",
+            Width = 55,
+            DefaultCellStyle = { Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold) }
+        });
+
+        dgvHistory.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            Name = "Title",
+            DataPropertyName = "Title",
+            HeaderText = "TITLE",
+            FillWeight = 140,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+        });
+
+        dgvHistory.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            Name = "Status",
+            DataPropertyName = "Status",
+            HeaderText = "STATUS",
+            Width = 95
+        });
+
+        dgvHistory.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            Name = "Date",
+            DataPropertyName = "Date",
+            HeaderText = "EFFECTIVE",
+            Width = 90
+        });
+
+        foreach (DataGridViewColumn col in dgvHistory.Columns)
+        {
+            col.SortMode = DataGridViewColumnSortMode.NotSortable;
+        }
+    }
+
+    private void DgvHistory_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)
+    {
+        if (e.RowIndex < 0 || e.ColumnIndex < 0 || e.Graphics == null) return;
+
+        if (dgvHistory.Columns[e.ColumnIndex].Name == "Status" && e.Value is string status)
+        {
+            e.PaintBackground(e.CellBounds, true);
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+            bool isActive = string.Equals(status, "ACTIVE", StringComparison.OrdinalIgnoreCase);
+            Color bg = isActive ? ColorBadgeBg : ColorActivePill;
+            Color fg = isActive ? ColorSuccess : ColorNavInactiveText;
+
+            var rect = new Rectangle(e.CellBounds.Left + 4, e.CellBounds.Top + 9, 82, 24);
+            using (var brush = new SolidBrush(bg))
+            using (var path = CreateRoundedPath(rect, 4))
+            {
+                e.Graphics.FillPath(brush, path);
+            }
+
+            TextRenderer.DrawText(
+                e.Graphics,
+                status,
+                new Font("Segoe UI Semibold", 8f, FontStyle.Bold),
+                rect,
+                fg,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+
+            e.Handled = true;
+        }
+    }
+
     public async Task RefreshDataAsync()
     {
         try
@@ -308,13 +464,10 @@ public partial class TermsAndConditionsView : UserControl
                 Date = t.EffectiveDate.ToString("MMM dd, yyyy")
             }).ToList();
 
-            if (dgvHistory.Columns.Contains("RentalTermId"))
-                dgvHistory.Columns["RentalTermId"]!.Visible = false;
-
             var active = terms.FirstOrDefault(t => t.IsActive);
             if (active != null)
             {
-                lblStatusBadge.Text = $"Active Version: v{active.VersionNumber} • Enforced since {active.EffectiveDate:MMM dd, yyyy}";
+                lblStatusBadge.Text = $"Active Policy: v{active.VersionNumber} • Enforced since {active.EffectiveDate:MMM dd, yyyy}";
                 DisplayTerm(active);
             }
         }
@@ -369,7 +522,7 @@ public partial class TermsAndConditionsView : UserControl
         txtContent.Clear();
 
         btnActivate.Enabled = false;
-        btnSaveEdit.Enabled = false; // Only Publish is valid for a brand new draft
+        btnSaveEdit.Enabled = false;
         txtTitle.Focus();
     }
 
@@ -456,8 +609,8 @@ public partial class TermsAndConditionsView : UserControl
     {
         var pnl = new Panel
         {
-            BackColor = Color.White,
-            Padding = new Padding(16)
+            BackColor = ColorCardBg,
+            Padding = new Padding(18)
         };
         pnl.Paint += (s, e) =>
         {

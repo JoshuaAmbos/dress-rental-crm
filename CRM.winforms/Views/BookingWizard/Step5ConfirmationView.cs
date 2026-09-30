@@ -1,11 +1,22 @@
-﻿using CRM.winforms.Models;
-using static CRM.winforms.Assets.Themes.ColorThemes;
+﻿using System;
+using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Linq;
+using System.Windows.Forms;
+using Microsoft.EntityFrameworkCore;
+using CRM.infrastructure.data;
+using CRM.winforms.Forms;
+using CRM.winforms.Models;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Views;
 
 public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
 {
+    private const string DefaultConnectionString =
+        "Server=10.0.2.2,1433;Database=DB_TenantCRM;User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;";
+
+    private readonly Func<TenantCrmDbContext> _contextFactory;
     private BookingDraftModel? _draft;
 
     private Label lblBookingIdVal = null!;
@@ -26,69 +37,135 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
 
     public string StepTitle => "Review & Confirm";
 
-    public Step5ConfirmationView()
+    public Step5ConfirmationView() : this(() =>
     {
+        var options = new DbContextOptionsBuilder<TenantCrmDbContext>()
+            .UseSqlServer(DefaultConnectionString)
+            .Options;
+        return new TenantCrmDbContext(options);
+    })
+    {
+    }
+
+    public Step5ConfirmationView(Func<TenantCrmDbContext> contextFactory)
+    {
+        _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         BuildLayout();
     }
 
     private void BuildLayout()
     {
+        DoubleBuffered = true;
         Dock = DockStyle.Fill;
         BackColor = ColorViewBg;
         Padding = new Padding(32, 20, 32, 20);
         Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
-        var pnlHeader = new Panel { Dock = DockStyle.Top, Height = 36, BackColor = Color.Transparent };
+        // 1. Header (Title only - no subtitle, matching Steps 1–4)
+        var pnlHeader = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 36,
+            BackColor = Color.Transparent
+        };
+
         var lblTitle = new Label
         {
             Text = "Review & Confirm",
             UseMnemonic = false,
-            Font = new Font("Segoe UI Semibold", 15.5f, FontStyle.Bold),
+            Font = new Font("Segoe UI", 16f, FontStyle.Bold),
             ForeColor = ColorPrimary,
             Location = new Point(0, 0),
             AutoSize = true
         };
         pnlHeader.Controls.Add(lblTitle);
 
-        var pnlHeaderSpacer = new Panel { Dock = DockStyle.Top, Height = 10, BackColor = Color.Transparent };
+        var pnlHeaderSpacer = new Panel { Dock = DockStyle.Top, Height = 14, BackColor = Color.Transparent };
 
+        // 2. Main Summary Card (Calculated height for 9 rows)
+        var pnlCard = BuildReviewCard();
+
+        var pnlTermsSpacer = new Panel { Dock = DockStyle.Top, Height = 14, BackColor = Color.Transparent };
+
+        // 3. Terms & Conditions Agreement Checkbox
         var pnlTerms = new Panel
         {
-            Dock = DockStyle.Bottom,
-            Height = 40,
+            Dock = DockStyle.Top,
+            Height = 38,
             BackColor = Color.Transparent,
             Padding = new Padding(4, 0, 0, 0)
         };
 
         chkAgreeTerms = new CheckBox
         {
-            Text = "Client agrees to rental terms, return deadlines, and security deposit policies.",
+            Text = "Client agrees to rental terms, return deadlines, and security deposit policies. (Click to review)",
             UseMnemonic = false,
-            Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
+            Font = new Font("Segoe UI Semibold", 9.25f, FontStyle.Bold),
             ForeColor = ColorPrimary,
             Dock = DockStyle.Fill,
             Cursor = Cursors.Hand
         };
+        chkAgreeTerms.Click += ChkAgreeTerms_Click;
+
         pnlTerms.Controls.Add(chkAgreeTerms);
 
-        var pnlTermsSpacer = new Panel { Dock = DockStyle.Bottom, Height = 10, BackColor = Color.Transparent };
-        var pnlCard = BuildReviewCard();
-
-        Controls.Add(pnlTermsSpacer);
+        // Assembly (Dock Stacking Order)
         Controls.Add(pnlTerms);
+        Controls.Add(pnlTermsSpacer);
         Controls.Add(pnlCard);
         Controls.Add(pnlHeaderSpacer);
         Controls.Add(pnlHeader);
     }
 
+    private void ChkAgreeTerms_Click(object? sender, EventArgs e)
+    {
+        if (chkAgreeTerms.Checked)
+        {
+            // Revert state until explicitly accepted in the active terms modal[cite: 2]
+            chkAgreeTerms.Checked = false;
+
+            using var termsDialog = new ActiveTermsDialogForm(_contextFactory);
+            var result = termsDialog.ShowDialog(this.FindForm() ?? (IWin32Window)this);
+
+            if (result == DialogResult.OK)
+            {
+                chkAgreeTerms.Checked = true;
+                if (_draft != null)
+                {
+                    _draft.AgreedToTerms = true;
+                }
+            }
+            else
+            {
+                chkAgreeTerms.Checked = false;
+                if (_draft != null)
+                {
+                    _draft.AgreedToTerms = false;
+                }
+            }
+        }
+        else
+        {
+            if (_draft != null)
+            {
+                _draft.AgreedToTerms = false;
+            }
+        }
+    }
+
     private Panel BuildReviewCard()
     {
+        int cardHeight = (RowHeight * TotalRows) + 2;
+
         var card = new Panel
         {
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
+            Height = cardHeight,
             BackColor = ColorCardBg,
             Padding = new Padding(24, 0, 24, 0)
         };
+
+        card.Resize += (s, e) => card.Invalidate();
 
         card.Paint += (s, e) =>
         {
@@ -140,7 +217,7 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
             Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold),
             ForeColor = ColorPrimary,
             Anchor = AnchorStyles.Top | AnchorStyles.Right,
-            Location = new Point(container.Width - 524, y + 11),
+            Location = new Point(Math.Max(240, container.Width - 524), y + 11),
             Size = new Size(500, 22),
             TextAlign = ContentAlignment.MiddleRight
         };
@@ -148,6 +225,8 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
         container.Controls.Add(lblTag);
         container.Controls.Add(valLabel);
     }
+
+    // --- IBookingWizardStep Implementation ---
 
     public void OnStepEnter(BookingDraftModel draft)
     {
@@ -164,7 +243,6 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
 
         int days = _draft.RentalDurationDays;
         lblPeriodVal.Text = $"{_draft.RentalStartDate:yyyy-MM-dd} → {_draft.RentalEndDate:yyyy-MM-dd} ({days} day{(days == 1 ? "" : "s")})";
-
         lblRentalFeeVal.Text = $"{CurrencySymbol}{_draft.SubtotalRentalFee:N2}";
 
         if (_draft.LoyaltyDiscountAmount > 0)
@@ -178,8 +256,12 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
             lblLoyaltyDiscountVal.Text = "₱0.00 (Standard Tier)";
         }
 
-        lblDepositVal.Text = $"{CurrencySymbol}{_draft.TotalSecurityDeposit:N2} ({_draft.DepositPercentage:0.#}%)";
+        lblDepositVal.Text = $"{CurrencySymbol}{_draft.TotalSecurityDeposit:N2}";
+
         lblTotalVal.Text = $"{CurrencySymbol}{_draft.TotalDue:N2}";
+        lblTotalVal.ForeColor = ColorAccent;
+        lblTotalVal.Font = new Font("Segoe UI Semibold", 11.5f, FontStyle.Bold);
+
         lblPaymentMethodVal.Text = string.IsNullOrWhiteSpace(_draft.SelectedPaymentMethod) ? "Not specified" : _draft.SelectedPaymentMethod;
 
         chkAgreeTerms.Checked = _draft.AgreedToTerms;
@@ -194,7 +276,7 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
     {
         if (!chkAgreeTerms.Checked)
         {
-            errorMessage = "The client must agree to the terms and conditions before confirming the booking.";
+            errorMessage = "The client must review and agree to the active rental terms and conditions before confirming the booking.";
             return false;
         }
 
@@ -206,8 +288,9 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
     {
         var path = new GraphicsPath();
         int d = radius * 2;
+        path.StartFigure();
         path.AddArc(rect.X, rect.Y, d, d, 180, 90);
-        path.AddArc(rect.Right - d, rect.Right - d, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
         path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
         path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
         path.CloseFigure();

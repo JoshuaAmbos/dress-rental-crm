@@ -47,7 +47,7 @@ public partial class MoveBranchDialogForm : Form
         {
             Text = $"Move Showroom: {_username}",
             Font = new Font("Segoe UI Semibold", 12f, FontStyle.Bold),
-            ForeColor = ColorPrimary,
+            ForeColor = ColorAccent,
             Location = new Point(24, 18),
             AutoSize = true
         };
@@ -56,7 +56,7 @@ public partial class MoveBranchDialogForm : Form
         {
             Text = $"CURRENT SHOWROOM: {_currentBranchName.ToUpperInvariant()}",
             Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold),
-            ForeColor = ColorAccent,
+            ForeColor = ColorPrimary,
             Location = new Point(24, 48),
             AutoSize = true
         };
@@ -83,7 +83,7 @@ public partial class MoveBranchDialogForm : Form
             Location = new Point(184, 170),
             Size = new Size(90, 36),
             FlatStyle = FlatStyle.Flat,
-            ForeColor = ColorPrimary,
+            ForeColor = ColorAccent,
             BackColor = Color.FromArgb(245, 240, 240),
             Cursor = Cursors.Hand
         };
@@ -97,7 +97,7 @@ public partial class MoveBranchDialogForm : Form
             Size = new Size(100, 36),
             FlatStyle = FlatStyle.Flat,
             ForeColor = Color.White,
-            BackColor = ColorAccent,
+            BackColor = ColorPrimary,
             Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
             Cursor = Cursors.Hand
         };

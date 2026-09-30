@@ -91,28 +91,6 @@ public partial class LoginForm : Form
 
         pnlBrandContent = new BufferedPanel { Size = new Size(420, 420), BackColor = Color.Transparent };
 
-        pnlBrandContent.Paint += (s, e) =>
-        {
-            //e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-
-            //using var badgeBrush = new SolidBrush(Color.FromArgb(249, 241, 241));
-            //using var badgePen = new Pen(ColorPrimary, 2f);
-            //e.Graphics.FillEllipse(badgeBrush, 1, 1, 70, 70);
-            //e.Graphics.DrawEllipse(badgePen, 1, 1, 70, 70);
-
-            //using var badgeFont = new Font("Segoe UI Semibold", 24f, FontStyle.Bold);
-            //using var textBrush = new SolidBrush(ColorPrimary);
-            //var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-            //e.Graphics.DrawString("A", badgeFont, textBrush, new RectangleF(0, 0, 72, 72), sf);
-
-            //using var bulletBrush = new SolidBrush(ColorPrimary);
-            //int startY = 200 + 8;
-            //for (int i = 0; i < 3; i++)
-            //{
-            //    e.Graphics.FillEllipse(bulletBrush, 2, startY + (i * 38), 9, 9);
-            //}
-        };
-
         var lblTitle = new Label
         {
             Text = "ATELIER - DRESS RENTAL CRM",
@@ -261,7 +239,7 @@ public partial class LoginForm : Form
 
         txtUsername = new TextBox
         {
-            Text = "superadmin",
+            Text = "atelier_admin",
             BorderStyle = BorderStyle.None,
             Font = new Font("Segoe UI", 12f),
             Location = new Point(14, 11),
@@ -320,7 +298,7 @@ public partial class LoginForm : Form
             Text = "Sign In",
             Location = new Point(pad, 364),
             Size = new Size(fieldWidth, 48),
-            BackColor = ColorPrimary,
+            BackColor = ColorAccent,
             ForeColor = Color.White,
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI Semibold", 11f, FontStyle.Bold),
@@ -334,7 +312,7 @@ public partial class LoginForm : Form
         }
 
         btnLogin.MouseEnter += (s, e) => btnLogin.BackColor = ColorPrimaryHover;
-        btnLogin.MouseLeave += (s, e) => btnLogin.BackColor = ColorPrimary;
+        btnLogin.MouseLeave += (s, e) => btnLogin.BackColor = ColorAccent;
         btnLogin.Click += async (s, e) => await AttemptLoginAsync();
 
         var lblFootnote = new Label
@@ -404,7 +382,7 @@ public partial class LoginForm : Form
         };
 
         panel.Click += (s, e) => linkedTextBox.Focus();
-        linkedTextBox.Enter += (s, e) => { borderColor = ColorPrimary; panel.Invalidate(); };
+        linkedTextBox.Enter += (s, e) => { borderColor = ColorAccent; panel.Invalidate(); };
         linkedTextBox.Leave += (s, e) => { borderColor = ColorBorder; panel.Invalidate(); };
 
         panel.Controls.Add(linkedTextBox);

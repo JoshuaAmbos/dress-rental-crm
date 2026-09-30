@@ -7,8 +7,11 @@ using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Views;
 
-public partial class RentalBookingsView : UserControl
+public partial class    RentalBookingsView : UserControl
 {
+    private const string ConnectionString =
+        "Server=10.0.2.2,1433;Database=DB_TenantCRM;User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;";
+
     private readonly RentalBookingController _controller;
     private readonly Func<TenantCrmDbContext> _contextFactory;
     private readonly Func<int> _getCompanyId;
@@ -19,28 +22,17 @@ public partial class RentalBookingsView : UserControl
     private List<BookingRowViewModel> _cachedRows = [];
     private RentalPipelineDto? _pipelineData;
 
-    private FlowLayoutPanel pnlFilterTabs = null!;
-    private TextBox txtSearch = null!;
-
     public event EventHandler? RequestNewBooking;
 
-    public RentalBookingsView()
+    // Parameterless constructor for WinForms Designer
+    public RentalBookingsView() : this(() =>
     {
-        InitializeComponent();
-
-        _contextFactory = () =>
-        {
-            var options = new DbContextOptionsBuilder<TenantCrmDbContext>()
-                .UseSqlServer("Server=10.0.2.2,1433;Database=DB_TenantCRM;User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;")
-                .Options;
-            return new TenantCrmDbContext(options);
-        };
-        _getCompanyId = () => 1;
-        _getBranchId = null;
-        _controller = new RentalBookingController(_contextFactory);
-
-        SetupFilterBar();
-        WireGridEvents();
+        var options = new DbContextOptionsBuilder<TenantCrmDbContext>()
+            .UseSqlServer(ConnectionString)
+            .Options;
+        return new TenantCrmDbContext(options);
+    }, () => 1, null)
+    {
     }
 
     public RentalBookingsView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId)
@@ -48,76 +40,117 @@ public partial class RentalBookingsView : UserControl
     {
     }
 
-    public RentalBookingsView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId, Func<int?>? getBranchId)
+    // Primary constructor invoked by MainForm (supports multi-showroom branch filtering)
+    public RentalBookingsView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId, Func<int?>? getBranchId = null)
     {
-        InitializeComponent();
-
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         _getCompanyId = getCompanyId ?? throw new ArgumentNullException(nameof(getCompanyId));
         _getBranchId = getBranchId;
         _controller = new RentalBookingController(_contextFactory);
 
-        SetupFilterBar();
-        WireGridEvents();
+        InitializeComponent();
+        ApplyThemeTokens();
+
+        if (!DesignMode)
+        {
+            SetupGridAppearance();
+            WireGridEvents();
+        }
     }
 
-    private void SetupFilterBar()
+    private void RentalBookingsView_Load(object? sender, EventArgs e)
     {
-        int filterY = 286;
-        int filterHeight = 38;
+        if (DesignMode || LicenseManager.UsageMode == LicenseUsageMode.Designtime)
+            return;
 
-        dgvBookings.Location = new Point(33, filterY + filterHeight + 10);
-        dgvBookings.Height = ClientSize.Height - dgvBookings.Top - 30;
+        _ = LoadBookingsAsync();
+    }
 
-        var pnlFilterStrip = new Panel
-        {
-            Location = new Point(33, filterY),
-            Size = new Size(dgvBookings.Width, filterHeight),
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-            BackColor = Color.Transparent
-        };
+    private void ApplyThemeTokens()
+    {
+        DoubleBuffered = true;
+        BackColor = ColorViewBg;
+        Padding = new Padding(32, 24, 32, 24);
 
-        var pnlSearch = new Panel
+        if (label1 != null)
         {
-            Dock = DockStyle.Right,
-            Width = 260,
-            Height = 34,
-            BackColor = Color.White
-        };
-        pnlSearch.Paint += (s, e) =>
-        {
-            using var pen = new Pen(ColorBorder, 1f);
-            e.Graphics.DrawRectangle(pen, 0, 0, pnlSearch.Width - 1, pnlSearch.Height - 1);
-        };
+            label1.Text = "Rental & Returns Pipeline";
+            label1.UseMnemonic = false;
+            label1.Font = new Font("Segoe UI", 18f, FontStyle.Bold);
+            label1.ForeColor = ColorPrimary;
+        }
 
-        txtSearch = new TextBox
+        if (lblSubtitle != null)
         {
-            BorderStyle = BorderStyle.None,
-            Font = new Font("Segoe UI", 9.5f),
-            ForeColor = ColorPrimary,
-            Location = new Point(10, 8),
-            Width = 240,
-            PlaceholderText = "Search bookings..."
-        };
-        txtSearch.TextChanged += async (s, e) =>
-        {
-            _currentSearchTerm = txtSearch.Text.Trim();
-            await LoadBookingsAsync();
-        };
-        pnlSearch.Controls.Add(txtSearch);
+            lblSubtitle.Text = "Monitor reservations, ongoing fittings, active leases, and returns.";
+            lblSubtitle.Font = new Font("Segoe UI", 9.5f);
+            lblSubtitle.ForeColor = ColorSubtext;
+        }
 
-        pnlFilterTabs = new FlowLayoutPanel
+        if (primaryButtonNewBooking != null)
         {
-            Dock = DockStyle.Fill,
-            WrapContents = false,
-            AutoScroll = false,
-            BackColor = Color.Transparent
-        };
+            primaryButtonNewBooking.Text = "+ New Booking";
+            primaryButtonNewBooking.BackColor = ColorAccent;
+            primaryButtonNewBooking.ForeColor = Color.White;
+            primaryButtonNewBooking.FlatStyle = FlatStyle.Flat;
+            primaryButtonNewBooking.FlatAppearance.BorderSize = 0;
+            primaryButtonNewBooking.Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold);
+            primaryButtonNewBooking.Cursor = Cursors.Hand;
+            primaryButtonNewBooking.MouseEnter += (s, e) => primaryButtonNewBooking.BackColor = ColorDustyRoseHover;
+            primaryButtonNewBooking.MouseLeave += (s, e) => primaryButtonNewBooking.BackColor = ColorAccent;
+        }
 
-        pnlFilterStrip.Controls.Add(pnlFilterTabs);
-        pnlFilterStrip.Controls.Add(pnlSearch);
-        Controls.Add(pnlFilterStrip);
-        pnlFilterStrip.BringToFront();
+        if (txtSearch != null)
+        {
+            txtSearch.Font = new Font("Segoe UI", 9.5f);
+            txtSearch.ForeColor = ColorBrandDark;
+            txtSearch.PlaceholderText = "Search by client, garment, or code...";
+            txtSearch.TextChanged += async (s, e) =>
+            {
+                _currentSearchTerm = txtSearch.Text.Trim();
+                await LoadBookingsAsync();
+            };
+        }
+    }
+
+    private void SetupGridAppearance()
+    {
+        if (dgvBookings == null) return;
+
+        dgvBookings.AutoGenerateColumns = false;
+        dgvBookings.BackgroundColor = ColorCardBg;
+        dgvBookings.GridColor = ColorDivider;
+        dgvBookings.BorderStyle = BorderStyle.None;
+        dgvBookings.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+        dgvBookings.RowHeadersVisible = false;
+        dgvBookings.AllowUserToAddRows = false;
+        dgvBookings.AllowUserToDeleteRows = false;
+        dgvBookings.AllowUserToResizeRows = false;
+        dgvBookings.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+        dgvBookings.MultiSelect = false;
+        dgvBookings.RowTemplate.Height = 44;
+
+        // Header Styling
+        dgvBookings.EnableHeadersVisualStyles = false;
+        dgvBookings.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
+        dgvBookings.ColumnHeadersHeight = 42;
+        dgvBookings.ColumnHeadersDefaultCellStyle.BackColor = ColorCardBg;
+        dgvBookings.ColumnHeadersDefaultCellStyle.ForeColor = ColorMutedLabel;
+        dgvBookings.ColumnHeadersDefaultCellStyle.SelectionBackColor = ColorCardBg;
+        dgvBookings.ColumnHeadersDefaultCellStyle.SelectionForeColor = ColorMutedLabel;
+        dgvBookings.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold);
+
+        // Row Styling
+        dgvBookings.DefaultCellStyle.BackColor = ColorCardBg;
+        dgvBookings.DefaultCellStyle.ForeColor = ColorBrandDark;
+        dgvBookings.DefaultCellStyle.Font = new Font("Segoe UI", 9.25f);
+        dgvBookings.DefaultCellStyle.SelectionBackColor = ColorSelectedBg;
+        dgvBookings.DefaultCellStyle.SelectionForeColor = ColorPrimary;
+
+        dgvBookings.AlternatingRowsDefaultCellStyle.BackColor = ColorBgSoft;
+        dgvBookings.AlternatingRowsDefaultCellStyle.ForeColor = ColorBrandDark;
+        dgvBookings.AlternatingRowsDefaultCellStyle.SelectionBackColor = ColorSelectedBg;
+        dgvBookings.AlternatingRowsDefaultCellStyle.SelectionForeColor = ColorPrimary;
     }
 
     private void WireGridEvents()
@@ -128,19 +161,10 @@ public partial class RentalBookingsView : UserControl
         dgvBookings.CellMouseMove += DgvBookings_CellMouseMove;
     }
 
-    private async void RentalBookingsView_Load(object? sender, EventArgs e)
-    {
-        if (DesignMode || LicenseManager.UsageMode == LicenseUsageMode.Designtime)
-            return;
-
-        await LoadBookingsAsync();
-    }
-
     public async Task LoadBookingsAsync()
     {
         try
         {
-            // Propagate optional branch filter
             int? branchId = _getBranchId?.Invoke();
             _pipelineData = await _controller.LoadPipelineAsync(_getCompanyId(), branchId, _currentStageFilter, _currentSearchTerm);
 
@@ -164,13 +188,14 @@ public partial class RentalBookingsView : UserControl
                 "UPCOMING RETURNS (7 DAYS)",
                 _pipelineData.UpcomingCount.ToString(),
                 "Due this week",
-                Color.FromArgb(186, 105, 115),
-                Color.FromArgb(255, 241, 242),
-                Color.FromArgb(186, 105, 115));
+                ColorAccent,
+                ColorActivePill,
+                ColorAccent);
 
             RenderFilterTabs();
 
             _cachedRows = _pipelineData.Rows;
+            dgvBookings.AutoGenerateColumns = false;
             dgvBookings.DataSource = null;
             dgvBookings.DataSource = _cachedRows;
         }
@@ -208,12 +233,12 @@ public partial class RentalBookingsView : UserControl
                 FlatStyle = FlatStyle.Flat,
                 Margin = new Padding(0, 0, 8, 0),
                 Cursor = Cursors.Hand,
-                BackColor = isSelected ? ColorAccent : Color.White,
-                ForeColor = isSelected ? Color.White : ColorPrimary
+                BackColor = isSelected ? ColorAccent : ColorCardBg,
+                ForeColor = isSelected ? Color.White : ColorNavInactiveText
             };
 
             btn.FlatAppearance.BorderSize = isSelected ? 0 : 1;
-            btn.FlatAppearance.BorderColor = ColorBorder;
+            btn.FlatAppearance.BorderColor = isSelected ? ColorAccent : ColorBorder;
 
             btn.Click += async (s, e) =>
             {
@@ -264,7 +289,7 @@ public partial class RentalBookingsView : UserControl
                     {
                         MessageBox.Show(
                             $"Garment returned successfully.\n\n⚠️ OVERDUE NOTICE:\nThis lease was {result.DaysLate} day(s) overdue.\n" +
-                            $"A penalty fee of ₱{result.LateFeeCharged:N2} was automatically assessed based on the system configuration rate and logged to the incident ledger.",
+                            $"A penalty fee of ₱{result.LateFeeCharged:N2} was automatically assessed based on the boutique configuration.",
                             "Overdue Return Penalty Assessed",
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Warning);
@@ -345,6 +370,4 @@ public partial class RentalBookingsView : UserControl
             container.ResumeLayout();
         }
     }
-
-    private void label1_Click(object? sender, EventArgs e) { }
 }

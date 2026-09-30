@@ -1,11 +1,17 @@
 ﻿using CRM.infrastructure.data;
 using CRM.winforms.Controllers;
+using Microsoft.EntityFrameworkCore;
+using System.ComponentModel;
 using System.Drawing.Drawing2D;
 using static CRM.winforms.Assets.Themes.ColorThemes;
+
 namespace CRM.winforms.Views;
 
 public partial class SystemConfigurationView : UserControl
 {
+    private const string DefaultConnectionString =
+        "Server=10.0.2.2,1433;Database=DB_TenantCRM;User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;";
+
     private readonly SystemConfigController _controller;
 
     // Financial Inputs
@@ -22,9 +28,20 @@ public partial class SystemConfigurationView : UserControl
     private Button btnSave = null!;
     private Button btnReset = null!;
 
+    // Parameterless constructor for WinForms Designer support
+    public SystemConfigurationView() : this(() =>
+    {
+        var options = new DbContextOptionsBuilder<TenantCrmDbContext>()
+            .UseSqlServer(DefaultConnectionString)
+            .Options;
+        return new TenantCrmDbContext(options);
+    })
+    {
+    }
+
     public SystemConfigurationView(Func<TenantCrmDbContext> contextFactory)
     {
-        _controller = new SystemConfigController(contextFactory);
+        _controller = new SystemConfigController(contextFactory ?? throw new ArgumentNullException(nameof(contextFactory)));
 
         BuildUI();
         _ = LoadConfigurationsAsync();
@@ -32,24 +49,25 @@ public partial class SystemConfigurationView : UserControl
 
     private void BuildUI()
     {
+        DoubleBuffered = true;
         Dock = DockStyle.Fill;
         BackColor = ColorViewBg;
         Padding = new Padding(32, 24, 32, 24);
         Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
-        // Header Section
+        // 1. Header Section
         var pnlHeader = new Panel
         {
             Dock = DockStyle.Top,
-            Height = 56,
+            Height = 64,
             BackColor = Color.Transparent
         };
 
         var lblTitle = new Label
         {
             Text = "System Configuration & Operational Parameters",
-            UseMnemonic = false, // Fixes the underscore glitch
-            Font = new Font("Segoe UI Semibold", 15f, FontStyle.Bold),
+            UseMnemonic = false,
+            Font = new Font("Segoe UI", 18f, FontStyle.Bold),
             ForeColor = ColorPrimary,
             Location = new Point(0, 0),
             AutoSize = true
@@ -59,15 +77,73 @@ public partial class SystemConfigurationView : UserControl
         {
             Text = "Super Admin Exclusive Control • Baseline Business Rules",
             UseMnemonic = false,
-            Font = new Font("Segoe UI", 8.5f),
+            Font = new Font("Segoe UI", 9.5f),
             ForeColor = ColorSubtext,
-            Location = new Point(2, 28),
+            Location = new Point(0, 34),
             AutoSize = true
         };
 
         pnlHeader.Controls.AddRange(new Control[] { lblTitle, lblLastAudit });
 
-        // Scrollable Body Container
+        // 2. Bottom Action Toolbar
+        var pnlActions = new Panel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 56,
+            BackColor = Color.Transparent,
+            Padding = new Padding(0, 12, 0, 0)
+        };
+
+        btnReset = new Button
+        {
+            Text = "Restore Defaults",
+            Size = new Size(150, 38),
+            Location = new Point(0, 10),
+            FlatStyle = FlatStyle.Flat,
+            ForeColor = ColorNavInactiveText,
+            BackColor = ColorCardBg,
+            Font = new Font("Segoe UI Semibold", 9.25f, FontStyle.Bold),
+            Cursor = Cursors.Hand
+        };
+        btnReset.FlatAppearance.BorderSize = 1;
+        btnReset.FlatAppearance.BorderColor = ColorBorder;
+        btnReset.MouseEnter += (s, e) =>
+        {
+            btnReset.BackColor = ColorActivePill;
+            btnReset.ForeColor = ColorPrimary;
+        };
+        btnReset.MouseLeave += (s, e) =>
+        {
+            btnReset.BackColor = ColorCardBg;
+            btnReset.ForeColor = ColorNavInactiveText;
+        };
+        btnReset.Click += async (s, e) => await ResetDefaultsAsync();
+
+        btnSave = new Button
+        {
+            Text = "Save Configuration",
+            Size = new Size(170, 38),
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+            Location = new Point(pnlActions.Width - 170, 10),
+            FlatStyle = FlatStyle.Flat,
+            ForeColor = Color.White,
+            BackColor = ColorAccent,
+            Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
+            Cursor = Cursors.Hand
+        };
+        btnSave.FlatAppearance.BorderSize = 0;
+        btnSave.MouseEnter += (s, e) => btnSave.BackColor = ColorAccentHover;
+        btnSave.MouseLeave += (s, e) => btnSave.BackColor = ColorAccent;
+        btnSave.Click += async (s, e) => await SaveChangesAsync();
+
+        pnlActions.Resize += (s, e) =>
+        {
+            btnSave.Location = new Point(Math.Max(160, pnlActions.ClientSize.Width - btnSave.Width), 10);
+        };
+
+        pnlActions.Controls.AddRange(new Control[] { btnReset, btnSave });
+
+        // 3. Scrollable Body Container
         var pnlBody = new Panel
         {
             Dock = DockStyle.Fill,
@@ -79,7 +155,7 @@ public partial class SystemConfigurationView : UserControl
         const int cardWidth = 860;
 
         // --- Card 1: Financial & Billing Parameters ---
-        int card1Y = 38;
+        int card1Y = 42;
         var cardFinance = CreateCardContainer("FINANCIAL & BILLING PARAMETERS", 0, 8, cardWidth, 275);
         txtLateFee = AddSettingRow(cardFinance, ref card1Y, cardWidth, "Daily Overdue Penalty (₱/day):", "Assessed per day overdue during post-return garment inspection (UC-03).");
         txtDepositPct = AddSettingRow(cardFinance, ref card1Y, cardWidth, "Standard Deposit Percentage (%):", "Default percentage of garment rental fee collected as refundable security deposit (UC-02).");
@@ -87,52 +163,14 @@ public partial class SystemConfigurationView : UserControl
         txtTaxRate = AddSettingRow(cardFinance, ref card1Y, cardWidth, "Sales Tax / VAT (%):", "Standard percentage added to rental invoices during transaction settlement.");
 
         // --- Card 2: Turnaround & Operational Policies ---
-        int card2Y = 38;
-        var cardLogistics = CreateCardContainer("OPERATIONAL POLICIES & TURNAROUND", 0, cardFinance.Bottom + 16, cardWidth, 165);
+        int card2Y = 42;
+        var cardLogistics = CreateCardContainer("OPERATIONAL POLICIES & TURNAROUND", 0, cardFinance.Bottom + 16, cardWidth, 168);
         txtCleaningBuffer = AddSettingRow(cardLogistics, ref card2Y, cardWidth, "Dry-Cleaning Buffer (Days):", "Calendar days reserved after return before a garment becomes available in catalog scheduling.");
         txtMaxRentals = AddSettingRow(cardLogistics, ref card2Y, cardWidth, "Max Active Leases Per Client:", "Maximum concurrent active gown leases allowed without administrative override.");
 
-        // Bottom Action Toolbar
-        var pnlActions = new Panel
-        {
-            Dock = DockStyle.Bottom,
-            Height = 52,
-            BackColor = Color.Transparent
-        };
-
-        btnReset = new Button
-        {
-            Text = "Restore Defaults",
-            Size = new Size(140, 36),
-            Location = new Point(0, 8),
-            FlatStyle = FlatStyle.Flat,
-            ForeColor = ColorPrimary,
-            BackColor = Color.FromArgb(245, 240, 240),
-            Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
-            Cursor = Cursors.Hand
-        };
-        btnReset.FlatAppearance.BorderSize = 0;
-        btnReset.Click += async (s, e) => await ResetDefaultsAsync();
-
-        btnSave = new Button
-        {
-            Text = "Save Configuration",
-            Size = new Size(160, 36),
-            Anchor = AnchorStyles.Top | AnchorStyles.Right,
-            Location = new Point(pnlActions.Width - 160, 8),
-            FlatStyle = FlatStyle.Flat,
-            ForeColor = Color.White,
-            BackColor = ColorAccent,
-            Font = new Font("Segoe UI Semibold", 9.25f, FontStyle.Bold),
-            Cursor = Cursors.Hand
-        };
-        btnSave.FlatAppearance.BorderSize = 0;
-        btnSave.Click += async (s, e) => await SaveChangesAsync();
-
-        pnlActions.Controls.AddRange(new Control[] { btnReset, btnSave });
-
         pnlBody.Controls.AddRange(new Control[] { cardFinance, cardLogistics });
 
+        // Assembly
         Controls.Add(pnlBody);
         Controls.Add(pnlActions);
         Controls.Add(pnlHeader);
@@ -162,7 +200,7 @@ public partial class SystemConfigurationView : UserControl
             UseMnemonic = false,
             Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
             ForeColor = ColorAccent,
-            Location = new Point(24, 14),
+            Location = new Point(24, 16),
             AutoSize = true
         };
 
@@ -193,22 +231,43 @@ public partial class SystemConfigurationView : UserControl
             AutoEllipsis = true
         };
 
-        var txt = new TextBox
+        // Enclosed border panel for modern text box styling
+        var pnlTextBorder = new Panel
         {
             Location = new Point(cardWidth - 240, currentY + 6),
-            Width = 216,
-            Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold),
-            ForeColor = ColorPrimary,
+            Size = new Size(216, 32),
+            BackColor = ColorCardBg,
+            Padding = new Padding(8, 6, 8, 4)
+        };
+        pnlTextBorder.Paint += (s, e) =>
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            using var pen = new Pen(ColorBorder, 1f);
+            using var path = CreateRoundedRectangle(new Rectangle(0, 0, pnlTextBorder.Width - 1, pnlTextBorder.Height - 1), 4);
+            e.Graphics.DrawPath(pen, path);
+        };
+
+        var txt = new TextBox
+        {
+            Dock = DockStyle.Fill,
+            BorderStyle = BorderStyle.None,
+            Font = new Font("Segoe UI Semibold", 9.75f, FontStyle.Bold),
+            ForeColor = ColorBrandDark,
+            BackColor = ColorCardBg,
             TextAlign = HorizontalAlignment.Right
         };
 
-        parentCard.Controls.AddRange(new Control[] { lblTitle, lblDesc, txt });
+        pnlTextBorder.Controls.Add(txt);
+        parentCard.Controls.AddRange(new Control[] { lblTitle, lblDesc, pnlTextBorder });
         currentY += 56;
         return txt;
     }
 
     public async Task LoadConfigurationsAsync()
     {
+        if (DesignMode || LicenseManager.UsageMode == LicenseUsageMode.Designtime)
+            return;
+
         try
         {
             var configs = await _controller.GetAllConfigurationsAsync();

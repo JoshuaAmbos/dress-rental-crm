@@ -9,6 +9,9 @@ namespace CRM.winforms.Views;
 
 public partial class CatalogView : UserControl
 {
+    private const string ConnectionString =
+        "Server=10.0.2.2,1433;Database=DB_TenantCRM;User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;";
+
     private readonly Func<TenantCrmDbContext> _contextFactory;
     private readonly Func<int> _getCompanyId;
     private readonly Func<int?>? _getBranchId;
@@ -18,40 +21,44 @@ public partial class CatalogView : UserControl
     private string _currentSearchTerm = string.Empty;
     private decimal _currentDepositPct = 50m;
 
-    private FlowLayoutPanel pnlFilterTabs = null!;
     private readonly List<Button> _filterButtons = new();
 
-    public CatalogView()
+    // Parameterless constructor for WinForms Designer
+    public CatalogView() : this(() =>
     {
-        InitializeComponent();
-
-        _contextFactory = () =>
-        {
-            var options = new DbContextOptionsBuilder<TenantCrmDbContext>()
-                .UseSqlServer("Server=10.0.2.2,1433;Database=DB_TenantCRM;User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;")
-                .Options;
-            return new TenantCrmDbContext(options);
-        };
-        _getCompanyId = () => 1;
-        _getBranchId = null;
-        _bookingService = new RentalBookingService(_contextFactory);
-
-        ConfigureView();
+        var options = new DbContextOptionsBuilder<TenantCrmDbContext>()
+            .UseSqlServer(ConnectionString)
+            .Options;
+        return new TenantCrmDbContext(options);
+    }, () => 1, null)
+    {
     }
 
+    public CatalogView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId)
+        : this(contextFactory, getCompanyId, null)
+    {
+    }
+
+    // Primary constructor invoked by MainForm (supports multi-showroom branch filtering)
     public CatalogView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId, Func<int?>? getBranchId = null)
     {
-        InitializeComponent();
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         _getCompanyId = getCompanyId ?? throw new ArgumentNullException(nameof(getCompanyId));
         _getBranchId = getBranchId;
         _bookingService = new RentalBookingService(_contextFactory);
 
-        ConfigureView();
+        InitializeComponent();
+        ApplyThemeTokens();
+
+        if (!DesignMode)
+        {
+            WireEvents();
+        }
     }
 
-    private void ConfigureView()
+    private void ApplyThemeTokens()
     {
+        DoubleBuffered = true;
         BackColor = ColorViewBg;
         Padding = new Padding(32, 24, 32, 24);
 
@@ -63,41 +70,28 @@ public partial class CatalogView : UserControl
             label1.ForeColor = ColorPrimary;
         }
 
-        if (secondaryButtonAll != null) secondaryButtonAll.Visible = false;
-        if (secondaryButtonRented != null) secondaryButtonRented.Visible = false;
-
-        SetupFilterTabs();
+        if (lblSubtitle != null)
+        {
+            lblSubtitle.Text = "Browse wardrobe collection, check rental availability, and update garment status.";
+            lblSubtitle.UseMnemonic = false;
+            lblSubtitle.Font = new Font("Segoe UI", 9.5f);
+            lblSubtitle.ForeColor = ColorSubtext;
+        }
 
         if (searchBar1 != null)
         {
             searchBar1.SetCueBanner("Search by garment name, SKU, category, or color...");
-            if (searchBar1 is Control searchCtrl)
-            {
-                searchCtrl.TextChanged += SearchBar_TextChanged;
-            }
+        }
+    }
+
+    private void WireEvents()
+    {
+        if (searchBar1 is Control searchCtrl)
+        {
+            searchCtrl.TextChanged += SearchBar_TextChanged;
         }
 
         this.Load += CatalogView_Load;
-    }
-
-    private void SetupFilterTabs()
-    {
-        int stripY = (secondaryButtonAll != null) ? secondaryButtonAll.Top : 75;
-        int stripX = (secondaryButtonAll != null) ? secondaryButtonAll.Left : 32;
-
-        pnlFilterTabs = new FlowLayoutPanel
-        {
-            Location = new Point(stripX, stripY),
-            Height = 36,
-            Width = Width - stripX - 32,
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-            WrapContents = false,
-            AutoScroll = false,
-            BackColor = Color.Transparent
-        };
-
-        Controls.Add(pnlFilterTabs);
-        pnlFilterTabs.BringToFront();
     }
 
     private async void CatalogView_Load(object? sender, EventArgs e)
@@ -156,6 +150,7 @@ public partial class CatalogView : UserControl
 
             var allGarments = await query.OrderBy(g => g.ItemCode).ToListAsync();
 
+            // Render interactive status pill buttons with dynamic counts
             RenderFilterButtons(allGarments);
 
             var filtered = (_currentStatusFilter == "All")
@@ -183,7 +178,6 @@ public partial class CatalogView : UserControl
             var cardList = new List<Control>();
             foreach (var garment in filtered)
             {
-                // Dynamic deposit calculation matching system configuration
                 decimal calculatedDeposit = Math.Round(garment.RentalRate * (_currentDepositPct / 100m), 2);
 
                 var card = new GarmentCardControl
@@ -239,16 +233,16 @@ public partial class CatalogView : UserControl
                 Text = status == "All" ? $"All  {count}" : $"{status}  {count}",
                 AutoSize = true,
                 Height = 32,
-                Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
+                Font = new Font("Segoe UI Semibold", 8.75f, FontStyle.Bold),
                 FlatStyle = FlatStyle.Flat,
                 Margin = new Padding(0, 0, 8, 0),
                 Cursor = Cursors.Hand,
-                BackColor = isSelected ? ColorAccent : Color.White,
-                ForeColor = isSelected ? Color.White : ColorPrimary
+                BackColor = isSelected ? ColorAccent : ColorCardBg,
+                ForeColor = isSelected ? Color.White : ColorNavInactiveText
             };
 
             btn.FlatAppearance.BorderSize = isSelected ? 0 : 1;
-            btn.FlatAppearance.BorderColor = ColorBorder;
+            btn.FlatAppearance.BorderColor = isSelected ? ColorAccent : ColorBorder;
 
             btn.Click += async (s, e) =>
             {
@@ -269,9 +263,10 @@ public partial class CatalogView : UserControl
         foreach (var btn in _filterButtons)
         {
             bool isSelected = (btn == activeBtn);
-            btn.BackColor = isSelected ? ColorAccent : Color.White;
-            btn.ForeColor = isSelected ? Color.White : ColorPrimary;
+            btn.BackColor = isSelected ? ColorAccent : ColorCardBg;
+            btn.ForeColor = isSelected ? Color.White : ColorNavInactiveText;
             btn.FlatAppearance.BorderSize = isSelected ? 0 : 1;
+            btn.FlatAppearance.BorderColor = isSelected ? ColorAccent : ColorBorder;
         }
     }
 

@@ -50,7 +50,7 @@ public partial class BookingDetailsDialog : Form
         {
             Text = $"Booking BKG-{_bookingId:D4}",
             Font = new Font("Segoe UI", 15f, FontStyle.Bold),
-            ForeColor = ColorPrimary,
+            ForeColor = ColorAccent,
             AutoSize = true
         };
         pnlHeader.Controls.Add(lblBookingCode);
@@ -63,7 +63,7 @@ public partial class BookingDetailsDialog : Form
             Text = "Close",
             Size = new Size(100, 38),
             Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
-            ForeColor = ColorPrimary,
+            ForeColor = ColorAccent,
             BackColor = Color.White,
             FlatStyle = FlatStyle.Flat,
             Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
@@ -79,7 +79,7 @@ public partial class BookingDetailsDialog : Form
             Size = new Size(130, 38),
             Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
             ForeColor = Color.White,
-            BackColor = ColorAccent,
+            BackColor = ColorPrimary,
             FlatStyle = FlatStyle.Flat,
             Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
             Location = new Point(pnlBottom.Width - 260, 13),
@@ -161,7 +161,7 @@ public partial class BookingDetailsDialog : Form
         {
             Text = "Loading...",
             Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
-            ForeColor = ColorPrimary,
+            ForeColor = ColorAccent,
             Location = new Point(160, y),
             AutoSize = true,
             MaximumSize = new Size(360, 60)
@@ -220,7 +220,7 @@ public partial class BookingDetailsDialog : Form
                 break;
             case "Active":
                 btnQuickAction.Text = "Process Return";
-                btnQuickAction.BackColor = ColorAccent;
+                btnQuickAction.BackColor = ColorPrimary;
                 btnQuickAction.Visible = true;
                 break;
             default:

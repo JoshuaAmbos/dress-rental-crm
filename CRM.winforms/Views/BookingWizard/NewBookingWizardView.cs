@@ -1,6 +1,7 @@
 ﻿using CRM.infrastructure.data;
 using CRM.winforms.Models;
 using Microsoft.EntityFrameworkCore;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Views;
 
@@ -12,11 +13,13 @@ public partial class NewBookingWizardView : UserControl
 
     private readonly BookingDraftModel _draft = new();
     private readonly List<IBookingWizardStep> _steps = new();
+
     private int _currentStepIndex = 0;
 
     public NewBookingWizardView()
     {
         InitializeComponent();
+        ApplyThemeTokens();
     }
 
     public NewBookingWizardView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId, Action? onCloseWizard = null)
@@ -27,6 +30,70 @@ public partial class NewBookingWizardView : UserControl
         _getCompanyId = getCompanyId ?? throw new ArgumentNullException(nameof(getCompanyId));
         _onCloseWizard = onCloseWizard;
 
+        ApplyThemeTokens();
+        WireNavigationEvents();
+
+        _ = LoadSystemConfigurationsAsync();
+        InitializeSteps();
+    }
+
+    private void ApplyThemeTokens()
+    {
+        DoubleBuffered = true;
+        BackColor = ColorViewBg;
+
+        if (label1 != null)
+        {
+            label1.Text = "New Rental Booking";
+            label1.UseMnemonic = false;
+            label1.Font = new Font("Segoe UI", 18f, FontStyle.Bold);
+            label1.ForeColor = ColorPrimary;
+        }
+
+        if (label3 != null)
+        {
+            label3.Text = "Complete the intake wizard to configure garments, client fittings, and active terms.";
+            label3.UseMnemonic = false;
+            label3.Font = new Font("Segoe UI", 9.5f);
+            label3.ForeColor = ColorSubtext;
+        }
+
+        if (btnNext != null)
+        {
+            btnNext.BackColor = ColorAccent;
+            btnNext.ForeColor = Color.White;
+            btnNext.FlatStyle = FlatStyle.Flat;
+            btnNext.FlatAppearance.BorderSize = 0;
+            btnNext.Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold);
+            btnNext.Cursor = Cursors.Hand;
+            btnNext.MouseEnter += (s, e) => btnNext.BackColor = ColorAccentHover;
+            btnNext.MouseLeave += (s, e) => btnNext.BackColor = ColorAccent;
+        }
+
+        if (btnCancel != null)
+        {
+            btnCancel.BackColor = ColorCardBg;
+            btnCancel.ForeColor = ColorNavInactiveText;
+            btnCancel.FlatStyle = FlatStyle.Flat;
+            btnCancel.FlatAppearance.BorderSize = 1;
+            btnCancel.FlatAppearance.BorderColor = ColorBorder;
+            btnCancel.Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold);
+            btnCancel.Cursor = Cursors.Hand;
+            btnCancel.MouseEnter += (s, e) =>
+            {
+                btnCancel.BackColor = ColorActivePill;
+                btnCancel.ForeColor = ColorPrimary;
+            };
+            btnCancel.MouseLeave += (s, e) =>
+            {
+                btnCancel.BackColor = ColorCardBg;
+                btnCancel.ForeColor = ColorNavInactiveText;
+            };
+        }
+    }
+
+    private void WireNavigationEvents()
+    {
         btnNext.BringToFront();
         btnCancel.BringToFront();
 
@@ -35,9 +102,6 @@ public partial class NewBookingWizardView : UserControl
 
         btnCancel.Click -= BtnCancel_Click;
         btnCancel.Click += BtnCancel_Click;
-
-        _ = LoadSystemConfigurationsAsync();
-        InitializeSteps();
     }
 
     private async Task LoadSystemConfigurationsAsync()
@@ -67,8 +131,10 @@ public partial class NewBookingWizardView : UserControl
 
         _steps.Clear();
 
+        // Step 1: Client Selection
         _steps.Add(new Step1ClientSelectionView(_contextFactory, _getCompanyId));
 
+        // Step 2: Garments & Rental Dates
         try
         {
             _steps.Add(new Step2GarmentDatesView(_contextFactory, _getCompanyId));
@@ -78,9 +144,14 @@ public partial class NewBookingWizardView : UserControl
             _steps.Add(new PlaceholderStepView("Step 2: Garment & Dates"));
         }
 
+        // Step 3: Fittings & Measurements
         _steps.Add(new Step3MeasurementsNotesView());
+
+        // Step 4: Payment Method & Escrow Deposit
         _steps.Add(new Step4PaymentDepositView());
-        _steps.Add(new Step5ConfirmationView());
+
+        // Step 5: Review & Confirmation (Passed _contextFactory to query active terms)
+        _steps.Add(new Step5ConfirmationView(_contextFactory));
 
         ShowStep(0);
     }
@@ -115,15 +186,17 @@ public partial class NewBookingWizardView : UserControl
 
         var step = _steps[_currentStepIndex];
 
+        // 1. Validate active step input
         if (!step.ValidateStep(out string error))
         {
             MessageBox.Show(error, "Validation Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
+        // 2. Persist step edits into the draft model
         step.OnStepLeave(_draft);
 
-        // When leaving Step 1 (Client Selection), refresh system deposit % and calculate loyalty tier
+        // 3. When completing Step 1, sync deposit percentage and calculate client loyalty discount
         if (_currentStepIndex == 0 && _draft.SelectedCustomer != null && _contextFactory != null)
         {
             await LoadSystemConfigurationsAsync();
@@ -146,6 +219,7 @@ public partial class NewBookingWizardView : UserControl
             }
         }
 
+        // 4. Advance forward or finalize database record
         if (_currentStepIndex < _steps.Count - 1)
         {
             ShowStep(_currentStepIndex + 1);
@@ -225,13 +299,14 @@ public partial class NewBookingWizardView : UserControl
         {
             StepTitle = title;
             Dock = DockStyle.Fill;
-            BackColor = Color.FromArgb(249, 241, 241);
+            BackColor = ColorViewBg;
 
             var lbl = new Label
             {
                 Text = title,
+                UseMnemonic = false,
                 Font = new Font("Segoe UI Semibold", 16f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(38, 22, 24),
+                ForeColor = ColorPrimary,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleCenter
             };

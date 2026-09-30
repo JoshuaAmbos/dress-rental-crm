@@ -1,6 +1,6 @@
-﻿using System.Drawing.Drawing2D;
+﻿using CRM.winforms.Models;
+using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
-using CRM.winforms.Models;
 using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Views;
@@ -27,11 +27,13 @@ public partial class Step3MeasurementsNotesView : UserControl, IBookingWizardSte
 
     private void BuildLayout()
     {
+        DoubleBuffered = true;
         Dock = DockStyle.Fill;
         BackColor = ColorViewBg;
         Padding = new Padding(32, 20, 32, 20);
         Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
+        // 1. Header (Title only - no subtitle)
         var pnlHeader = new Panel
         {
             Dock = DockStyle.Top,
@@ -42,60 +44,69 @@ public partial class Step3MeasurementsNotesView : UserControl, IBookingWizardSte
         var lblTitle = new Label
         {
             Text = "Measurements & Alteration Notes",
-            Font = new Font("Segoe UI Semibold", 15.5f, FontStyle.Bold),
+            UseMnemonic = false,
+            Font = new Font("Segoe UI", 16f, FontStyle.Bold),
             ForeColor = ColorPrimary,
             Location = new Point(0, 0),
             AutoSize = true
         };
         pnlHeader.Controls.Add(lblTitle);
 
-        var pnlHeaderSpacer = new Panel { Dock = DockStyle.Top, Height = 20, BackColor = Color.Transparent };
+        var pnlHeaderSpacer = new Panel { Dock = DockStyle.Top, Height = 16, BackColor = Color.Transparent };
 
+        // 2. Client & On-File Metadata Strip
         var pnlClientStrip = new Panel
         {
             Dock = DockStyle.Top,
-            Height = 50,
+            Height = 52,
             BackColor = Color.Transparent
         };
 
+        // CLIENT Column
         var lblClientTag = new Label
         {
             Text = "CLIENT",
-            Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
-            ForeColor = ColorSubtext,
+            UseMnemonic = false,
+            Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold),
+            ForeColor = ColorMutedLabel,
             Location = new Point(0, 0),
             AutoSize = true
         };
         lblClientNameVal = new Label
         {
             Text = "—",
+            UseMnemonic = false,
             Font = new Font("Segoe UI Semibold", 11.5f, FontStyle.Bold),
             ForeColor = ColorPrimary,
             Location = new Point(0, 20),
             AutoSize = true
         };
 
+        // MEASUREMENTS ON FILE Column
         var lblOnFileTag = new Label
         {
             Text = "MEASUREMENTS ON FILE",
-            Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
-            ForeColor = ColorSubtext,
-            Location = new Point(220, 0),
+            UseMnemonic = false,
+            Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold),
+            ForeColor = ColorMutedLabel,
+            Location = new Point(240, 0),
             AutoSize = true
         };
         lblOnFileSizesVal = new Label
         {
             Text = "—",
+            UseMnemonic = false,
             Font = new Font("Segoe UI Semibold", 11.5f, FontStyle.Bold),
-            ForeColor = ColorPrimary,
-            Location = new Point(220, 20),
+            ForeColor = ColorAccent,
+            Location = new Point(240, 20),
             AutoSize = true
         };
 
         pnlClientStrip.Controls.AddRange(new Control[] { lblClientTag, lblClientNameVal, lblOnFileTag, lblOnFileSizesVal });
 
-        var pnlStripSpacer = new Panel { Dock = DockStyle.Top, Height = 18, BackColor = Color.Transparent };
+        var pnlStripSpacer = new Panel { Dock = DockStyle.Top, Height = 16, BackColor = Color.Transparent };
 
+        // 3. Measurement Spinners Row (Bust, Waist, Hip)
         var pnlMeasurementsRow = new Panel
         {
             Dock = DockStyle.Top,
@@ -104,13 +115,14 @@ public partial class Step3MeasurementsNotesView : UserControl, IBookingWizardSte
         };
 
         var pnlBustBox = CreateMeasurementBox("Bust (in)", out numBust, 0);
-        var pnlWaistBox = CreateMeasurementBox("Waist (in)", out numWaist, 220);
-        var pnlHipBox = CreateMeasurementBox("Hip (in)", out numHip, 440);
+        var pnlWaistBox = CreateMeasurementBox("Waist (in)", out numWaist, 210);
+        var pnlHipBox = CreateMeasurementBox("Hip (in)", out numHip, 420);
 
         pnlMeasurementsRow.Controls.AddRange(new Control[] { pnlBustBox, pnlWaistBox, pnlHipBox });
 
         var pnlMeasureSpacer = new Panel { Dock = DockStyle.Top, Height = 18, BackColor = Color.Transparent };
 
+        // 4. Alteration Notes Container
         var pnlNotesContainer = new Panel
         {
             Dock = DockStyle.Fill,
@@ -119,25 +131,25 @@ public partial class Step3MeasurementsNotesView : UserControl, IBookingWizardSte
 
         var lblNotesTag = new Label
         {
-            Text = "Alteration Notes",
-            Font = new Font("Segoe UI", 9f, FontStyle.Regular),
-            ForeColor = ColorSubtext,
+            Text = "ALTERATION REQUIREMENTS & FIT PREFERENCES",
+            UseMnemonic = false,
+            Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold),
+            ForeColor = ColorMutedLabel,
             Dock = DockStyle.Top,
             Height = 22
         };
 
         var pnlNotesBorder = new Panel
         {
-            Dock = DockStyle.Top,
-            Height = 150,
+            Dock = DockStyle.Fill,
             BackColor = ColorCardBg,
             Padding = new Padding(14, 12, 14, 12)
         };
         pnlNotesBorder.Paint += (s, e) =>
         {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            using var path = CreateRoundedRectangle(new Rectangle(0, 0, pnlNotesBorder.Width - 1, pnlNotesBorder.Height - 1), 6);
-            using var pen = new Pen(ColorBorder, 1.25f);
+            using var path = CreateRoundedRectangle(new Rectangle(0, 0, pnlNotesBorder.Width - 1, pnlNotesBorder.Height - 1), 8);
+            using var pen = new Pen(ColorBorder, 1.2f);
             e.Graphics.DrawPath(pen, path);
         };
 
@@ -146,8 +158,8 @@ public partial class Step3MeasurementsNotesView : UserControl, IBookingWizardSte
             Dock = DockStyle.Fill,
             BorderStyle = BorderStyle.None,
             Multiline = true,
-            Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
-            ForeColor = ColorPrimary,
+            Font = new Font("Segoe UI", 9.75f, FontStyle.Regular),
+            ForeColor = ColorBrandDark,
             BackColor = ColorCardBg,
             ScrollBars = ScrollBars.Vertical
         };
@@ -156,6 +168,7 @@ public partial class Step3MeasurementsNotesView : UserControl, IBookingWizardSte
         pnlNotesContainer.Controls.Add(pnlNotesBorder);
         pnlNotesContainer.Controls.Add(lblNotesTag);
 
+        // Assembly (Dock stacking order)
         Controls.Add(pnlNotesContainer);
         Controls.Add(pnlMeasureSpacer);
         Controls.Add(pnlMeasurementsRow);
@@ -166,7 +179,7 @@ public partial class Step3MeasurementsNotesView : UserControl, IBookingWizardSte
 
         txtAlterationNotes.HandleCreated += (s, e) =>
         {
-            SendMessage(txtAlterationNotes.Handle, EM_SETCUEBANNER, 1, "e.g. Hem to ankle length, take in waist 1 inch, add bra cups...");
+            SendMessage(txtAlterationNotes.Handle, EM_SETCUEBANNER, 1, "e.g. Hem to ankle length, take in waist 1 inch, add temporary shoulder pads...");
         };
     }
 
@@ -175,14 +188,15 @@ public partial class Step3MeasurementsNotesView : UserControl, IBookingWizardSte
         var box = new Panel
         {
             Location = new Point(xPosition, 0),
-            Size = new Size(196, 70),
+            Size = new Size(190, 70),
             BackColor = Color.Transparent
         };
 
         var lbl = new Label
         {
             Text = labelText,
-            Font = new Font("Segoe UI", 9f, FontStyle.Regular),
+            UseMnemonic = false,
+            Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
             ForeColor = ColorSubtext,
             Location = new Point(0, 0),
             AutoSize = true
@@ -191,15 +205,15 @@ public partial class Step3MeasurementsNotesView : UserControl, IBookingWizardSte
         var borderPanel = new Panel
         {
             Location = new Point(0, 24),
-            Size = new Size(196, 40),
+            Size = new Size(190, 42),
             BackColor = ColorCardBg,
-            Padding = new Padding(12, 9, 8, 8)
+            Padding = new Padding(12, 10, 10, 8)
         };
         borderPanel.Paint += (s, e) =>
         {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             using var path = CreateRoundedRectangle(new Rectangle(0, 0, borderPanel.Width - 1, borderPanel.Height - 1), 6);
-            using var pen = new Pen(ColorBorder, 1.25f);
+            using var pen = new Pen(ColorBorder, 1.2f);
             e.Graphics.DrawPath(pen, path);
         };
 
@@ -208,8 +222,9 @@ public partial class Step3MeasurementsNotesView : UserControl, IBookingWizardSte
             Dock = DockStyle.Fill,
             BorderStyle = BorderStyle.None,
             Font = new Font("Segoe UI Semibold", 10.5f, FontStyle.Bold),
-            ForeColor = ColorPrimary,
+            ForeColor = ColorBrandDark,
             BackColor = ColorCardBg,
+            TextAlign = HorizontalAlignment.Center,
             DecimalPlaces = 1,
             Minimum = 0,
             Maximum = 120,
@@ -223,6 +238,8 @@ public partial class Step3MeasurementsNotesView : UserControl, IBookingWizardSte
         return box;
     }
 
+    // --- IBookingWizardStep Implementation ---
+
     public void OnStepEnter(BookingDraftModel draft)
     {
         if (draft.SelectedCustomer is { } customer)
@@ -234,6 +251,7 @@ public partial class Step3MeasurementsNotesView : UserControl, IBookingWizardSte
             string h = customer.HipSize > 0 ? $"{customer.HipSize:0.#}" : "—";
             lblOnFileSizesVal.Text = $"{b} – {w} – {h} in";
 
+            // If draft already has fitting overrides, retain them; otherwise default to customer's on-file measurements
             numBust.Value = draft.FittingBust > 0 ? draft.FittingBust : customer.BustSize;
             numWaist.Value = draft.FittingWaist > 0 ? draft.FittingWaist : customer.WaistSize;
             numHip.Value = draft.FittingHip > 0 ? draft.FittingHip : customer.HipSize;
@@ -242,6 +260,10 @@ public partial class Step3MeasurementsNotesView : UserControl, IBookingWizardSte
         {
             lblClientNameVal.Text = "—";
             lblOnFileSizesVal.Text = "—";
+
+            numBust.Value = draft.FittingBust;
+            numWaist.Value = draft.FittingWaist;
+            numHip.Value = draft.FittingHip;
         }
 
         txtAlterationNotes.Text = draft.AlterationNotes ?? string.Empty;
@@ -261,7 +283,7 @@ public partial class Step3MeasurementsNotesView : UserControl, IBookingWizardSte
     {
         if (numBust.Value == 0 && numWaist.Value == 0 && numHip.Value == 0)
         {
-            errorMessage = "Please enter the client's fitting measurements.";
+            errorMessage = "Please enter or confirm the client's fitting measurements.";
             return false;
         }
 
@@ -273,6 +295,7 @@ public partial class Step3MeasurementsNotesView : UserControl, IBookingWizardSte
     {
         var path = new GraphicsPath();
         int d = radius * 2;
+        path.StartFigure();
         path.AddArc(rect.X, rect.Y, d, d, 180, 90);
         path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
         path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);

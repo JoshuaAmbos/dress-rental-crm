@@ -10,8 +10,8 @@ public partial class BookingSuccessView : UserControl
     private readonly Action _onReturnToDashboard;
 
     // Atelier Palette
-    //private static readonly Color ColorPrimary = Color.FromArgb(38, 22, 24);
-    //private static readonly Color ColorAccent = Color.FromArgb(186, 105, 115);
+    //private static readonly Color ColorAccent = Color.FromArgb(38, 22, 24);
+    //private static readonly Color ColorPrimary = Color.FromArgb(186, 105, 115);
     //private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
     //private static readonly Color ColorBadgeBg = Color.FromArgb(232, 248, 238);
     //private static readonly Color ColorCheckmark = Color.FromArgb(34, 139, 64);
@@ -77,7 +77,7 @@ public partial class BookingSuccessView : UserControl
         {
             Text = "Booking Confirmed!",
             Font = new Font("Segoe UI", 17f, FontStyle.Bold),
-            ForeColor = ColorPrimary,
+            ForeColor = ColorAccent,
             TextAlign = ContentAlignment.MiddleCenter,
             Size = new Size(pnlCenter.Width, 34),
             Location = new Point(0, 78)
@@ -109,7 +109,7 @@ public partial class BookingSuccessView : UserControl
             int startX = (pnlText.Width - totalLineWidth) / 2;
 
             TextRenderer.DrawText(g, part1, regularFont, new Point(startX, 4), ColorSubtext);
-            TextRenderer.DrawText(g, part2, codeFont, new Point(startX + sz1.Width - 7, 4), ColorAccent);
+            TextRenderer.DrawText(g, part2, codeFont, new Point(startX + sz1.Width - 7, 4), ColorPrimary);
             TextRenderer.DrawText(g, part3, regularFont, new Point(startX + sz1.Width + sz2.Width - 14, 4), ColorSubtext);
 
             string line2 = "A confirmation has been sent to the client.";
@@ -123,7 +123,7 @@ public partial class BookingSuccessView : UserControl
             Text = "Return to Dashboard",
             Font = new Font("Segoe UI Semibold", 9.75f, FontStyle.Bold),
             ForeColor = Color.White,
-            BackColor = ColorAccent,
+            BackColor = ColorPrimary,
             FlatStyle = FlatStyle.Flat,
             Size = new Size(184, 42),
             Location = new Point((pnlCenter.Width - 184) / 2, 196),

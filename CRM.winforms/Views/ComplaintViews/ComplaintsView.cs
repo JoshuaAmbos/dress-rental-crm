@@ -1,6 +1,7 @@
 ﻿using CRM.infrastructure.data;
 using CRM.winforms.Controls;
 using CRM.winforms.Forms;
+using Microsoft.EntityFrameworkCore;
 using System.Drawing.Drawing2D;
 using static CRM.winforms.Assets.Themes.ColorThemes;
 
@@ -8,6 +9,9 @@ namespace CRM.winforms.Views;
 
 public partial class ComplaintsView : UserControl
 {
+    private const string ConnectionString =
+        "Server=10.0.2.2,1433;Database=DB_TenantCRM;User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;";
+
     private readonly Func<TenantCrmDbContext> _contextFactory;
     private readonly Func<int> _getCompanyId;
     private readonly Func<int?>? _getBranchId;
@@ -17,17 +21,36 @@ public partial class ComplaintsView : UserControl
     private string _currentSearch = string.Empty;
     private ComplaintPipelineDto? _pipelineData;
 
+    // Header & Action Controls
+    private Button btnLog = null!;
+
     // KPI Cards
     private KpiCardControl kpiNew = null!;
     private KpiCardControl kpiInvestigating = null!;
     private KpiCardControl kpiResolutionRate = null!;
     private KpiCardControl kpiTotal = null!;
 
+    // Chevron Strip & Filter Bar
     private FlowLayoutPanel pnlChevronPills = null!;
     private FlowLayoutPanel pnlFilterTabs = null!;
     private TextBox txtSearch = null!;
     private Label lblRecordsCount = null!;
     private DataGridView dgvComplaints = null!;
+
+    public ComplaintsView() : this(() =>
+    {
+        var options = new DbContextOptionsBuilder<TenantCrmDbContext>()
+            .UseSqlServer(ConnectionString)
+            .Options;
+        return new TenantCrmDbContext(options);
+    }, () => 1, null)
+    {
+    }
+
+    public ComplaintsView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId)
+        : this(contextFactory, getCompanyId, null)
+    {
+    }
 
     public ComplaintsView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId, Func<int?>? getBranchId = null)
     {
@@ -42,22 +65,37 @@ public partial class ComplaintsView : UserControl
 
     private void InitializeLayout()
     {
+        DoubleBuffered = true;
         Dock = DockStyle.Fill;
         BackColor = ColorViewBg;
         AutoScroll = true;
         Padding = new Padding(32, 24, 32, 24);
         Font = new Font("Segoe UI", 9.5f);
 
+        // 1. Header & Primary Action
         var pnlHeader = new Panel { Dock = DockStyle.Top, Height = 64, BackColor = Color.Transparent };
-        var lblTitle = new Label { Text = "Client Complaints & Incidents", Font = new Font("Segoe UI", 18f, FontStyle.Bold), ForeColor = ColorPrimary, AutoSize = true };
-        var lblSub = new Label { Text = "Log customer disputes, track quality escalations, and audit corrective resolutions.", Font = new Font("Segoe UI", 9.75f), ForeColor = ColorSubtext, Location = new Point(0, 34), AutoSize = true };
+        var lblTitle = new Label
+        {
+            Text = "Client Complaints & Incidents",
+            UseMnemonic = false,
+            Font = new Font("Segoe UI", 18f, FontStyle.Bold),
+            ForeColor = ColorPrimary,
+            AutoSize = true
+        };
+        var lblSub = new Label
+        {
+            Text = "Log customer disputes, track quality escalations, and audit corrective resolutions.",
+            UseMnemonic = false,
+            Font = new Font("Segoe UI", 9.75f),
+            ForeColor = ColorSubtext,
+            Location = new Point(0, 34),
+            AutoSize = true
+        };
 
-        var btnLog = new Button
+        btnLog = new Button
         {
             Text = "+ Log Complaint",
-            Size = new Size(140, 36),
-            Location = new Point(Width - 140 - 64, 14),
-            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+            Size = new Size(140, 38),
             BackColor = ColorAccent,
             ForeColor = Color.White,
             FlatStyle = FlatStyle.Flat,
@@ -65,10 +103,19 @@ public partial class ComplaintsView : UserControl
             Cursor = Cursors.Hand
         };
         btnLog.FlatAppearance.BorderSize = 0;
+        btnLog.MouseEnter += (s, e) => btnLog.BackColor = ColorAccentHover;
+        btnLog.MouseLeave += (s, e) => btnLog.BackColor = ColorAccent;
         btnLog.Click += BtnLog_Click;
+
+        pnlHeader.Resize += (s, e) =>
+        {
+            btnLog.Location = new Point(Math.Max(0, pnlHeader.ClientSize.Width - btnLog.Width), 12);
+        };
+        btnLog.Location = new Point(Math.Max(0, pnlHeader.ClientSize.Width - btnLog.Width), 12);
 
         pnlHeader.Controls.AddRange(new Control[] { lblTitle, lblSub, btnLog });
 
+        // 2. Sections
         var pnlKpis = BuildKpiRow();
         var pnlChevronStrip = BuildChevronStrip();
         var pnlFilterStrip = BuildFilterStrip();
@@ -83,7 +130,7 @@ public partial class ComplaintsView : UserControl
 
     private Panel BuildKpiRow()
     {
-        var pnl = new Panel { Dock = DockStyle.Top, Height = 140, Padding = new Padding(0, 6, 0, 10), BackColor = Color.Transparent };
+        var pnl = new Panel { Dock = DockStyle.Top, Height = 136, Padding = new Padding(0, 6, 0, 10), BackColor = Color.Transparent };
         var table = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4, RowCount = 1 };
         for (int i = 0; i < 4; i++) table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
 
@@ -100,10 +147,24 @@ public partial class ComplaintsView : UserControl
     private Panel BuildChevronStrip()
     {
         var wrapper = new Panel { Dock = DockStyle.Top, Height = 84, Padding = new Padding(0, 4, 0, 10), BackColor = Color.Transparent };
-        var card = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(16, 12, 16, 12) };
-        ApplyRoundedCard(card, ColorBorder);
+        var card = new Panel { Dock = DockStyle.Fill, BackColor = ColorCardBg, Padding = new Padding(16, 12, 16, 12) };
 
-        pnlChevronPills = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, AutoScroll = false, BackColor = Color.Transparent };
+        card.Paint += (s, e) =>
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            using var pen = new Pen(ColorBorder, 1f);
+            using var path = CreateRoundedRectangle(new Rectangle(0, 0, card.Width - 1, card.Height - 1), 8);
+            e.Graphics.DrawPath(pen, path);
+        };
+
+        pnlChevronPills = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            WrapContents = false,
+            AutoScroll = false,
+            BackColor = Color.Transparent
+        };
+
         card.Controls.Add(pnlChevronPills);
         wrapper.Controls.Add(card);
         return wrapper;
@@ -113,16 +174,20 @@ public partial class ComplaintsView : UserControl
     {
         var pnl = new Panel { Dock = DockStyle.Top, Height = 48, BackColor = Color.Transparent, Padding = new Padding(0, 8, 0, 8) };
 
-        var pnlSearch = new Panel { Location = new Point(0, 4), Size = new Size(260, 32), BackColor = Color.White };
-        pnlSearch.Paint += (s, e) => { using var pen = new Pen(ColorBorder, 1f); e.Graphics.DrawRectangle(pen, 0, 0, pnlSearch.Width - 1, pnlSearch.Height - 1); };
+        var pnlSearch = new Panel { Location = new Point(0, 4), Size = new Size(260, 34), BackColor = ColorCardBg };
+        pnlSearch.Paint += (s, e) =>
+        {
+            using var pen = new Pen(ColorBorder, 1f);
+            e.Graphics.DrawRectangle(pen, 0, 0, pnlSearch.Width - 1, pnlSearch.Height - 1);
+        };
 
         txtSearch = new TextBox
         {
             BorderStyle = BorderStyle.None,
             Width = 240,
-            Location = new Point(8, 7),
+            Location = new Point(8, 8),
             Font = new Font("Segoe UI", 9.5f),
-            ForeColor = ColorPrimary,
+            ForeColor = ColorBrandDark,
             PlaceholderText = "Search by client, ID, category..."
         };
         txtSearch.TextChanged += async (s, e) =>
@@ -135,7 +200,16 @@ public partial class ComplaintsView : UserControl
         pnlFilterTabs = new FlowLayoutPanel { Location = new Point(275, 4), AutoSize = true, WrapContents = false, BackColor = Color.Transparent };
         InitFilterTabs();
 
-        lblRecordsCount = new Label { Dock = DockStyle.Right, Text = "0 records", ForeColor = ColorSubtext, AutoSize = true, Font = new Font("Segoe UI", 9f), TextAlign = ContentAlignment.MiddleRight, Padding = new Padding(0, 8, 0, 0) };
+        lblRecordsCount = new Label
+        {
+            Dock = DockStyle.Right,
+            Text = "0 records",
+            ForeColor = ColorSubtext,
+            AutoSize = true,
+            Font = new Font("Segoe UI", 9f),
+            TextAlign = ContentAlignment.MiddleRight,
+            Padding = new Padding(0, 8, 0, 0)
+        };
 
         pnl.Controls.AddRange(new Control[] { pnlSearch, pnlFilterTabs, lblRecordsCount });
         return pnl;
@@ -152,7 +226,7 @@ public partial class ComplaintsView : UserControl
                 Tag = tab,
                 AutoSize = true,
                 Height = 32,
-                Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI Semibold", 8.75f, FontStyle.Bold),
                 FlatStyle = FlatStyle.Flat,
                 Margin = new Padding(0, 0, 6, 0),
                 Cursor = Cursors.Hand
@@ -176,9 +250,10 @@ public partial class ComplaintsView : UserControl
             if (c is Button btn && btn.Tag is string tabName)
             {
                 bool isSelected = string.Equals(_currentStatusFilter, tabName, StringComparison.OrdinalIgnoreCase);
-                btn.BackColor = isSelected ? ColorAccent : Color.White;
-                btn.ForeColor = isSelected ? Color.White : ColorPrimary;
+                btn.BackColor = isSelected ? ColorAccent : ColorCardBg;
+                btn.ForeColor = isSelected ? Color.White : ColorNavInactiveText;
                 btn.FlatAppearance.BorderSize = isSelected ? 0 : 1;
+                btn.FlatAppearance.BorderColor = isSelected ? ColorAccent : ColorBorder;
             }
         }
     }
@@ -186,52 +261,101 @@ public partial class ComplaintsView : UserControl
     private Panel BuildTableCard()
     {
         var wrapper = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 6, 0, 4), BackColor = Color.Transparent };
-        var card = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(12) };
-        ApplyRoundedCard(card, ColorBorder);
+        var card = new Panel { Dock = DockStyle.Fill, BackColor = ColorCardBg, Padding = new Padding(1) };
+
+        card.Paint += (s, e) =>
+        {
+            using var pen = new Pen(ColorBorder, 1f);
+            e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+        };
 
         dgvComplaints = new DataGridView
         {
             Dock = DockStyle.Fill,
-            BackgroundColor = Color.White,
+            BackgroundColor = ColorCardBg,
             BorderStyle = BorderStyle.None,
             CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
-            GridColor = Color.FromArgb(244, 237, 237),
+            GridColor = ColorDivider,
             RowHeadersVisible = false,
             AllowUserToAddRows = false,
+            AllowUserToDeleteRows = false,
+            AllowUserToResizeRows = false,
             ReadOnly = true,
             AutoGenerateColumns = false,
             SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-            RowTemplate = { Height = 48 }
+            MultiSelect = false,
+            RowTemplate = { Height = 44 },
+            ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None,
+            EnableHeadersVisualStyles = false,
+            ColumnHeadersHeight = 42
         };
 
-        dgvComplaints.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
-        dgvComplaints.EnableHeadersVisualStyles = false;
-        dgvComplaints.ColumnHeadersDefaultCellStyle.BackColor = Color.White;
-        dgvComplaints.ColumnHeadersDefaultCellStyle.ForeColor = ColorSubtext;
-        dgvComplaints.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold);
-        dgvComplaints.ColumnHeadersDefaultCellStyle.Padding = new Padding(8, 0, 8, 0);
-        dgvComplaints.ColumnHeadersHeight = 38;
+        dgvComplaints.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
+        {
+            BackColor = ColorCardBg,
+            ForeColor = ColorMutedLabel,
+            SelectionBackColor = ColorCardBg,
+            SelectionForeColor = ColorMutedLabel,
+            Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
+            Padding = new Padding(10, 0, 10, 0)
+        };
 
-        var boldStyle = new DataGridViewCellStyle { Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold) };
+        dgvComplaints.DefaultCellStyle = new DataGridViewCellStyle
+        {
+            BackColor = ColorCardBg,
+            ForeColor = ColorBrandDark,
+            SelectionBackColor = ColorRowSelected,
+            SelectionForeColor = ColorRowSelectedText,
+            Font = new Font("Segoe UI", 9.25f),
+            Padding = new Padding(10, 0, 10, 0)
+        };
+
+        dgvComplaints.AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle
+        {
+            BackColor = ColorRowAlt,
+            ForeColor = ColorBrandDark,
+            SelectionBackColor = ColorRowSelected,
+            SelectionForeColor = ColorRowSelectedText,
+            Font = new Font("Segoe UI", 9.25f),
+            Padding = new Padding(10, 0, 10, 0)
+        };
+
+        var boldStyle = new DataGridViewCellStyle { Font = new Font("Segoe UI Semibold", 9.25f, FontStyle.Bold) };
 
         dgvComplaints.Columns.AddRange(new DataGridViewColumn[]
         {
-            new DataGridViewTextBoxColumn { DataPropertyName = "ComplaintCode", HeaderText = "CODE", Width = 100, DefaultCellStyle = boldStyle },
+            new DataGridViewTextBoxColumn { DataPropertyName = "ComplaintCode", HeaderText = "CODE", Width = 95, DefaultCellStyle = boldStyle },
             new DataGridViewTextBoxColumn { DataPropertyName = "ClientName", HeaderText = "CLIENT", Width = 150, DefaultCellStyle = boldStyle },
-            new DataGridViewTextBoxColumn { DataPropertyName = "Category", HeaderText = "CATEGORY", Width = 150 },
+            new DataGridViewTextBoxColumn { DataPropertyName = "Category", HeaderText = "CATEGORY", Width = 140 },
             new DataGridViewTextBoxColumn { DataPropertyName = "Severity", HeaderText = "SEVERITY", Width = 110 },
             new DataGridViewTextBoxColumn { DataPropertyName = "Status", HeaderText = "STATUS", Width = 140 },
             new DataGridViewTextBoxColumn { DataPropertyName = "Description", HeaderText = "INCIDENT DESCRIPTION", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill },
-            new DataGridViewTextBoxColumn { DataPropertyName = "CompensationAmount", HeaderText = "REFUND/CREDIT", Width = 120, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "₱#,##0.00", Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold), ForeColor = ColorAccent } },
-            new DataGridViewTextBoxColumn { DataPropertyName = "LoggedDateFormatted", HeaderText = "LOGGED", Width = 110 },
-            new DataGridViewButtonColumn { Name = "ColView", HeaderText = "", Text = "View", UseColumnTextForButtonValue = true, Width = 75, FlatStyle = FlatStyle.Flat },
-            new DataGridViewButtonColumn { Name = "ColResolve", HeaderText = "ACTION", Text = "Resolve", UseColumnTextForButtonValue = true, Width = 85, FlatStyle = FlatStyle.Flat }
+            new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "CompensationAmount",
+                HeaderText = "REFUND/CREDIT",
+                Width = 120,
+                DefaultCellStyle = new DataGridViewCellStyle
+                {
+                    Alignment = DataGridViewContentAlignment.MiddleRight,
+                    Format = "₱#,##0.00",
+                    Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
+                    ForeColor = ColorPrimary
+                }
+            },
+            new DataGridViewTextBoxColumn { DataPropertyName = "LoggedDateFormatted", HeaderText = "LOGGED", Width = 100 },
+            new DataGridViewButtonColumn { Name = "ColView", HeaderText = "", Text = "View", UseColumnTextForButtonValue = true, Width = 74 },
+            new DataGridViewButtonColumn { Name = "ColResolve", HeaderText = "ACTION", Text = "", UseColumnTextForButtonValue = false, Width = 84 }
         });
 
-        foreach (DataGridViewColumn col in dgvComplaints.Columns) col.SortMode = DataGridViewColumnSortMode.NotSortable;
+        foreach (DataGridViewColumn col in dgvComplaints.Columns)
+        {
+            col.SortMode = DataGridViewColumnSortMode.NotSortable;
+        }
 
         dgvComplaints.CellContentClick += Grid_CellContentClick;
         dgvComplaints.CellPainting += DgvComplaints_CellPainting;
+        dgvComplaints.CellMouseMove += DgvComplaints_CellMouseMove;
 
         card.Controls.Add(dgvComplaints);
         wrapper.Controls.Add(card);
@@ -246,14 +370,16 @@ public partial class ComplaintsView : UserControl
             _pipelineData = await _controller.LoadPipelineAsync(_getCompanyId(), branchId, _currentStatusFilter, _currentSearch);
             if (_pipelineData == null) return;
 
-            kpiNew.SetData("NEW COMPLAINTS", _pipelineData.NewCount.ToString(), "Requires triage", Color.FromArgb(220, 38, 38), Color.FromArgb(254, 242, 242), Color.FromArgb(185, 28, 28));
+            kpiNew.SetData("NEW COMPLAINTS", _pipelineData.NewCount.ToString(), "Requires triage", ColorError, Color.FromArgb(254, 242, 242), ColorError);
             kpiInvestigating.SetData("UNDER REVIEW", _pipelineData.InvestigatingCount.ToString(), "In assessment", Color.FromArgb(217, 119, 6), Color.FromArgb(254, 243, 199), Color.FromArgb(180, 83, 9));
-            kpiResolutionRate.SetData("RESOLUTION RATE", $"{_pipelineData.ResolutionRate:0.#}%", $"{_pipelineData.ResolvedCount} Settled", Color.FromArgb(5, 150, 105), Color.FromArgb(236, 253, 245), Color.FromArgb(5, 150, 105));
+            kpiResolutionRate.SetData("RESOLUTION RATE", $"{_pipelineData.ResolutionRate:0.#}%", $"{_pipelineData.ResolvedCount} Settled", ColorSuccess, ColorBadgeBg, ColorSuccess);
             kpiTotal.SetData("TOTAL INCIDENTS", _pipelineData.TotalCount.ToString(), "Scoped showroom", Color.FromArgb(37, 99, 235), Color.FromArgb(239, 246, 255), Color.FromArgb(29, 78, 216));
 
             lblRecordsCount.Text = $"{_pipelineData.Rows.Count} records";
             RenderChevronPills();
+            UpdateFilterTabStyles();
 
+            dgvComplaints.AutoGenerateColumns = false;
             dgvComplaints.DataSource = null;
             dgvComplaints.DataSource = _pipelineData.Rows;
             dgvComplaints.ClearSelection();
@@ -273,10 +399,10 @@ public partial class ComplaintsView : UserControl
 
         var stages = new (string Stage, int Count, Color Bg, Color Fg)[]
         {
-            ("New", _pipelineData.NewCount, Color.FromArgb(254, 242, 242), Color.FromArgb(220, 38, 38)),
+            ("New", _pipelineData.NewCount, Color.FromArgb(254, 242, 242), ColorError),
             ("Under Investigation", _pipelineData.InvestigatingCount, Color.FromArgb(254, 243, 199), Color.FromArgb(180, 83, 9)),
             ("In Progress", _pipelineData.InProgressCount, Color.FromArgb(239, 246, 255), Color.FromArgb(37, 99, 235)),
-            ("Resolved", _pipelineData.ResolvedCount, Color.FromArgb(236, 253, 245), Color.FromArgb(5, 150, 105)),
+            ("Resolved", _pipelineData.ResolvedCount, ColorBadgeBg, ColorSuccess),
             ("Escalated", _pipelineData.EscalatedCount, Color.FromArgb(243, 232, 255), Color.FromArgb(126, 34, 206))
         };
 
@@ -285,14 +411,31 @@ public partial class ComplaintsView : UserControl
             var item = stages[i];
             var container = new Panel { Width = 150, Height = 48, BackColor = Color.Transparent };
             var lblCount = new Label { Text = item.Count.ToString(), Font = new Font("Segoe UI", 12f, FontStyle.Bold), ForeColor = ColorPrimary, AutoSize = true };
-            var badge = new Label { Text = item.Stage, Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold), ForeColor = item.Fg, BackColor = item.Bg, AutoSize = true, Padding = new Padding(8, 2, 8, 2), Location = new Point(0, 24) };
+            var badge = new Label
+            {
+                Text = item.Stage,
+                Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold),
+                ForeColor = item.Fg,
+                BackColor = item.Bg,
+                AutoSize = true,
+                Padding = new Padding(8, 2, 8, 2),
+                Location = new Point(0, 24)
+            };
 
             container.Controls.AddRange(new Control[] { lblCount, badge });
             pnlChevronPills.Controls.Add(container);
 
             if (i < stages.Length - 1)
             {
-                var chevron = new Label { Text = "›", Font = new Font("Segoe UI", 14f), ForeColor = Color.FromArgb(209, 213, 219), Width = 24, Height = 48, TextAlign = ContentAlignment.MiddleCenter };
+                var chevron = new Label
+                {
+                    Text = "›",
+                    Font = new Font("Segoe UI", 14f),
+                    ForeColor = ColorBorder,
+                    Width = 24,
+                    Height = 48,
+                    TextAlign = ContentAlignment.MiddleCenter
+                };
                 pnlChevronPills.Controls.Add(chevron);
             }
         }
@@ -305,35 +448,110 @@ public partial class ComplaintsView : UserControl
         if (e.RowIndex < 0 || e.ColumnIndex < 0 || _pipelineData?.Rows == null || e.RowIndex >= _pipelineData.Rows.Count || e.Graphics == null)
             return;
 
-        var colName = dgvComplaints.Columns[e.ColumnIndex]?.DataPropertyName;
-        if (colName is not ("Severity" or "Status")) return;
-
+        var column = dgvComplaints.Columns[e.ColumnIndex];
+        string colName = column.Name;
+        string dataProp = column.DataPropertyName;
         var row = _pipelineData.Rows[e.RowIndex];
-        string text = (colName == "Severity" ? row.Severity : row.Status) ?? string.Empty;
+        bool isRowSelected = (e.State & DataGridViewElementStates.Selected) != 0;
+        bool isResolved = string.Equals(row.Status, "Resolved", StringComparison.OrdinalIgnoreCase) ||
+                          string.Equals(row.Status, "Closed", StringComparison.OrdinalIgnoreCase);
 
-        var (bg, fg) = text switch
+        // Custom render flat modern action buttons
+        if (colName is "ColView" or "ColResolve")
         {
-            "Critical" or "New" => (Color.FromArgb(254, 242, 242), Color.FromArgb(220, 38, 38)),
-            "High" or "Under Investigation" => (Color.FromArgb(254, 243, 199), Color.FromArgb(180, 83, 9)),
-            "In Progress" => (Color.FromArgb(239, 246, 255), Color.FromArgb(37, 99, 235)),
-            "Resolved" or "Low" => (Color.FromArgb(236, 253, 245), Color.FromArgb(5, 150, 105)),
-            "Escalated" => (Color.FromArgb(243, 232, 255), Color.FromArgb(126, 34, 206)),
-            _ => (Color.FromArgb(243, 244, 246), Color.FromArgb(107, 114, 128))
-        };
+            e.PaintBackground(e.CellBounds, true);
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-        e.PaintBackground(e.ClipBounds, true);
-        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            // Do not paint a "Resolve" button for complaints that are already resolved
+            if (colName == "ColResolve" && isResolved)
+            {
+                e.Handled = true;
+                return;
+            }
 
-        var badgeRect = new Rectangle(e.CellBounds.X + 6, e.CellBounds.Y + 12, 115, 24);
-        using (var brush = new SolidBrush(bg))
-        using (var path = CreateRoundedRectangle(badgeRect, 4))
-        {
+            bool isResolve = (colName == "ColResolve");
+            string btnText = isResolve ? "Resolve" : "View";
+
+            Color btnBg = isResolve
+                ? (isRowSelected ? Color.White : ColorBadgeBg)
+                : (isRowSelected ? Color.FromArgb(240, 220, 225) : ColorActivePill);
+
+            Color btnFg = isResolve
+                ? ColorSuccess
+                : ColorAccent;
+
+            var btnRect = new Rectangle(e.CellBounds.X + 4, e.CellBounds.Y + 8, e.CellBounds.Width - 8, e.CellBounds.Height - 16);
+
+            using var brush = new SolidBrush(btnBg);
+            using var path = CreateRoundedRectangle(btnRect, 6);
             e.Graphics.FillPath(brush, path);
+
+            if (!isResolve)
+            {
+                using var borderPen = new Pen(isRowSelected ? Color.Transparent : ColorBorder, 1f);
+                e.Graphics.DrawPath(borderPen, path);
+            }
+
+            TextRenderer.DrawText(
+                e.Graphics,
+                btnText,
+                new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
+                btnRect,
+                btnFg,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+
+            e.Handled = true;
+            return;
         }
 
-        using var font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold);
-        TextRenderer.DrawText(e.Graphics, text, font, badgeRect, fg, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-        e.Handled = true;
+        // Custom render Severity & Status pill badges
+        if (dataProp is "Severity" or "Status")
+        {
+            e.PaintBackground(e.CellBounds, true);
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+            string text = (dataProp == "Severity" ? row.Severity : row.Status) ?? string.Empty;
+
+            var (bg, fg) = text switch
+            {
+                "Critical" or "New" => (Color.FromArgb(254, 242, 242), ColorError),
+                "High" or "Under Investigation" => (Color.FromArgb(254, 243, 199), Color.FromArgb(180, 83, 9)),
+                "In Progress" => (Color.FromArgb(239, 246, 255), Color.FromArgb(37, 99, 235)),
+                "Resolved" or "Low" => (ColorBadgeBg, ColorSuccess),
+                "Escalated" => (Color.FromArgb(243, 232, 255), Color.FromArgb(126, 34, 206)),
+                _ => (Color.FromArgb(243, 244, 246), ColorNavInactiveText)
+            };
+
+            var badgeRect = new Rectangle(e.CellBounds.X + 6, e.CellBounds.Y + 10, Math.Min(115, e.CellBounds.Width - 12), 24);
+            using (var brush = new SolidBrush(bg))
+            using (var path = CreateRoundedRectangle(badgeRect, 4))
+            {
+                e.Graphics.FillPath(brush, path);
+            }
+
+            using var font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold);
+            TextRenderer.DrawText(e.Graphics, text, font, badgeRect, fg, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+
+            e.Handled = true;
+        }
+    }
+
+    private void DgvComplaints_CellMouseMove(object? sender, DataGridViewCellMouseEventArgs e)
+    {
+        if (e.RowIndex >= 0 && e.ColumnIndex >= 0 && _pipelineData?.Rows != null && e.RowIndex < _pipelineData.Rows.Count)
+        {
+            var colName = dgvComplaints.Columns[e.ColumnIndex]?.Name;
+            var row = _pipelineData.Rows[e.RowIndex];
+            bool isResolved = string.Equals(row.Status, "Resolved", StringComparison.OrdinalIgnoreCase) ||
+                              string.Equals(row.Status, "Closed", StringComparison.OrdinalIgnoreCase);
+
+            if (colName == "ColView" || (colName == "ColResolve" && !isResolved))
+            {
+                dgvComplaints.Cursor = Cursors.Hand;
+                return;
+            }
+        }
+        dgvComplaints.Cursor = Cursors.Default;
     }
 
     private async void Grid_CellContentClick(object? sender, DataGridViewCellEventArgs e)
@@ -358,6 +576,13 @@ public partial class ComplaintsView : UserControl
         }
         else if (colName == "ColResolve")
         {
+            // Guard: Do not allow resolving an already resolved or closed incident
+            if (string.Equals(row.Status, "Resolved", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(row.Status, "Closed", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
             var entity = await _controller.GetComplaintAsync(row.ComplaintId);
             if (entity != null)
             {
@@ -380,17 +605,6 @@ public partial class ComplaintsView : UserControl
             await _controller.SaveComplaintAsync(dlg.ComplaintModel);
             await LoadComplaintsAsync();
         }
-    }
-
-    private static void ApplyRoundedCard(Panel pnl, Color borderColor)
-    {
-        pnl.Paint += (s, e) =>
-        {
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            using var pen = new Pen(borderColor, 1f);
-            using var path = CreateRoundedRectangle(new Rectangle(0, 0, pnl.Width - 1, pnl.Height - 1), 8);
-            e.Graphics.DrawPath(pen, path);
-        };
     }
 
     private static GraphicsPath CreateRoundedRectangle(Rectangle rect, int radius)

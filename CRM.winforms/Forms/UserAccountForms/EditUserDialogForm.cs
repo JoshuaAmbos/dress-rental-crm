@@ -50,7 +50,7 @@ public partial class EditUserDialogForm : Form
         {
             Text = $"Edit Profile: {_username}",
             Font = new Font("Segoe UI Semibold", 12f, FontStyle.Bold),
-            ForeColor = ColorPrimary,
+            ForeColor = ColorAccent,
             Location = new Point(24, 18),
             AutoSize = true
         };
@@ -83,11 +83,11 @@ public partial class EditUserDialogForm : Form
             cmbTenant.Enabled = false;
         }
 
-        btnCancel = new Button { Text = "Cancel", Location = new Point(180, 260), Size = new Size(90, 34), FlatStyle = FlatStyle.Flat, ForeColor = ColorPrimary, BackColor = Color.FromArgb(245, 240, 240) };
+        btnCancel = new Button { Text = "Cancel", Location = new Point(180, 260), Size = new Size(90, 34), FlatStyle = FlatStyle.Flat, ForeColor = ColorAccent, BackColor = Color.FromArgb(245, 240, 240) };
         btnCancel.FlatAppearance.BorderSize = 0;
         btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
 
-        btnSubmit = new Button { Text = "Save Changes", Location = new Point(278, 260), Size = new Size(102, 34), FlatStyle = FlatStyle.Flat, ForeColor = Color.White, BackColor = ColorAccent, Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold) };
+        btnSubmit = new Button { Text = "Save Changes", Location = new Point(278, 260), Size = new Size(102, 34), FlatStyle = FlatStyle.Flat, ForeColor = Color.White, BackColor = ColorPrimary, Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold) };
         btnSubmit.FlatAppearance.BorderSize = 0;
         btnSubmit.Click += async (s, e) =>
         {

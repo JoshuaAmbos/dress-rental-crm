@@ -1,7 +1,6 @@
 ﻿using CRM.domain.Constants;
 using CRM.domain.entities;
 using CRM.infrastructure.data;
-using CRM.winforms.Controls;
 using CRM.winforms.Views;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
@@ -61,7 +60,6 @@ public partial class MainForm : Form
     private Button _btnTerms = null!;
     private Button _btnUsers = null!;
     private Button _btnSettings = null!;
-
 
     public MainForm() : this(new LoginResult
     {
@@ -143,7 +141,7 @@ public partial class MainForm : Form
         BuildSidebarContents();
         Controls.Add(pnlSidebar);
 
-        // Apply role visibility directly after building the sidebar
+        // Apply role permissions directly after building the sidebar
         ApplyRolePermissions();
 
         // Main Content Area Wrapper
@@ -242,14 +240,14 @@ public partial class MainForm : Form
         {
             Location = new Point(0, 52),
             Size = new Size(198, 36),
-            BackColor = Color.White,
+            BackColor = ColorCardBg,
             Cursor = Cursors.Hand
         };
         pnlTenant.Paint += (s, e) =>
         {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             using var pen = new Pen(ColorBorder, 1f);
-            using var path = GraphicsHelper.CreateRoundedRectangle(new Rectangle(0, 0, pnlTenant.Width - 1, pnlTenant.Height - 1), 7);
+            using var path = CreateRoundedPath(new Rectangle(0, 0, pnlTenant.Width - 1, pnlTenant.Height - 1), 7);
             e.Graphics.DrawPath(pen, path);
         };
 
@@ -266,7 +264,7 @@ public partial class MainForm : Form
         };
         lblTenantBadge.Paint += (s, e) =>
         {
-            using var path = GraphicsHelper.CreateRoundedRectangle(new Rectangle(0, 0, 19, 19), 4);
+            using var path = CreateRoundedPath(new Rectangle(0, 0, 19, 19), 4);
             lblTenantBadge.Region = new Region(path);
         };
 
@@ -309,7 +307,7 @@ public partial class MainForm : Form
         {
             Dock = DockStyle.Bottom,
             Height = 56,
-            BackColor = Color.White,
+            BackColor = ColorCardBg,
             Padding = new Padding(0, 8, 0, 0),
             Cursor = Cursors.Hand
         };
@@ -438,14 +436,16 @@ public partial class MainForm : Form
             Padding = new Padding(0, 6, 0, 0)
         };
 
-        //TODO: Replace emoji icons with line icons
+        // Note: With DockStyle.Top, the last control added appears HIGHEST on screen.
+        // We add them in reverse order so the top-to-bottom layout matches the visual design:
+        // Client Directory -> Rental Pipeline -> Garment Catalog -> Inquiries -> Complaints -> Loyalty -> Analytics -> Terms -> Users -> Settings
         _btnSettings = CreateNavButton("⚙️", "System Config", (s, e) => ShowSystemConfigView());
         _btnUsers = CreateNavButton("👥", "User Accounts", (s, e) => ShowUsersView());
-        _btnTerms = CreateNavButton("📜", "Terms & Conditions", (s, e) => ShowTermsView());
+        _btnTerms = CreateNavButton("📜", "Terms and Conditions", (s, e) => ShowTermsView());
         _btnAnalytics = CreateNavButton("📊", "Analytics", (s, e) => ShowDashboardView());
         _btnLoyalty = CreateNavButton("🎗", "Loyalty Awards", (s, e) => ShowLoyaltyAwardsView());
-        _btnInquiries = CreateNavButton("💬", "Inquiries", (s, e) => ShowInquiryView());
         _btnComplaints = CreateNavButton("⚠️", "Complaints", (s, e) => ShowComplaintsView());
+        _btnInquiries = CreateNavButton("💬", "Inquiries", (s, e) => ShowInquiryView());
         _btnCatalog = CreateNavButton("👗", "Garment Catalog", (s, e) => ShowCatalogView());
         _btnRentals = CreateNavButton("📅", "Rental Pipeline", (s, e) => ShowRentalBookingsView());
         _btnCustomers = CreateNavButton("👤", "Client Directory", (s, e) => ShowCustomerProfiles());
@@ -457,7 +457,7 @@ public partial class MainForm : Form
             _btnTerms,
             _btnAnalytics,
             _btnLoyalty,
-            _btnComplaints, // <-- Added here
+            _btnComplaints,
             _btnInquiries,
             _btnCatalog,
             _btnRentals,
@@ -503,7 +503,7 @@ public partial class MainForm : Form
         // 3. Oversight & Analytics (Manager and Admin only)
         _btnAnalytics.Visible = isManager || isAdmin;
 
-        // 4. Terms and Conditions (All 4 roles)
+        // 4. Terms and Conditions (All authenticated boutique roles)
         _btnTerms.Visible = true;
 
         // 5. User Accounts Management (Admin and Super Admin)
@@ -543,13 +543,6 @@ public partial class MainForm : Form
         }
         catch { }
     }
-    public void ShowComplaintsView()
-    {
-        _complaintsView ??= new ComplaintsView(_contextFactory, () => _currentCompanyId, () => _currentBranchId);
-        SwitchView(_complaintsView);
-        _ = _complaintsView.LoadComplaintsAsync();
-        HighlightNavByText("Complaints");
-    }
 
     private void SelectBranch(int? branchId, string branchName, string initial)
     {
@@ -559,40 +552,34 @@ public partial class MainForm : Form
         lblTenantBadge.Text = initial;
         lblTenantName.Text = branchName.Length > 16 ? $"{branchName.Substring(0, 14)}... ▾" : $"{branchName} ▾";
 
-        if (_activeView is InquiriesView)
+        // Refresh currently active view to propagate the selected showroom filter
+        if (_activeView is CustomerProfilesView cv)
         {
-            _inquiriesView = null;
-            ShowInquiryView();
+            _ = cv.LoadCustomerDataAsync();
         }
-        else if (_activeView is ComplaintsView)
+        else if (_activeView is RentalBookingsView bv)
         {
-            _complaintsView = null;
-            ShowComplaintsView();
+            _ = bv.LoadBookingsAsync();
         }
-        else if (_activeView is CustomerProfilesView)
+        else if (_activeView is CatalogView cat)
         {
-            _customerProfilesView = null;
-            ShowCustomerProfiles();
+            _ = cat.LoadGarmentsAsync();
         }
-        else if (_activeView is RentalBookingsView)
+        else if (_activeView is InquiriesView inq)
         {
-            _bookingsView = null;
-            ShowRentalBookingsView();
+            _ = inq.LoadInquiriesAsync();
         }
-        else if (_activeView is CatalogView)
+        else if (_activeView is ComplaintsView comp)
         {
-            _catalogView = null;
-            ShowCatalogView();
+            _ = comp.LoadComplaintsAsync();
         }
-        else if (_activeView is AnalyticsAndReportsView)
+        else if (_activeView is LoyaltyAwardsView loy)
         {
-            _reportsView = null;
-            ShowDashboardView();
+            _ = loy.LoadDataAsync();
         }
-        else if (_activeView is LoyaltyAwardsView)
+        else if (_activeView is AnalyticsAndReportsView rep)
         {
-            _loyaltyAwardsView = null;
-            ShowLoyaltyAwardsView();
+            _ = rep.LoadDashboardDataAsync();
         }
     }
 
@@ -612,7 +599,7 @@ public partial class MainForm : Form
             Margin = new Padding(0, 2, 0, 2)
         };
         btn.FlatAppearance.BorderSize = 0;
-        btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(253, 248, 248);
+        btn.FlatAppearance.MouseOverBackColor = ColorBgSoft;
 
         btn.Click += (s, e) =>
         {
@@ -652,11 +639,13 @@ public partial class MainForm : Form
         _activeView = view;
     }
 
+    // =========================================================================
     // View Navigation Routers
+    // =========================================================================
 
     public void ShowCustomerProfiles()
     {
-        _customerProfilesView = new CustomerProfilesView(_contextFactory, () => _currentCompanyId, () => _currentBranchId);
+        _customerProfilesView ??= new CustomerProfilesView(_contextFactory, () => _currentCompanyId, () => _currentBranchId);
         SwitchView(_customerProfilesView);
         HighlightNavByText("Client Directory");
     }
@@ -677,9 +666,23 @@ public partial class MainForm : Form
 
     public void ShowInquiryView()
     {
-        _inquiriesView = new InquiriesView(_contextFactory, () => _currentCompanyId, () => _currentBranchId);
+        _inquiriesView ??= new InquiriesView(_contextFactory, () => _currentCompanyId, () => _currentBranchId);
         SwitchView(_inquiriesView);
         HighlightNavByText("Inquiries");
+    }
+
+    public void ShowComplaintsView()
+    {
+        _complaintsView ??= new ComplaintsView(_contextFactory, () => _currentCompanyId, () => _currentBranchId);
+        SwitchView(_complaintsView);
+        HighlightNavByText("Complaints");
+    }
+
+    public void ShowLoyaltyAwardsView()
+    {
+        _loyaltyAwardsView ??= new LoyaltyAwardsView(_contextFactory, () => _currentCompanyId, () => _currentBranchId);
+        SwitchView(_loyaltyAwardsView);
+        HighlightNavByText("Loyalty Awards");
     }
 
     public void ShowDashboardView()
@@ -688,13 +691,6 @@ public partial class MainForm : Form
         SwitchView(_reportsView);
         _ = _reportsView.LoadDashboardDataAsync();
         HighlightNavByText("Analytics");
-    }
-
-    public void ShowLoyaltyAwardsView()
-    {
-        _loyaltyAwardsView = new LoyaltyAwardsView(_contextFactory, () => _currentCompanyId, () => _currentBranchId);
-        SwitchView(_loyaltyAwardsView);
-        HighlightNavByText("Loyalty Awards");
     }
 
     public void ShowTermsView()
@@ -712,7 +708,7 @@ public partial class MainForm : Form
 
         _usersView ??= new UserAccountsView(
             _masterContextFactory,
-            _contextFactory, // <-- Passed here
+            _contextFactory,
             _currentCompanyId,
             string.IsNullOrWhiteSpace(_user.CompanyName) ? "Atelier Haute Couture" : _user.CompanyName,
             isSuperAdmin);
@@ -745,6 +741,18 @@ public partial class MainForm : Form
         {
             SetActiveNavButton(match);
         }
+    }
+
+    private static GraphicsPath CreateRoundedPath(Rectangle rect, int radius)
+    {
+        var path = new GraphicsPath();
+        int d = radius * 2;
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 
     private static string GetInitials(string name)

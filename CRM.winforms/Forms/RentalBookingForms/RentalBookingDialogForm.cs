@@ -69,7 +69,7 @@ public partial class RentalBookingDialogForm : Form
         {
             Text = "New Wardrobe Booking",
             Font = new Font("Segoe UI Semibold", 14f, FontStyle.Bold),
-            ForeColor = ColorPrimary,
+            ForeColor = ColorAccent,
             AutoSize = true,
             Location = new Point(24, 14)
         };
@@ -112,11 +112,11 @@ public partial class RentalBookingDialogForm : Form
             Width = 120,
             Height = 31,
             BackColor = ColorBgSoft,
-            ForeColor = ColorAccent,
+            ForeColor = ColorPrimary,
             FlatStyle = FlatStyle.Flat,
             Cursor = Cursors.Hand
         };
-        btnAddNewCustomer.FlatAppearance.BorderColor = ColorAccent;
+        btnAddNewCustomer.FlatAppearance.BorderColor = ColorPrimary;
         btnAddNewCustomer.Click += BtnAddNewCustomer_Click;
 
         top += 44;
@@ -188,7 +188,7 @@ public partial class RentalBookingDialogForm : Form
         {
             Text = "Total Rental Rate: ₱0.00",
             Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold),
-            ForeColor = ColorAccent,
+            ForeColor = ColorPrimary,
             Location = new Point(14, 14),
             AutoSize = true
         };
@@ -196,7 +196,7 @@ public partial class RentalBookingDialogForm : Form
         {
             Text = "Security Deposit: ₱0.00",
             Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold),
-            ForeColor = ColorPrimary,
+            ForeColor = ColorAccent,
             Location = new Point(320, 14),
             AutoSize = true
         };
@@ -210,7 +210,7 @@ public partial class RentalBookingDialogForm : Form
             Location = new Point(28, top),
             Width = 600,
             Font = new Font("Segoe UI", 9f),
-            ForeColor = ColorPrimary
+            ForeColor = ColorAccent
         };
         top += 36;
 
@@ -248,7 +248,7 @@ public partial class RentalBookingDialogForm : Form
             Text = "Confirm Booking",
             Size = new Size(140, 36),
             Location = new Point(520, 12),
-            BackColor = ColorAccent,
+            BackColor = ColorPrimary,
             ForeColor = Color.White,
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),

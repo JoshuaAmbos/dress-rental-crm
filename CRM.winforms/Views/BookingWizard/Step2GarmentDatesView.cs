@@ -1,14 +1,16 @@
 ﻿using CRM.domain.entities;
 using CRM.infrastructure.data;
 using CRM.winforms.Models;
-using static CRM.winforms.Assets.Themes.ColorThemes;
+using System.ComponentModel;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Views;
 
 public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
 {
+    // Dependencies & State
     private readonly Func<TenantCrmDbContext>? _contextFactory;
     private readonly RentalBookingService? _bookingService;
     private readonly Func<int>? _getCompanyId;
@@ -18,6 +20,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
     private readonly HashSet<int> _selectedGarmentIds = new();
     private bool _isUpdatingDates = false;
 
+    // UI Controls
     private Label lblSelectedCustomer = null!;
     private const string CurrencySymbol = "₱";
 
@@ -44,14 +47,17 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
 
     private void ConfigureLayout()
     {
+        DoubleBuffered = true;
         Dock = DockStyle.Fill;
         BackColor = ColorViewBg;
         Padding = new Padding(32, 20, 32, 20);
+        Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
+        // 1. Header Title & Selected Client Banner
         if (lblTitle != null)
         {
             lblTitle.Text = "Select Garment & Dates";
-            lblTitle.Font = new Font("Segoe UI Semibold", 15.5f, FontStyle.Bold);
+            lblTitle.Font = new Font("Segoe UI", 16f, FontStyle.Bold);
             lblTitle.ForeColor = ColorPrimary;
             lblTitle.Location = new Point(32, 20);
             lblTitle.AutoSize = true;
@@ -64,13 +70,14 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             Size = new Size(650, 30),
             Location = new Point(Math.Max(32, Width - 682), 22),
             TextAlign = ContentAlignment.MiddleRight,
-            Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold),
-            ForeColor = ColorPrimary,
+            Font = new Font("Segoe UI Semibold", 9.75f, FontStyle.Bold),
+            ForeColor = ColorAccent,
             Text = "Selected Customer: —"
         };
         Controls.Add(lblSelectedCustomer);
         lblSelectedCustomer.BringToFront();
 
+        // 2. Date Pickers Strip
         if (lblStartDate != null)
         {
             lblStartDate.Text = "Rental Start Date";
@@ -105,15 +112,17 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             dtpEndDate.Format = DateTimePickerFormat.Short;
         }
 
+        // 3. Section Tagline
         if (lblAvailableGarments != null)
         {
             lblAvailableGarments.Text = "AVAILABLE GARMENTS";
             lblAvailableGarments.Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold);
-            lblAvailableGarments.ForeColor = ColorSubtext;
+            lblAvailableGarments.ForeColor = ColorMutedLabel;
             lblAvailableGarments.Location = new Point(32, 134);
             lblAvailableGarments.AutoSize = true;
         }
 
+        // 4. Owner-Drawn Garment Cards ListBox
         if (listBoxGarments != null)
         {
             listBoxGarments.Location = new Point(32, 158);
@@ -179,7 +188,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
 
     public async Task LoadAvailableGarmentsAsync()
     {
-        if (DesignMode || _bookingService == null || _getCompanyId == null)
+        if (DesignMode || LicenseManager.UsageMode == LicenseUsageMode.Designtime || _bookingService == null || _getCompanyId == null)
             return;
 
         try
@@ -234,16 +243,18 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
         bool isSelected = _selectedGarmentIds.Contains(item.GarmentId);
         var bounds = e.Bounds;
 
+        // 1. Fill card gap background
         using (var bgBrush = new SolidBrush(ColorViewBg))
         {
             g.FillRectangle(bgBrush, bounds);
         }
 
+        // 2. Floating Card Bounds
         var cardRect = new Rectangle(bounds.Left + 1, bounds.Top + 3, bounds.Width - 4, bounds.Height - 7);
 
         using (var cardPath = CreateRoundedRectangle(cardRect, 8))
         {
-            using (var fillBrush = new SolidBrush(isSelected ? ColorSelectedBg : ColorCardBg))
+            using (var fillBrush = new SolidBrush(isSelected ? ColorActivePill : ColorCardBg))
             {
                 g.FillPath(fillBrush, cardPath);
             }
@@ -254,7 +265,8 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             }
         }
 
-        int boxSize = 16;
+        // 3. Selection Checkbox Box (18x18 Rounded Box)
+        int boxSize = 18;
         int boxX = cardRect.Left + 18;
         int boxY = cardRect.Top + (cardRect.Height - boxSize) / 2;
         var boxRect = new Rectangle(boxX, boxY, boxSize, boxSize);
@@ -266,12 +278,12 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
                 using var fillBrush = new SolidBrush(ColorAccent);
                 g.FillPath(fillBrush, boxPath);
 
-                using var checkPen = new Pen(Color.White, 1.75f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+                using var checkPen = new Pen(Color.White, 1.85f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
                 g.DrawLines(checkPen, new[]
                 {
-                    new Point(boxRect.Left + 3, boxRect.Top + 8),
-                    new Point(boxRect.Left + 7, boxRect.Top + 12),
-                    new Point(boxRect.Left + 13, boxRect.Top + 4)
+                    new Point(boxRect.Left + 4, boxRect.Top + 9),
+                    new Point(boxRect.Left + 8, boxRect.Top + 13),
+                    new Point(boxRect.Left + 14, boxRect.Top + 5)
                 });
             }
             else
@@ -281,6 +293,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             }
         }
 
+        // 4. Garment Title & Details
         int textLeft = boxX + boxSize + 18;
         int topY = cardRect.Top + 13;
 
@@ -292,7 +305,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             TextRenderer.DrawText(g, subtitle, subFont, new Point(textLeft, topY + 20), ColorSubtext);
         }
 
-        // Price & Dynamic Deposit Display
+        // 5. Price & Dynamic Deposit Display
         using (var priceFont = new Font("Segoe UI Semibold", 10.5f, FontStyle.Bold))
         using (var depFont = new Font("Segoe UI", 8.5f, FontStyle.Regular))
         {
@@ -306,7 +319,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             var depSize = TextRenderer.MeasureText(g, depText, depFont);
 
             int rightMargin = cardRect.Right - 20;
-            TextRenderer.DrawText(g, priceText, priceFont, new Point(rightMargin - priceSize.Width, topY), ColorPrimary);
+            TextRenderer.DrawText(g, priceText, priceFont, new Point(rightMargin - priceSize.Width, topY), ColorAccent);
             TextRenderer.DrawText(g, depText, depFont, new Point(rightMargin - depSize.Width, topY + 21), ColorSubtext);
         }
     }
@@ -350,6 +363,8 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             lblAvailableGarments.Text = $"AVAILABLE GARMENTS ({totalAvailable} available{turnaroundNote})";
         }
     }
+
+    // IBookingWizardStep Implementation
 
     public void OnStepEnter(BookingDraftModel draft)
     {

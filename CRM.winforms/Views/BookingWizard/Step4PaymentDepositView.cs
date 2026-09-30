@@ -1,7 +1,7 @@
 ﻿using CRM.winforms.Models;
-using static CRM.winforms.Assets.Themes.ColorThemes;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Views;
 
@@ -14,17 +14,19 @@ public partial class Step4PaymentDepositView : UserControl, IBookingWizardStep
     {
         "Gcash",
         "Credit Card – Visa",
+        "Credit Card – Mastercard",
         "Credit Card – Amex",
-        "Bank Transfer / ACH",
-        "Cash on Pickup",
-        "Invoice / Net-30"
+        "Bank Transfer / Instapay",
+        "Cash on Pickup"
     };
 
     private Label lblRentalFeeTitle = null!;
     private Label lblRentalFeeAmount = null!;
     private Label lblDiscountTitle = null!;
     private Label lblDiscountAmount = null!;
+    private Label lblDepositTitle = null!;
     private Label lblDepositAmount = null!;
+    private Label lblTotalDueTitle = null!;
     private Label lblTotalDueAmount = null!;
     private Label lblDepositNote = null!;
     private PaymentCardListBox listBoxPaymentMethods = null!;
@@ -40,16 +42,25 @@ public partial class Step4PaymentDepositView : UserControl, IBookingWizardStep
 
     private void BuildLayout()
     {
+        DoubleBuffered = true;
         Dock = DockStyle.Fill;
         BackColor = ColorViewBg;
         Padding = new Padding(32, 20, 32, 20);
         Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
-        var pnlHeader = new Panel { Dock = DockStyle.Top, Height = 36, BackColor = Color.Transparent };
+        // 1. Header (Title only - no subtitle, matching Steps 1, 2, & 3)
+        var pnlHeader = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 36,
+            BackColor = Color.Transparent
+        };
+
         var lblTitle = new Label
         {
             Text = "Payment & Deposit",
-            Font = new Font("Segoe UI Semibold", 15.5f, FontStyle.Bold),
+            UseMnemonic = false,
+            Font = new Font("Segoe UI", 16f, FontStyle.Bold),
             ForeColor = ColorPrimary,
             Location = new Point(0, 0),
             AutoSize = true
@@ -57,21 +68,26 @@ public partial class Step4PaymentDepositView : UserControl, IBookingWizardStep
         pnlHeader.Controls.Add(lblTitle);
 
         var pnlHeaderSpacer = new Panel { Dock = DockStyle.Top, Height = 14, BackColor = Color.Transparent };
-        var pnlFeeCard = BuildFeeBreakdownCard();
-        var pnlCardSpacer = new Panel { Dock = DockStyle.Top, Height = 18, BackColor = Color.Transparent };
 
+        // 2. Fee Breakdown Card
+        var pnlFeeCard = BuildFeeBreakdownCard();
+        var pnlCardSpacer = new Panel { Dock = DockStyle.Top, Height = 16, BackColor = Color.Transparent };
+
+        // 3. Payment Method Section Tag
         var lblMethodHeader = new Label
         {
-            Text = "Payment Method",
-            Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
-            ForeColor = ColorSubtext,
+            Text = "SELECT PAYMENT METHOD",
+            UseMnemonic = false,
+            Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
+            ForeColor = ColorMutedLabel,
             Dock = DockStyle.Top,
-            Height = 26,
+            Height = 24,
             TextAlign = ContentAlignment.BottomLeft
         };
 
         var pnlMethodSpacer = new Panel { Dock = DockStyle.Top, Height = 8, BackColor = Color.Transparent };
 
+        // 4. Owner-Drawn Payment Option Cards
         listBoxPaymentMethods = new PaymentCardListBox
         {
             Dock = DockStyle.Fill,
@@ -91,9 +107,13 @@ public partial class Step4PaymentDepositView : UserControl, IBookingWizardStep
         listBoxPaymentMethods.DrawItem += ListBoxPaymentMethods_DrawItem;
         listBoxPaymentMethods.SelectedIndexChanged += (s, e) =>
         {
-            if (listBoxPaymentMethods.SelectedItem is string m) _selectedPaymentMethod = m;
+            if (listBoxPaymentMethods.SelectedItem is string m)
+            {
+                _selectedPaymentMethod = m;
+            }
         };
 
+        // Assembly (Dock Stacking Order)
         Controls.Add(listBoxPaymentMethods);
         Controls.Add(pnlMethodSpacer);
         Controls.Add(lblMethodHeader);
@@ -108,7 +128,7 @@ public partial class Step4PaymentDepositView : UserControl, IBookingWizardStep
         var card = new Panel
         {
             Dock = DockStyle.Top,
-            Height = 195,
+            Height = 196,
             BackColor = ColorCardBg,
             Padding = new Padding(24, 16, 24, 16)
         };
@@ -120,6 +140,7 @@ public partial class Step4PaymentDepositView : UserControl, IBookingWizardStep
             using var borderPen = new Pen(ColorBorder, 1.25f);
             e.Graphics.DrawPath(borderPen, borderPath);
 
+            // Divider line directly above "Total Due"
             using var dividerPen = new Pen(ColorDivider, 1f);
             e.Graphics.DrawLine(dividerPen, 24, 126, card.Width - 24, 126);
         };
@@ -127,25 +148,115 @@ public partial class Step4PaymentDepositView : UserControl, IBookingWizardStep
         var lblFeeTag = new Label
         {
             Text = "FEE BREAKDOWN",
+            UseMnemonic = false,
             Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
-            ForeColor = ColorSubtext,
+            ForeColor = ColorMutedLabel,
             Location = new Point(24, 14),
             AutoSize = true
         };
 
-        lblRentalFeeTitle = new Label { Text = "Base Rental Fee", Font = new Font("Segoe UI", 9.5f), ForeColor = ColorSubtext, Location = new Point(24, 38), AutoSize = true };
-        lblRentalFeeAmount = new Label { Text = "₱0", Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold), ForeColor = ColorPrimary, Anchor = AnchorStyles.Top | AnchorStyles.Right, Location = new Point(card.Width - 160, 38), Size = new Size(136, 20), TextAlign = ContentAlignment.MiddleRight };
+        // Line 1: Rental Fee
+        lblRentalFeeTitle = new Label
+        {
+            Text = "Base Rental Fee",
+            UseMnemonic = false,
+            Font = new Font("Segoe UI", 9.5f),
+            ForeColor = ColorSubtext,
+            Location = new Point(24, 38),
+            AutoSize = true
+        };
 
-        lblDiscountTitle = new Label { Text = "Loyalty Discount", Font = new Font("Segoe UI", 9.5f), ForeColor = ColorSuccess, Location = new Point(24, 62), AutoSize = true };
-        lblDiscountAmount = new Label { Text = "₱0", Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold), ForeColor = ColorSuccess, Anchor = AnchorStyles.Top | AnchorStyles.Right, Location = new Point(card.Width - 160, 62), Size = new Size(136, 20), TextAlign = ContentAlignment.MiddleRight };
+        lblRentalFeeAmount = new Label
+        {
+            Text = "₱0.00",
+            UseMnemonic = false,
+            Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold),
+            ForeColor = ColorPrimary,
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+            Location = new Point(card.Width - 180, 38),
+            Size = new Size(156, 20),
+            TextAlign = ContentAlignment.MiddleRight
+        };
 
-        var lblDepositTitle = new Label { Text = "Security Deposit", Font = new Font("Segoe UI", 9.5f), ForeColor = ColorSubtext, Location = new Point(24, 86), AutoSize = true };
-        lblDepositAmount = new Label { Text = "₱0", Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold), ForeColor = ColorPrimary, Anchor = AnchorStyles.Top | AnchorStyles.Right, Location = new Point(card.Width - 160, 86), Size = new Size(136, 20), TextAlign = ContentAlignment.MiddleRight };
+        // Line 2: Loyalty Perk / Discount
+        lblDiscountTitle = new Label
+        {
+            Text = "Loyalty Perk",
+            UseMnemonic = false,
+            Font = new Font("Segoe UI", 9.5f),
+            ForeColor = ColorSubtext,
+            Location = new Point(24, 62),
+            AutoSize = true
+        };
 
-        var lblTotalDueTitle = new Label { Text = "Total Due", Font = new Font("Segoe UI Semibold", 12f, FontStyle.Bold), ForeColor = ColorPrimary, Location = new Point(24, 136), AutoSize = true };
-        lblTotalDueAmount = new Label { Text = "₱0", Font = new Font("Segoe UI Semibold", 13.5f, FontStyle.Bold), ForeColor = ColorAccent, Anchor = AnchorStyles.Top | AnchorStyles.Right, Location = new Point(card.Width - 160, 134), Size = new Size(136, 26), TextAlign = ContentAlignment.MiddleRight };
+        lblDiscountAmount = new Label
+        {
+            Text = "₱0.00 (Standard Tier)",
+            UseMnemonic = false,
+            Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold),
+            ForeColor = ColorSubtext,
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+            Location = new Point(card.Width - 260, 62),
+            Size = new Size(236, 20),
+            TextAlign = ContentAlignment.MiddleRight
+        };
 
-        lblDepositNote = new Label { Text = "Deposit of ₱0 is refundable upon return in good condition.", Font = new Font("Segoe UI", 8.5f), ForeColor = ColorSubtext, Location = new Point(24, 168), AutoSize = true };
+        // Line 3: Security Deposit
+        lblDepositTitle = new Label
+        {
+            Text = "Security Deposit Escrow",
+            UseMnemonic = false,
+            Font = new Font("Segoe UI", 9.5f),
+            ForeColor = ColorSubtext,
+            Location = new Point(24, 86),
+            AutoSize = true
+        };
+
+        lblDepositAmount = new Label
+        {
+            Text = "₱0.00",
+            UseMnemonic = false,
+            Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold),
+            ForeColor = ColorPrimary,
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+            Location = new Point(card.Width - 180, 86),
+            Size = new Size(156, 20),
+            TextAlign = ContentAlignment.MiddleRight
+        };
+
+        // Line 4: Total Due (Highlighted)
+        lblTotalDueTitle = new Label
+        {
+            Text = "Total Due",
+            UseMnemonic = false,
+            Font = new Font("Segoe UI Semibold", 12f, FontStyle.Bold),
+            ForeColor = ColorPrimary,
+            Location = new Point(24, 136),
+            AutoSize = true
+        };
+
+        lblTotalDueAmount = new Label
+        {
+            Text = "₱0.00",
+            UseMnemonic = false,
+            Font = new Font("Segoe UI Semibold", 13.5f, FontStyle.Bold),
+            ForeColor = ColorAccent,
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+            Location = new Point(card.Width - 180, 134),
+            Size = new Size(156, 26),
+            TextAlign = ContentAlignment.MiddleRight
+        };
+
+        // Footnote
+        lblDepositNote = new Label
+        {
+            Text = "Deposit is refundable upon return of garments in good condition.",
+            UseMnemonic = false,
+            Font = new Font("Segoe UI", 8.5f),
+            ForeColor = ColorSubtext,
+            Location = new Point(24, 168),
+            AutoSize = true
+        };
 
         card.Controls.AddRange(new Control[]
         {
@@ -162,7 +273,8 @@ public partial class Step4PaymentDepositView : UserControl, IBookingWizardStep
 
     private void ListBoxPaymentMethods_DrawItem(object? sender, DrawItemEventArgs e)
     {
-        if (e.Index < 0 || e.Index >= listBoxPaymentMethods.Items.Count || e.Graphics == null) return;
+        if (e.Index < 0 || e.Index >= listBoxPaymentMethods.Items.Count || e.Graphics == null)
+            return;
 
         string methodName = listBoxPaymentMethods.Items[e.Index].ToString() ?? string.Empty;
         var g = e.Graphics;
@@ -172,24 +284,38 @@ public partial class Step4PaymentDepositView : UserControl, IBookingWizardStep
         bool isSelected = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
         var bounds = e.Bounds;
 
-        using (var bgBrush = new SolidBrush(ColorViewBg)) g.FillRectangle(bgBrush, bounds);
-
-        var cardRect = new Rectangle(bounds.Left + 1, bounds.Top + 2, bounds.Width - 4, bounds.Height - 6);
-        using (var cardPath = CreateRoundedRectangle(cardRect, 6))
+        // Gap Fill
+        using (var bgBrush = new SolidBrush(ColorViewBg))
         {
-            using var fillBrush = new SolidBrush(isSelected ? ColorSelectedBg : ColorCardBg);
-            using var borderPen = new Pen(isSelected ? ColorAccent : ColorBorder, isSelected ? 1.4f : 1f);
-            g.FillPath(fillBrush, cardPath);
-            g.DrawPath(borderPen, cardPath);
+            g.FillRectangle(bgBrush, bounds);
         }
 
+        // Floating Card Container
+        var cardRect = new Rectangle(bounds.Left + 1, bounds.Top + 2, bounds.Width - 4, bounds.Height - 6);
+
+        using (var cardPath = CreateRoundedRectangle(cardRect, 6))
+        {
+            using (var fillBrush = new SolidBrush(isSelected ? ColorActivePill : ColorCardBg))
+            {
+                g.FillPath(fillBrush, cardPath);
+            }
+
+            using (var borderPen = new Pen(isSelected ? ColorAccent : ColorBorder, isSelected ? 1.4f : 1f))
+            {
+                g.DrawPath(borderPen, cardPath);
+            }
+        }
+
+        // Radio Button Indicator
         int radioDiameter = 14;
         int radioX = cardRect.Left + 18;
         int radioY = cardRect.Top + (cardRect.Height - radioDiameter) / 2;
         var radioRect = new Rectangle(radioX, radioY, radioDiameter, radioDiameter);
 
         using (var radioPen = new Pen(isSelected ? ColorAccent : ColorBorder, 1.5f))
+        {
             g.DrawEllipse(radioPen, radioRect);
+        }
 
         if (isSelected)
         {
@@ -200,62 +326,55 @@ public partial class Step4PaymentDepositView : UserControl, IBookingWizardStep
             g.FillEllipse(dotBrush, new Rectangle(dotX, dotY, dotDiameter, dotDiameter));
         }
 
+        // Method Text
         int textLeft = radioX + radioDiameter + 16;
         using var font = new Font("Segoe UI Semibold", 9.75f, FontStyle.Bold);
         var textSize = TextRenderer.MeasureText(g, methodName, font);
         int textY = cardRect.Top + (cardRect.Height - textSize.Height) / 2;
+
         TextRenderer.DrawText(g, methodName, font, new Point(textLeft, textY), ColorPrimary);
     }
+
+    // --- IBookingWizardStep Implementation ---
 
     public void OnStepEnter(BookingDraftModel draft)
     {
         _draft = draft;
 
         int itemCount = _draft.SelectedGarments.Count;
-        decimal subtotal = _draft.SubtotalRentalFee;
-        decimal discount = _draft.LoyaltyDiscountAmount;
+        decimal baseRentalFee = _draft.SubtotalRentalFee;
+        decimal discountAmount = _draft.LoyaltyDiscountAmount;
         decimal deposit = _draft.TotalSecurityDeposit;
         decimal totalDue = _draft.TotalDue;
 
-        if (lblRentalFeeTitle != null)
-            lblRentalFeeTitle.Text = $"Rental Fee ({itemCount} item{(itemCount == 1 ? "" : "s")} · Lease)";
+        lblRentalFeeTitle.Text = $"Base Rental Fee ({itemCount} item{(itemCount == 1 ? "" : "s")})";
+        lblRentalFeeAmount.Text = $"{CurrencySymbol}{baseRentalFee:N2}";
 
-        if (lblRentalFeeAmount != null)
-            lblRentalFeeAmount.Text = $"₱{subtotal:N2}";
-
-        bool hasDiscount = discount > 0;
-
-        if (lblDiscountAmount != null)
-            lblDiscountAmount.Visible = hasDiscount;
-
-        if (lblDiscountTitle != null)
+        if (discountAmount > 0)
         {
-            lblDiscountTitle.Text = $"Loyalty Perk ({_draft.LoyaltyTierName} · {_draft.LoyaltyDiscountPercentage:0.#}%)";
-            lblDiscountTitle.Visible = hasDiscount;
+            lblDiscountTitle.Text = $"Loyalty Perk ({_draft.LoyaltyTierName} – {_draft.LoyaltyDiscountPercentage:0.#}%)";
+            lblDiscountTitle.ForeColor = ColorSuccess;
+            lblDiscountAmount.Text = $"-{CurrencySymbol}{discountAmount:N2}";
+            lblDiscountAmount.ForeColor = ColorSuccess;
+        }
+        else
+        {
+            lblDiscountTitle.Text = "Loyalty Perk";
+            lblDiscountTitle.ForeColor = ColorSubtext;
+            lblDiscountAmount.Text = "₱0.00 (Standard Tier)";
+            lblDiscountAmount.ForeColor = ColorSubtext;
         }
 
-        if (lblDiscountAmount != null)
-        {
-            lblDiscountAmount.Text = $"-₱{discount:N2}";
-            lblDiscountAmount.Visible = hasDiscount;
-        }
-
-        if (lblDepositAmount != null)
-            lblDepositAmount.Text = $"₱{deposit:N2}";
-
-        if (lblDepositNote != null)
-            lblDepositNote.Text = $"Refundable security deposit ({_draft.DepositPercentage:0.#}%) returned upon good condition.";
-
-        if (lblTotalDueAmount != null)
-            lblTotalDueAmount.Text = $"₱{totalDue:N2}";
+        lblDepositAmount.Text = $"{CurrencySymbol}{deposit:N2}";
+        lblTotalDueAmount.Text = $"{CurrencySymbol}{totalDue:N2}";
+        lblDepositNote.Text = $"Refundable security deposit ({_draft.DepositPercentage:0.#}%) returned upon good condition.";
 
         if (!string.IsNullOrWhiteSpace(_draft.SelectedPaymentMethod))
         {
-            _selectedPaymentMethod = _draft.SelectedPaymentMethod;
-            if (listBoxPaymentMethods != null)
+            int index = _paymentMethods.IndexOf(_draft.SelectedPaymentMethod);
+            if (index >= 0)
             {
-                int index = _paymentMethods.IndexOf(_selectedPaymentMethod);
-                if (index >= 0) listBoxPaymentMethods.SelectedIndex = index;
+                listBoxPaymentMethods.SelectedIndex = index;
             }
         }
     }
@@ -281,6 +400,7 @@ public partial class Step4PaymentDepositView : UserControl, IBookingWizardStep
     {
         var path = new GraphicsPath();
         int d = radius * 2;
+        path.StartFigure();
         path.AddArc(rect.X, rect.Y, d, d, 180, 90);
         path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
         path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);

@@ -115,7 +115,7 @@ public partial class CustomerDialogForm : Form
         {
             Text = _customerId.HasValue ? "Edit Client Profile" : "New Client Intake",
             Font = new Font("Segoe UI", 15.5f, FontStyle.Bold),
-            ForeColor = ColorPrimary,
+            ForeColor = ColorAccent,
             Location = new Point(28, 18),
             AutoSize = true
         };
@@ -206,7 +206,7 @@ public partial class CustomerDialogForm : Form
             Size = new Size(100, 38),
             Location = new Point(pnlFooter.Width - 250, 16),
             BackColor = Color.White,
-            ForeColor = ColorPrimary,
+            ForeColor = ColorAccent,
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
             Cursor = Cursors.Hand
@@ -220,7 +220,7 @@ public partial class CustomerDialogForm : Form
             Text = _customerId.HasValue ? "Update Client" : "Create Client",
             Size = new Size(130, 38),
             Location = new Point(pnlFooter.Width - 140, 16),
-            BackColor = ColorAccent,
+            BackColor = ColorPrimary,
             ForeColor = Color.White,
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
@@ -228,7 +228,7 @@ public partial class CustomerDialogForm : Form
         };
         btnSave.FlatAppearance.BorderSize = 0;
         btnSave.MouseEnter += (s, e) => btnSave.BackColor = ColorDustyRoseHover;
-        btnSave.MouseLeave += (s, e) => btnSave.BackColor = ColorAccent;
+        btnSave.MouseLeave += (s, e) => btnSave.BackColor = ColorPrimary;
         btnSave.Click += async (s, e) => await SaveCustomerAsync();
 
         pnlFooter.Controls.AddRange(new Control[] { btnCancel, btnSave });
@@ -279,7 +279,7 @@ public partial class CustomerDialogForm : Form
         {
             BorderStyle = BorderStyle.None,
             Font = new Font("Segoe UI", 9.5f),
-            ForeColor = ColorPrimary,
+            ForeColor = ColorAccent,
             PlaceholderText = placeholder,
             Location = new Point(10, 8),
             Width = width - 20
@@ -304,7 +304,7 @@ public partial class CustomerDialogForm : Form
         {
             DropDownStyle = ComboBoxStyle.DropDownList,
             Font = new Font("Segoe UI", 9.5f),
-            ForeColor = ColorPrimary,
+            ForeColor = ColorAccent,
             Location = new Point(x, y + 20),
             Width = width
         };
@@ -342,7 +342,7 @@ public partial class CustomerDialogForm : Form
         {
             BorderStyle = BorderStyle.None,
             Font = new Font("Segoe UI", 9.5f),
-            ForeColor = ColorPrimary,
+            ForeColor = ColorAccent,
             DecimalPlaces = 1,
             Minimum = 0,
             Maximum = 120,

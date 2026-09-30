@@ -2,15 +2,8 @@
 
 partial class RentalBookingsView
 {
-    /// <summary> 
-    /// Required designer variable.
-    /// </summary>
     private System.ComponentModel.IContainer components = null!;
 
-    /// <summary> 
-    /// Clean up any resources being used.
-    /// </summary>
-    /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
     protected override void Dispose(bool disposing)
     {
         if (disposing && (components != null))
@@ -22,20 +15,20 @@ partial class RentalBookingsView
 
     #region Component Designer generated code
 
-    /// <summary> 
-    /// Required method for Designer support - do not modify 
-    /// the contents of this method with the code editor.
-    /// </summary>
     private void InitializeComponent()
     {
-        DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
-        DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
-        DataGridViewCellStyle dataGridViewCellStyle3 = new DataGridViewCellStyle();
         label1 = new Label();
+        lblSubtitle = new Label();
+        primaryButtonNewBooking = new CRM.winforms.Controls.PrimaryButton();
+        tblKpis = new TableLayoutPanel();
         kpiCardControlActiveLeases = new CRM.winforms.Controls.KpiCardControl();
         kpiCardControlOverdue = new CRM.winforms.Controls.KpiCardControl();
         kpiCardControlUpcomingReturns = new CRM.winforms.Controls.KpiCardControl();
-        primaryButtonNewBooking = new CRM.winforms.Controls.PrimaryButton();
+        pnlFilterStrip = new Panel();
+        pnlFilterTabs = new FlowLayoutPanel();
+        pnlSearch = new Panel();
+        txtSearch = new TextBox();
+        pnlGridCard = new Panel();
         dgvBookings = new DataGridView();
         bookingCodeDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
         clientNameDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
@@ -44,92 +37,180 @@ partial class RentalBookingsView
         feeDepositDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
         stageDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
         actionDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
+        tblKpis.SuspendLayout();
+        pnlFilterStrip.SuspendLayout();
+        pnlSearch.SuspendLayout();
+        pnlGridCard.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)dgvBookings).BeginInit();
         SuspendLayout();
+
         // 
-        // label1
+        // label1 (Page Title)
         // 
         label1.AutoSize = true;
-        label1.Font = new Font("Segoe UI", 20.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
+        label1.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
         label1.ForeColor = Color.FromArgb(38, 22, 24);
-        label1.Location = new Point(33, 28);
+        label1.Location = new Point(32, 24);
         label1.Name = "label1";
-        label1.Size = new Size(382, 37);
-        label1.TabIndex = 1;
-        label1.Text = "Rentals and Returns Pipeline";
-        label1.Click += label1_Click;
+        label1.Size = new Size(328, 32);
+        label1.TabIndex = 0;
+        label1.Text = "Rental & Returns Pipeline";
+
         // 
-        // kpiCardControlActiveLeases
+        // lblSubtitle
         // 
-        kpiCardControlActiveLeases.BackColor = Color.Transparent;
-        kpiCardControlActiveLeases.Location = new Point(33, 93);
-        kpiCardControlActiveLeases.Name = "kpiCardControlActiveLeases";
-        kpiCardControlActiveLeases.Padding = new Padding(14);
-        kpiCardControlActiveLeases.Size = new Size(518, 183);
-        kpiCardControlActiveLeases.TabIndex = 2;
-        // 
-        // kpiCardControlOverdue
-        // 
-        kpiCardControlOverdue.BackColor = Color.Transparent;
-        kpiCardControlOverdue.Location = new Point(596, 93);
-        kpiCardControlOverdue.Name = "kpiCardControlOverdue";
-        kpiCardControlOverdue.Padding = new Padding(14);
-        kpiCardControlOverdue.Size = new Size(518, 183);
-        kpiCardControlOverdue.TabIndex = 3;
-        // 
-        // kpiCardControlUpcomingReturns
-        // 
-        kpiCardControlUpcomingReturns.BackColor = Color.Transparent;
-        kpiCardControlUpcomingReturns.Location = new Point(1161, 93);
-        kpiCardControlUpcomingReturns.Name = "kpiCardControlUpcomingReturns";
-        kpiCardControlUpcomingReturns.Padding = new Padding(14);
-        kpiCardControlUpcomingReturns.Size = new Size(518, 183);
-        kpiCardControlUpcomingReturns.TabIndex = 4;
+        lblSubtitle.AutoSize = true;
+        lblSubtitle.Font = new Font("Segoe UI", 9.5F);
+        lblSubtitle.ForeColor = Color.FromArgb(145, 135, 140);
+        lblSubtitle.Location = new Point(34, 58);
+        lblSubtitle.Name = "lblSubtitle";
+        lblSubtitle.Size = new Size(392, 17);
+        lblSubtitle.TabIndex = 1;
+        lblSubtitle.Text = "Monitor reservations, ongoing fittings, active leases, and returns.";
+
         // 
         // primaryButtonNewBooking
         // 
         primaryButtonNewBooking.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        primaryButtonNewBooking.BackColor = Color.FromArgb(190, 110, 120);
+        primaryButtonNewBooking.BackColor = Color.FromArgb(186, 105, 115);
         primaryButtonNewBooking.FlatAppearance.BorderSize = 0;
         primaryButtonNewBooking.FlatStyle = FlatStyle.Flat;
         primaryButtonNewBooking.Font = new Font("Segoe UI Semibold", 9.5F, FontStyle.Bold);
         primaryButtonNewBooking.ForeColor = Color.White;
-        primaryButtonNewBooking.Location = new Point(1549, 27);
+        primaryButtonNewBooking.Location = new Point(1024, 28);
         primaryButtonNewBooking.Name = "primaryButtonNewBooking";
-        primaryButtonNewBooking.Size = new Size(130, 38);
-        primaryButtonNewBooking.TabIndex = 5;
+        primaryButtonNewBooking.Size = new Size(144, 38);
+        primaryButtonNewBooking.TabIndex = 2;
         primaryButtonNewBooking.Text = "+ New Booking";
         primaryButtonNewBooking.UseVisualStyleBackColor = false;
         primaryButtonNewBooking.Click += PrimaryButtonNewBooking_Click;
+
+        // 
+        // tblKpis (Responsive 3-Column Strip)
+        // 
+        tblKpis.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        tblKpis.ColumnCount = 3;
+        tblKpis.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33333F));
+        tblKpis.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33333F));
+        tblKpis.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33333F));
+        tblKpis.Controls.Add(kpiCardControlActiveLeases, 0, 0);
+        tblKpis.Controls.Add(kpiCardControlOverdue, 1, 0);
+        tblKpis.Controls.Add(kpiCardControlUpcomingReturns, 2, 0);
+        tblKpis.Location = new Point(32, 92);
+        tblKpis.Name = "tblKpis";
+        tblKpis.RowCount = 1;
+        tblKpis.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+        tblKpis.Size = new Size(1136, 120);
+        tblKpis.TabIndex = 3;
+
+        // 
+        // kpiCardControlActiveLeases
+        // 
+        kpiCardControlActiveLeases.BackColor = Color.White;
+        kpiCardControlActiveLeases.Dock = DockStyle.Fill;
+        kpiCardControlActiveLeases.Location = new Point(0, 0);
+        kpiCardControlActiveLeases.Margin = new Padding(0, 0, 10, 0);
+        kpiCardControlActiveLeases.Name = "kpiCardControlActiveLeases";
+        kpiCardControlActiveLeases.Size = new Size(368, 120);
+        kpiCardControlActiveLeases.TabIndex = 0;
+
+        // 
+        // kpiCardControlOverdue
+        // 
+        kpiCardControlOverdue.BackColor = Color.White;
+        kpiCardControlOverdue.Dock = DockStyle.Fill;
+        kpiCardControlOverdue.Location = new Point(383, 0);
+        kpiCardControlOverdue.Margin = new Padding(5, 0, 5, 0);
+        kpiCardControlOverdue.Name = "kpiCardControlOverdue";
+        kpiCardControlOverdue.Size = new Size(368, 120);
+        kpiCardControlOverdue.TabIndex = 1;
+
+        // 
+        // kpiCardControlUpcomingReturns
+        // 
+        kpiCardControlUpcomingReturns.BackColor = Color.White;
+        kpiCardControlUpcomingReturns.Dock = DockStyle.Fill;
+        kpiCardControlUpcomingReturns.Location = new Point(766, 0);
+        kpiCardControlUpcomingReturns.Margin = new Padding(10, 0, 0, 0);
+        kpiCardControlUpcomingReturns.Name = "kpiCardControlUpcomingReturns";
+        kpiCardControlUpcomingReturns.Size = new Size(370, 120);
+        kpiCardControlUpcomingReturns.TabIndex = 2;
+
+        // 
+        // pnlFilterStrip
+        // 
+        pnlFilterStrip.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        pnlFilterStrip.Controls.Add(pnlFilterTabs);
+        pnlFilterStrip.Controls.Add(pnlSearch);
+        pnlFilterStrip.Location = new Point(32, 226);
+        pnlFilterStrip.Name = "pnlFilterStrip";
+        pnlFilterStrip.Size = new Size(1136, 38);
+        pnlFilterStrip.TabIndex = 4;
+
+        // 
+        // pnlFilterTabs
+        // 
+        pnlFilterTabs.Dock = DockStyle.Fill;
+        pnlFilterTabs.Location = new Point(0, 0);
+        pnlFilterTabs.Name = "pnlFilterTabs";
+        pnlFilterTabs.Size = new Size(866, 38);
+        pnlFilterTabs.TabIndex = 0;
+        pnlFilterTabs.WrapContents = false;
+
+        // 
+        // pnlSearch
+        // 
+        pnlSearch.BackColor = Color.White;
+        pnlSearch.Controls.Add(txtSearch);
+        pnlSearch.Dock = DockStyle.Right;
+        pnlSearch.Location = new Point(866, 0);
+        pnlSearch.Name = "pnlSearch";
+        pnlSearch.Size = new Size(270, 38);
+        pnlSearch.TabIndex = 1;
+        pnlSearch.Paint += (s, e) =>
+        {
+            using var pen = new Pen(Color.FromArgb(234, 223, 217), 1f);
+            e.Graphics.DrawRectangle(pen, 0, 0, pnlSearch.Width - 1, pnlSearch.Height - 1);
+        };
+
+        // 
+        // txtSearch
+        // 
+        txtSearch.BorderStyle = BorderStyle.None;
+        txtSearch.Font = new Font("Segoe UI", 9.5F);
+        txtSearch.Location = new Point(12, 10);
+        txtSearch.Name = "txtSearch";
+        txtSearch.Size = new Size(246, 17);
+        txtSearch.TabIndex = 0;
+
+        // 
+        // pnlGridCard (White Container Card with 1px Border)
+        // 
+        pnlGridCard.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+        pnlGridCard.BackColor = Color.White;
+        pnlGridCard.Controls.Add(dgvBookings);
+        pnlGridCard.Location = new Point(32, 276);
+        pnlGridCard.Name = "pnlGridCard";
+        pnlGridCard.Padding = new Padding(1);
+        pnlGridCard.Size = new Size(1136, 460);
+        pnlGridCard.TabIndex = 5;
+        pnlGridCard.Paint += (s, e) =>
+        {
+            using var pen = new Pen(Color.FromArgb(234, 223, 217), 1f);
+            e.Graphics.DrawRectangle(pen, 0, 0, pnlGridCard.Width - 1, pnlGridCard.Height - 1);
+        };
+
         // 
         // dgvBookings
         // 
         dgvBookings.AllowUserToAddRows = false;
         dgvBookings.AllowUserToDeleteRows = false;
         dgvBookings.AllowUserToResizeRows = false;
-        dataGridViewCellStyle1.BackColor = Color.FromArgb(250, 244, 244);
-        dataGridViewCellStyle1.ForeColor = Color.FromArgb(44, 34, 38);
-        dataGridViewCellStyle1.Padding = new Padding(12, 2, 12, 2);
-        dataGridViewCellStyle1.SelectionBackColor = Color.FromArgb(190, 110, 120);
-        dataGridViewCellStyle1.SelectionForeColor = Color.White;
-        dgvBookings.AlternatingRowsDefaultCellStyle = dataGridViewCellStyle1;
-        dgvBookings.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-        dgvBookings.AutoGenerateColumns = false;
         dgvBookings.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
         dgvBookings.BackgroundColor = Color.White;
-        dgvBookings.BorderStyle = BorderStyle.Fixed3D;
+        dgvBookings.BorderStyle = BorderStyle.None;
         dgvBookings.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
         dgvBookings.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
-        dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft;
-        dataGridViewCellStyle2.BackColor = Color.FromArgb(249, 241, 241);
-        dataGridViewCellStyle2.Font = new Font("Segoe UI Semibold", 9.5F, FontStyle.Bold, GraphicsUnit.Point, 0);
-        dataGridViewCellStyle2.ForeColor = Color.FromArgb(38, 22, 24);
-        dataGridViewCellStyle2.Padding = new Padding(12, 0, 12, 0);
-        dataGridViewCellStyle2.SelectionBackColor = Color.FromArgb(249, 241, 241);
-        dataGridViewCellStyle2.SelectionForeColor = Color.FromArgb(38, 22, 24);
-        dataGridViewCellStyle2.WrapMode = DataGridViewTriState.False;
-        dgvBookings.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle2;
-        dgvBookings.ColumnHeadersHeight = 44;
         dgvBookings.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
         dgvBookings.Columns.AddRange(new DataGridViewColumn[] {
             bookingCodeDataGridViewTextBoxColumn,
@@ -140,101 +221,84 @@ partial class RentalBookingsView
             stageDataGridViewTextBoxColumn,
             actionDataGridViewTextBoxColumn
         });
-        dataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleLeft;
-        dataGridViewCellStyle3.BackColor = Color.White;
-        dataGridViewCellStyle3.Font = new Font("Segoe UI", 9.5F, FontStyle.Regular, GraphicsUnit.Point, 0);
-        dataGridViewCellStyle3.ForeColor = Color.FromArgb(44, 34, 38);
-        dataGridViewCellStyle3.Padding = new Padding(12, 2, 12, 2);
-        dataGridViewCellStyle3.SelectionBackColor = Color.FromArgb(190, 110, 120);
-        dataGridViewCellStyle3.SelectionForeColor = Color.White;
-        dataGridViewCellStyle3.WrapMode = DataGridViewTriState.False;
-        dgvBookings.DefaultCellStyle = dataGridViewCellStyle3;
-        dgvBookings.EnableHeadersVisualStyles = false;
-        dgvBookings.GridColor = Color.FromArgb(234, 223, 217);
-        dgvBookings.Location = new Point(33, 298);
+        dgvBookings.Dock = DockStyle.Fill;
+        dgvBookings.GridColor = Color.FromArgb(242, 235, 235);
+        dgvBookings.Location = new Point(1, 1);
         dgvBookings.MultiSelect = false;
         dgvBookings.Name = "dgvBookings";
         dgvBookings.ReadOnly = true;
         dgvBookings.RowHeadersVisible = false;
         dgvBookings.RowTemplate.Height = 44;
         dgvBookings.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-        dgvBookings.Size = new Size(1646, 624);
-        dgvBookings.TabIndex = 7;
+        dgvBookings.Size = new Size(1134, 458);
+        dgvBookings.TabIndex = 0;
+
         // 
-        // bookingCodeDataGridViewTextBoxColumn
+        // Column Configurations
         // 
-        bookingCodeDataGridViewTextBoxColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
         bookingCodeDataGridViewTextBoxColumn.DataPropertyName = "BookingCode";
         bookingCodeDataGridViewTextBoxColumn.FillWeight = 85F;
         bookingCodeDataGridViewTextBoxColumn.HeaderText = "CODE";
         bookingCodeDataGridViewTextBoxColumn.Name = "bookingCodeDataGridViewTextBoxColumn";
         bookingCodeDataGridViewTextBoxColumn.ReadOnly = true;
-        // 
-        // clientNameDataGridViewTextBoxColumn
-        // 
-        clientNameDataGridViewTextBoxColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+
         clientNameDataGridViewTextBoxColumn.DataPropertyName = "ClientName";
         clientNameDataGridViewTextBoxColumn.FillWeight = 130F;
         clientNameDataGridViewTextBoxColumn.HeaderText = "CLIENT";
         clientNameDataGridViewTextBoxColumn.Name = "clientNameDataGridViewTextBoxColumn";
         clientNameDataGridViewTextBoxColumn.ReadOnly = true;
-        // 
-        // garmentSummaryDataGridViewTextBoxColumn
-        // 
-        garmentSummaryDataGridViewTextBoxColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+
         garmentSummaryDataGridViewTextBoxColumn.DataPropertyName = "GarmentSummary";
-        garmentSummaryDataGridViewTextBoxColumn.FillWeight = 190F;
+        garmentSummaryDataGridViewTextBoxColumn.FillWeight = 180F;
         garmentSummaryDataGridViewTextBoxColumn.HeaderText = "GARMENT";
         garmentSummaryDataGridViewTextBoxColumn.Name = "garmentSummaryDataGridViewTextBoxColumn";
         garmentSummaryDataGridViewTextBoxColumn.ReadOnly = true;
-        // 
-        // rentalPeriodDataGridViewTextBoxColumn
-        // 
-        rentalPeriodDataGridViewTextBoxColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
-        rentalPeriodDataGridViewTextBoxColumn.FillWeight = 160F;
+
+        rentalPeriodDataGridViewTextBoxColumn.DataPropertyName = "RentalPeriod";
+        rentalPeriodDataGridViewTextBoxColumn.FillWeight = 150F;
         rentalPeriodDataGridViewTextBoxColumn.HeaderText = "RENTAL PERIOD";
-        rentalPeriodDataGridViewTextBoxColumn.Name = "ColRentalPeriod";
+        rentalPeriodDataGridViewTextBoxColumn.Name = "rentalPeriodDataGridViewTextBoxColumn";
         rentalPeriodDataGridViewTextBoxColumn.ReadOnly = true;
-        // 
-        // feeDepositDataGridViewTextBoxColumn
-        // 
-        feeDepositDataGridViewTextBoxColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+
+        feeDepositDataGridViewTextBoxColumn.DataPropertyName = "FeeDeposit";
         feeDepositDataGridViewTextBoxColumn.FillWeight = 110F;
         feeDepositDataGridViewTextBoxColumn.HeaderText = "FEE / DEPOSIT";
-        feeDepositDataGridViewTextBoxColumn.Name = "ColFeeDeposit";
+        feeDepositDataGridViewTextBoxColumn.Name = "feeDepositDataGridViewTextBoxColumn";
         feeDepositDataGridViewTextBoxColumn.ReadOnly = true;
-        // 
-        // stageDataGridViewTextBoxColumn
-        // 
-        stageDataGridViewTextBoxColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+
+        stageDataGridViewTextBoxColumn.DataPropertyName = "Stage";
         stageDataGridViewTextBoxColumn.FillWeight = 90F;
         stageDataGridViewTextBoxColumn.HeaderText = "STAGE";
-        stageDataGridViewTextBoxColumn.Name = "ColStage";
+        stageDataGridViewTextBoxColumn.Name = "stageDataGridViewTextBoxColumn";
         stageDataGridViewTextBoxColumn.ReadOnly = true;
-        // 
-        // actionDataGridViewTextBoxColumn
-        // 
-        actionDataGridViewTextBoxColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+
+        actionDataGridViewTextBoxColumn.DataPropertyName = "ActionText";
         actionDataGridViewTextBoxColumn.FillWeight = 110F;
         actionDataGridViewTextBoxColumn.HeaderText = "ACTIONS";
-        actionDataGridViewTextBoxColumn.Name = "ColAction";
+        actionDataGridViewTextBoxColumn.Name = "actionDataGridViewTextBoxColumn";
         actionDataGridViewTextBoxColumn.ReadOnly = true;
+
         // 
         // RentalBookingsView
         // 
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
         BackColor = Color.FromArgb(249, 241, 241);
-        Controls.Add(dgvBookings);
+        Controls.Add(pnlGridCard);
+        Controls.Add(pnlFilterStrip);
+        Controls.Add(tblKpis);
+        Controls.Add(lblSubtitle);
         Controls.Add(primaryButtonNewBooking);
-        Controls.Add(kpiCardControlUpcomingReturns);
-        Controls.Add(kpiCardControlOverdue);
-        Controls.Add(kpiCardControlActiveLeases);
         Controls.Add(label1);
         Name = "RentalBookingsView";
-        Padding = new Padding(30);
-        Size = new Size(1712, 955);
+        Padding = new Padding(32, 24, 32, 24);
+        Size = new Size(1200, 760);
         Load += RentalBookingsView_Load;
+        tblKpis.ResumeLayout(false);
+        pnlFilterStrip.ResumeLayout(false);
+        pnlSearch.ResumeLayout(false);
+        pnlSearch.PerformLayout();
+        pnlGridCard.ResumeLayout(false);
         ((System.ComponentModel.ISupportInitialize)dgvBookings).EndInit();
         ResumeLayout(false);
         PerformLayout();
@@ -243,10 +307,17 @@ partial class RentalBookingsView
     #endregion
 
     private Label label1;
+    private Label lblSubtitle;
+    private Controls.PrimaryButton primaryButtonNewBooking;
+    private TableLayoutPanel tblKpis;
     private Controls.KpiCardControl kpiCardControlActiveLeases;
     private Controls.KpiCardControl kpiCardControlOverdue;
     private Controls.KpiCardControl kpiCardControlUpcomingReturns;
-    private Controls.PrimaryButton primaryButtonNewBooking;
+    private Panel pnlFilterStrip;
+    private FlowLayoutPanel pnlFilterTabs;
+    private Panel pnlSearch;
+    private TextBox txtSearch;
+    private Panel pnlGridCard;
     private DataGridView dgvBookings;
     private DataGridViewTextBoxColumn bookingCodeDataGridViewTextBoxColumn;
     private DataGridViewTextBoxColumn clientNameDataGridViewTextBoxColumn;

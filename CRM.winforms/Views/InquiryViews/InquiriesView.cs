@@ -1,6 +1,7 @@
 ﻿using CRM.infrastructure.data;
 using CRM.winforms.Controls;
 using CRM.winforms.Forms;
+using Microsoft.EntityFrameworkCore;
 using System.Drawing.Drawing2D;
 using static CRM.winforms.Assets.Themes.ColorThemes;
 
@@ -8,6 +9,9 @@ namespace CRM.winforms.Views;
 
 public partial class InquiriesView : UserControl
 {
+    private const string ConnectionString =
+        "Server=10.0.2.2,1433;Database=DB_TenantCRM;User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;";
+
     private readonly Func<TenantCrmDbContext> _contextFactory;
     private readonly Func<int> _getCompanyId;
     private readonly Func<int?>? _getBranchId;
@@ -17,24 +21,38 @@ public partial class InquiriesView : UserControl
     private string _currentSearch = string.Empty;
     private InquiryPipelineDto? _pipelineData;
 
+    // Header & Actions
+    private Button btnLog = null!;
+
     // KPI Cards
     private KpiCardControl kpiNew = null!;
     private KpiCardControl kpiInReview = null!;
     private KpiCardControl kpiRate = null!;
     private KpiCardControl kpiTotal = null!;
 
+    // Chevron Strip & Filter Bar
     private FlowLayoutPanel pnlChevronPills = null!;
     private FlowLayoutPanel pnlFilterTabs = null!;
     private TextBox txtSearch = null!;
     private Label lblRecordsCount = null!;
     private DataGridView dgvInquiries = null!;
 
+    public InquiriesView() : this(() =>
+    {
+        var options = new DbContextOptionsBuilder<TenantCrmDbContext>()
+            .UseSqlServer(ConnectionString)
+            .Options;
+        return new TenantCrmDbContext(options);
+    }, () => 1, null)
+    {
+    }
+
     public InquiriesView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId)
         : this(contextFactory, getCompanyId, null)
     {
     }
 
-    public InquiriesView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId, Func<int?>? getBranchId)
+    public InquiriesView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId, Func<int?>? getBranchId = null)
     {
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         _getCompanyId = getCompanyId ?? throw new ArgumentNullException(nameof(getCompanyId));
@@ -47,22 +65,37 @@ public partial class InquiriesView : UserControl
 
     private void InitializeLayout()
     {
+        DoubleBuffered = true;
         Dock = DockStyle.Fill;
         BackColor = ColorViewBg;
         AutoScroll = true;
         Padding = new Padding(32, 24, 32, 24);
         Font = new Font("Segoe UI", 9.5f);
 
+        // 1. Header & Primary Action
         var pnlHeader = new Panel { Dock = DockStyle.Top, Height = 64, BackColor = Color.Transparent };
-        var lblTitle = new Label { Text = "Client Inquiries", Font = new Font("Segoe UI", 18f, FontStyle.Bold), ForeColor = ColorPrimary, AutoSize = true };
-        var lblSub = new Label { Text = "Track inbound wardrobe consultations and convert qualified prospects to bookings.", Font = new Font("Segoe UI", 9.75f), ForeColor = ColorSubtext, Location = new Point(0, 34), AutoSize = true };
+        var lblTitle = new Label
+        {
+            Text = "Client Inquiries",
+            UseMnemonic = false,
+            Font = new Font("Segoe UI", 18f, FontStyle.Bold),
+            ForeColor = ColorPrimary,
+            AutoSize = true
+        };
+        var lblSub = new Label
+        {
+            Text = "Track inbound wardrobe consultations and convert qualified prospects to bookings.",
+            UseMnemonic = false,
+            Font = new Font("Segoe UI", 9.75f),
+            ForeColor = ColorSubtext,
+            Location = new Point(0, 34),
+            AutoSize = true
+        };
 
-        var btnLog = new Button
+        btnLog = new Button
         {
             Text = "+ Log Inquiry",
-            Size = new Size(130, 36),
-            Location = new Point(Width - 130 - 64, 14),
-            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+            Size = new Size(130, 38),
             BackColor = ColorAccent,
             ForeColor = Color.White,
             FlatStyle = FlatStyle.Flat,
@@ -70,10 +103,19 @@ public partial class InquiriesView : UserControl
             Cursor = Cursors.Hand
         };
         btnLog.FlatAppearance.BorderSize = 0;
+        btnLog.MouseEnter += (s, e) => btnLog.BackColor = ColorAccentHover;
+        btnLog.MouseLeave += (s, e) => btnLog.BackColor = ColorAccent;
         btnLog.Click += BtnLog_Click;
+
+        pnlHeader.Resize += (s, e) =>
+        {
+            btnLog.Location = new Point(Math.Max(0, pnlHeader.ClientSize.Width - btnLog.Width), 12);
+        };
+        btnLog.Location = new Point(Math.Max(0, pnlHeader.ClientSize.Width - btnLog.Width), 12);
 
         pnlHeader.Controls.AddRange(new Control[] { lblTitle, lblSub, btnLog });
 
+        // 2. Sections
         var pnlKpis = BuildKpiRow();
         var pnlChevronStrip = BuildChevronStrip();
         var pnlFilterStrip = BuildFilterStrip();
@@ -88,7 +130,7 @@ public partial class InquiriesView : UserControl
 
     private Panel BuildKpiRow()
     {
-        var pnl = new Panel { Dock = DockStyle.Top, Height = 140, Padding = new Padding(0, 6, 0, 10), BackColor = Color.Transparent };
+        var pnl = new Panel { Dock = DockStyle.Top, Height = 136, Padding = new Padding(0, 6, 0, 10), BackColor = Color.Transparent };
         var table = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4, RowCount = 1 };
         for (int i = 0; i < 4; i++) table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
 
@@ -105,8 +147,15 @@ public partial class InquiriesView : UserControl
     private Panel BuildChevronStrip()
     {
         var wrapper = new Panel { Dock = DockStyle.Top, Height = 84, Padding = new Padding(0, 4, 0, 10), BackColor = Color.Transparent };
-        var card = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(16, 12, 16, 12) };
-        ApplyRoundedCard(card, ColorBorder);
+        var card = new Panel { Dock = DockStyle.Fill, BackColor = ColorCardBg, Padding = new Padding(16, 12, 16, 12) };
+
+        card.Paint += (s, e) =>
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            using var pen = new Pen(ColorBorder, 1f);
+            using var path = CreateRoundedRectangle(new Rectangle(0, 0, card.Width - 1, card.Height - 1), 8);
+            e.Graphics.DrawPath(pen, path);
+        };
 
         pnlChevronPills = new FlowLayoutPanel
         {
@@ -125,7 +174,7 @@ public partial class InquiriesView : UserControl
     {
         var pnl = new Panel { Dock = DockStyle.Top, Height = 48, BackColor = Color.Transparent, Padding = new Padding(0, 8, 0, 8) };
 
-        var pnlSearch = new Panel { Location = new Point(0, 4), Size = new Size(240, 32), BackColor = Color.White };
+        var pnlSearch = new Panel { Location = new Point(0, 4), Size = new Size(250, 34), BackColor = ColorCardBg };
         pnlSearch.Paint += (s, e) =>
         {
             using var pen = new Pen(ColorBorder, 1f);
@@ -135,11 +184,11 @@ public partial class InquiriesView : UserControl
         txtSearch = new TextBox
         {
             BorderStyle = BorderStyle.None,
-            Width = 220,
-            Location = new Point(8, 7),
+            Width = 230,
+            Location = new Point(8, 8),
             Font = new Font("Segoe UI", 9.5f),
-            ForeColor = ColorPrimary,
-            PlaceholderText = "Search by name, event, ID..."
+            ForeColor = ColorBrandDark,
+            PlaceholderText = "Search by client, event, code..."
         };
         txtSearch.TextChanged += async (s, e) =>
         {
@@ -148,10 +197,19 @@ public partial class InquiriesView : UserControl
         };
         pnlSearch.Controls.Add(txtSearch);
 
-        pnlFilterTabs = new FlowLayoutPanel { Location = new Point(255, 4), AutoSize = true, WrapContents = false, BackColor = Color.Transparent };
+        pnlFilterTabs = new FlowLayoutPanel { Location = new Point(265, 4), AutoSize = true, WrapContents = false, BackColor = Color.Transparent };
         InitFilterTabs();
 
-        lblRecordsCount = new Label { Dock = DockStyle.Right, Text = "0 records", ForeColor = ColorSubtext, AutoSize = true, Font = new Font("Segoe UI", 9f), TextAlign = ContentAlignment.MiddleRight, Padding = new Padding(0, 8, 0, 0) };
+        lblRecordsCount = new Label
+        {
+            Dock = DockStyle.Right,
+            Text = "0 records",
+            ForeColor = ColorSubtext,
+            AutoSize = true,
+            Font = new Font("Segoe UI", 9f),
+            TextAlign = ContentAlignment.MiddleRight,
+            Padding = new Padding(0, 8, 0, 0)
+        };
 
         pnl.Controls.AddRange(new Control[] { pnlSearch, pnlFilterTabs, lblRecordsCount });
         return pnl;
@@ -168,7 +226,7 @@ public partial class InquiriesView : UserControl
                 Tag = tab,
                 AutoSize = true,
                 Height = 32,
-                Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI Semibold", 8.75f, FontStyle.Bold),
                 FlatStyle = FlatStyle.Flat,
                 Margin = new Padding(0, 0, 6, 0),
                 Cursor = Cursors.Hand
@@ -192,9 +250,10 @@ public partial class InquiriesView : UserControl
             if (c is Button btn && btn.Tag is string tabName)
             {
                 bool isSelected = string.Equals(_currentStatusFilter, tabName, StringComparison.OrdinalIgnoreCase);
-                btn.BackColor = isSelected ? ColorAccent : Color.White;
-                btn.ForeColor = isSelected ? Color.White : ColorPrimary;
+                btn.BackColor = isSelected ? ColorAccent : ColorCardBg;
+                btn.ForeColor = isSelected ? Color.White : ColorNavInactiveText;
                 btn.FlatAppearance.BorderSize = isSelected ? 0 : 1;
+                btn.FlatAppearance.BorderColor = isSelected ? ColorAccent : ColorBorder;
             }
         }
     }
@@ -202,46 +261,79 @@ public partial class InquiriesView : UserControl
     private Panel BuildTableCard()
     {
         var wrapper = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 6, 0, 4), BackColor = Color.Transparent };
-        var card = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(12) };
-        ApplyRoundedCard(card, ColorBorder);
+        var card = new Panel { Dock = DockStyle.Fill, BackColor = ColorCardBg, Padding = new Padding(1) };
+
+        card.Paint += (s, e) =>
+        {
+            using var pen = new Pen(ColorBorder, 1f);
+            e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+        };
 
         dgvInquiries = new DataGridView
         {
             Dock = DockStyle.Fill,
-            BackgroundColor = Color.White,
+            BackgroundColor = ColorCardBg,
             BorderStyle = BorderStyle.None,
             CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
-            GridColor = Color.FromArgb(244, 237, 237),
+            GridColor = ColorDivider,
             RowHeadersVisible = false,
             AllowUserToAddRows = false,
+            AllowUserToDeleteRows = false,
+            AllowUserToResizeRows = false,
             ReadOnly = true,
             AutoGenerateColumns = false,
             SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-            RowTemplate = { Height = 48 }
+            MultiSelect = false,
+            RowTemplate = { Height = 44 },
+            ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None,
+            EnableHeadersVisualStyles = false,
+            ColumnHeadersHeight = 42
         };
 
-        dgvInquiries.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
-        dgvInquiries.EnableHeadersVisualStyles = false;
-        dgvInquiries.ColumnHeadersDefaultCellStyle.BackColor = Color.White;
-        dgvInquiries.ColumnHeadersDefaultCellStyle.ForeColor = ColorSubtext;
-        dgvInquiries.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold);
-        dgvInquiries.ColumnHeadersDefaultCellStyle.Padding = new Padding(8, 0, 8, 0);
-        dgvInquiries.ColumnHeadersHeight = 38;
+        dgvInquiries.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
+        {
+            BackColor = ColorCardBg,
+            ForeColor = ColorMutedLabel,
+            SelectionBackColor = ColorCardBg,
+            SelectionForeColor = ColorMutedLabel,
+            Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
+            Padding = new Padding(10, 0, 10, 0)
+        };
 
-        var boldStyle = new DataGridViewCellStyle { Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold) };
+        dgvInquiries.DefaultCellStyle = new DataGridViewCellStyle
+        {
+            BackColor = ColorCardBg,
+            ForeColor = ColorBrandDark,
+            SelectionBackColor = ColorRowSelected,
+            SelectionForeColor = ColorRowSelectedText,
+            Font = new Font("Segoe UI", 9.25f),
+            Padding = new Padding(10, 0, 10, 0)
+        };
+
+        dgvInquiries.AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle
+        {
+            BackColor = ColorRowAlt,
+            ForeColor = ColorBrandDark,
+            SelectionBackColor = ColorRowSelected,
+            SelectionForeColor = ColorRowSelectedText,
+            Font = new Font("Segoe UI", 9.25f),
+            Padding = new Padding(10, 0, 10, 0)
+        };
+
+        var boldStyle = new DataGridViewCellStyle { Font = new Font("Segoe UI Semibold", 9.25f, FontStyle.Bold) };
 
         dgvInquiries.Columns.AddRange(new DataGridViewColumn[]
         {
-            new DataGridViewTextBoxColumn { DataPropertyName = "InquiryCode", HeaderText = "ID", Width = 100, DefaultCellStyle = boldStyle },
-            new DataGridViewTextBoxColumn { DataPropertyName = "ClientName", HeaderText = "CLIENT", Width = 160, DefaultCellStyle = boldStyle },
-            new DataGridViewTextBoxColumn { DataPropertyName = "EventType", HeaderText = "EVENT", Width = 130 },
-            new DataGridViewTextBoxColumn { DataPropertyName = "EventDateFormatted", HeaderText = "EVENT DATE", Width = 120 },
+            new DataGridViewTextBoxColumn { DataPropertyName = "InquiryCode", HeaderText = "CODE", Width = 95, DefaultCellStyle = boldStyle },
+            new DataGridViewTextBoxColumn { DataPropertyName = "ClientName", HeaderText = "CLIENT", Width = 150, DefaultCellStyle = boldStyle },
+            new DataGridViewTextBoxColumn { DataPropertyName = "EventType", HeaderText = "EVENT", Width = 120 },
+            new DataGridViewTextBoxColumn { DataPropertyName = "EventDateFormatted", HeaderText = "EVENT DATE", Width = 110 },
             new DataGridViewTextBoxColumn { DataPropertyName = "GarmentRequest", HeaderText = "GARMENT REQUEST", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill },
             new DataGridViewTextBoxColumn { DataPropertyName = "BudgetRange", HeaderText = "BUDGET", Width = 110 },
             new DataGridViewTextBoxColumn { DataPropertyName = "Priority", HeaderText = "PRIORITY", Width = 100 },
-            new DataGridViewTextBoxColumn { DataPropertyName = "Status", HeaderText = "STATUS", Width = 100 },
-            new DataGridViewButtonColumn { Name = "ColView", HeaderText = "", Text = "View", UseColumnTextForButtonValue = true, Width = 75, FlatStyle = FlatStyle.Flat },
-            new DataGridViewButtonColumn { Name = "ColConvert", HeaderText = "ACTIONS", Text = "Convert", UseColumnTextForButtonValue = true, Width = 85, FlatStyle = FlatStyle.Flat }
+            new DataGridViewTextBoxColumn { DataPropertyName = "Status", HeaderText = "STATUS", Width = 105 },
+            new DataGridViewButtonColumn { Name = "ColView", HeaderText = "", Text = "View", UseColumnTextForButtonValue = true, Width = 74 },
+            new DataGridViewButtonColumn { Name = "ColConvert", HeaderText = "ACTIONS", Text = "", UseColumnTextForButtonValue = false, Width = 84 }
         });
 
         foreach (DataGridViewColumn col in dgvInquiries.Columns)
@@ -251,6 +343,7 @@ public partial class InquiriesView : UserControl
 
         dgvInquiries.CellContentClick += Grid_CellContentClick;
         dgvInquiries.CellPainting += DgvInquiries_CellPainting;
+        dgvInquiries.CellMouseMove += DgvInquiries_CellMouseMove;
 
         card.Controls.Add(dgvInquiries);
         wrapper.Controls.Add(card);
@@ -265,14 +358,17 @@ public partial class InquiriesView : UserControl
             _pipelineData = await _controller.LoadPipelineAsync(_getCompanyId(), branchId, _currentStatusFilter, _currentSearch);
             if (_pipelineData == null) return;
 
-            kpiNew.SetData("NEW INQUIRIES", _pipelineData.NewCount.ToString(), "Unactioned", ColorAccent, Color.FromArgb(254, 242, 243), ColorAccent);
+            kpiNew.SetData("NEW INQUIRIES", _pipelineData.NewCount.ToString(), "Unactioned", ColorAccent, ColorActivePill, ColorAccent);
             kpiInReview.SetData("IN REVIEW", _pipelineData.InReviewCount.ToString(), "Being assessed", Color.FromArgb(217, 119, 6), Color.FromArgb(254, 243, 199), Color.FromArgb(180, 83, 9));
-            kpiRate.SetData("CONVERSION RATE", $"{_pipelineData.ConversionRate:0.#}%", "Inquiries → Bookings", Color.FromArgb(5, 150, 105), Color.FromArgb(236, 253, 245), Color.FromArgb(5, 150, 105));
-            kpiTotal.SetData("TOTAL INQUIRIES", _pipelineData.TotalCount.ToString(), "Scoped showroom", Color.FromArgb(37, 99, 235), Color.FromArgb(239, 246, 255), Color.FromArgb(29, 78, 216));
+            kpiRate.SetData("CONVERSION RATE", $"{_pipelineData.ConversionRate:0.#}%", "Inquiries → Bookings", ColorSuccess, ColorBadgeBg, ColorSuccess);
+            kpiTotal.SetData("TOTAL INQUIRIES", _pipelineData.TotalCount.ToString(), "Active showroom", Color.FromArgb(37, 99, 235), Color.FromArgb(239, 246, 255), Color.FromArgb(29, 78, 216));
 
             lblRecordsCount.Text = $"{_pipelineData.Rows.Count} records";
-            RenderChevronPills();
 
+            RenderChevronPills();
+            UpdateFilterTabStyles();
+
+            dgvInquiries.AutoGenerateColumns = false;
             dgvInquiries.DataSource = null;
             dgvInquiries.DataSource = _pipelineData.Rows;
             dgvInquiries.ClearSelection();
@@ -295,8 +391,8 @@ public partial class InquiriesView : UserControl
             ("New", _pipelineData.NewCount, Color.FromArgb(239, 246, 255), Color.FromArgb(37, 99, 235)),
             ("In Review", _pipelineData.InReviewCount, Color.FromArgb(254, 243, 199), Color.FromArgb(180, 83, 9)),
             ("Quoted", _pipelineData.QuotedCount, Color.FromArgb(243, 232, 255), Color.FromArgb(126, 34, 206)),
-            ("Converted", _pipelineData.ConvertedCount, Color.FromArgb(236, 253, 245), Color.FromArgb(5, 150, 105)),
-            ("Closed", _pipelineData.ClosedCount, Color.FromArgb(243, 244, 246), Color.FromArgb(107, 114, 128))
+            ("Converted", _pipelineData.ConvertedCount, ColorBadgeBg, ColorSuccess),
+            ("Closed", _pipelineData.ClosedCount, Color.FromArgb(243, 244, 246), ColorNavInactiveText)
         };
 
         for (int i = 0; i < stages.Length; i++)
@@ -304,14 +400,31 @@ public partial class InquiriesView : UserControl
             var item = stages[i];
             var container = new Panel { Width = 150, Height = 48, BackColor = Color.Transparent };
             var lblCount = new Label { Text = item.Count.ToString(), Font = new Font("Segoe UI", 12f, FontStyle.Bold), ForeColor = ColorPrimary, AutoSize = true };
-            var badge = new Label { Text = item.Stage, Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold), ForeColor = item.BadgeText, BackColor = item.BadgeBg, AutoSize = true, Padding = new Padding(8, 2, 8, 2), Location = new Point(0, 24) };
+            var badge = new Label
+            {
+                Text = item.Stage,
+                Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold),
+                ForeColor = item.BadgeText,
+                BackColor = item.BadgeBg,
+                AutoSize = true,
+                Padding = new Padding(8, 2, 8, 2),
+                Location = new Point(0, 24)
+            };
 
             container.Controls.AddRange(new Control[] { lblCount, badge });
             pnlChevronPills.Controls.Add(container);
 
             if (i < stages.Length - 1)
             {
-                var chevron = new Label { Text = "›", Font = new Font("Segoe UI", 14f), ForeColor = Color.FromArgb(209, 213, 219), Width = 24, Height = 48, TextAlign = ContentAlignment.MiddleCenter };
+                var chevron = new Label
+                {
+                    Text = "›",
+                    Font = new Font("Segoe UI", 14f),
+                    ForeColor = ColorBorder,
+                    Width = 24,
+                    Height = 48,
+                    TextAlign = ContentAlignment.MiddleCenter
+                };
                 pnlChevronPills.Controls.Add(chevron);
             }
         }
@@ -324,37 +437,112 @@ public partial class InquiriesView : UserControl
         if (e.RowIndex < 0 || e.ColumnIndex < 0 || _pipelineData?.Rows == null || e.RowIndex >= _pipelineData.Rows.Count || e.Graphics == null)
             return;
 
-        var colName = dgvInquiries.Columns[e.ColumnIndex]?.DataPropertyName;
-        if (colName is not ("Priority" or "Status")) return;
-
+        var column = dgvInquiries.Columns[e.ColumnIndex];
+        string colName = column.Name;
+        string dataProp = column.DataPropertyName;
         var row = _pipelineData.Rows[e.RowIndex];
-        string text = (colName == "Priority" ? row.Priority : row.Status) ?? string.Empty;
+        bool isRowSelected = (e.State & DataGridViewElementStates.Selected) != 0;
+        bool isConvertedOrClosed = string.Equals(row.Status, "Converted", StringComparison.OrdinalIgnoreCase) ||
+                                  string.Equals(row.Status, "Closed", StringComparison.OrdinalIgnoreCase);
 
-        var (bg, fg) = text switch
+        // Custom render flat modern action buttons
+        if (colName is "ColView" or "ColConvert")
         {
-            "High" => (Color.FromArgb(254, 242, 242), Color.FromArgb(220, 38, 38)),
-            "Medium" => (Color.FromArgb(254, 243, 199), Color.FromArgb(180, 83, 9)),
-            "New" => (Color.FromArgb(239, 246, 255), Color.FromArgb(37, 99, 235)),
-            "In Review" => (Color.FromArgb(254, 243, 199), Color.FromArgb(180, 83, 9)),
-            "Quoted" => (Color.FromArgb(243, 232, 255), Color.FromArgb(126, 34, 206)),
-            "Converted" => (Color.FromArgb(236, 253, 245), Color.FromArgb(5, 150, 105)),
-            _ => (Color.FromArgb(243, 244, 246), Color.FromArgb(107, 114, 128))
-        };
+            e.PaintBackground(e.CellBounds, true);
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-        e.PaintBackground(e.ClipBounds, true);
-        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            // Do not paint "Convert" button for inquiries that are already Converted or Closed
+            if (colName == "ColConvert" && isConvertedOrClosed)
+            {
+                e.Handled = true;
+                return;
+            }
 
-        var badgeRect = new Rectangle(e.CellBounds.X + 6, e.CellBounds.Y + 12, 76, 24);
-        using (var brush = new SolidBrush(bg))
-        using (var path = GraphicsHelper.CreateRoundedRectangle(badgeRect, 4))
-        {
+            bool isConvert = (colName == "ColConvert");
+            string btnText = isConvert ? "Convert" : "View";
+
+            Color btnBg = isConvert
+                ? (isRowSelected ? Color.White : ColorBadgeBg)
+                : (isRowSelected ? Color.FromArgb(240, 220, 225) : ColorActivePill);
+
+            Color btnFg = isConvert
+                ? ColorSuccess
+                : ColorAccent;
+
+            var btnRect = new Rectangle(e.CellBounds.X + 4, e.CellBounds.Y + 8, e.CellBounds.Width - 8, e.CellBounds.Height - 16);
+
+            using var brush = new SolidBrush(btnBg);
+            using var path = CreateRoundedRectangle(btnRect, 6);
             e.Graphics.FillPath(brush, path);
+
+            if (!isConvert)
+            {
+                using var borderPen = new Pen(isRowSelected ? Color.Transparent : ColorBorder, 1f);
+                e.Graphics.DrawPath(borderPen, path);
+            }
+
+            TextRenderer.DrawText(
+                e.Graphics,
+                btnText,
+                new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
+                btnRect,
+                btnFg,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+
+            e.Handled = true;
+            return;
         }
 
-        using var font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold);
-        TextRenderer.DrawText(e.Graphics, text, font, badgeRect, fg, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+        // Custom render Status & Priority pill badges
+        if (dataProp is "Priority" or "Status")
+        {
+            e.PaintBackground(e.CellBounds, true);
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-        e.Handled = true;
+            string text = (dataProp == "Priority" ? row.Priority : row.Status) ?? string.Empty;
+
+            var (bg, fg) = text switch
+            {
+                "High" => (Color.FromArgb(254, 242, 242), Color.FromArgb(220, 38, 38)),
+                "Medium" => (Color.FromArgb(254, 243, 199), Color.FromArgb(180, 83, 9)),
+                "Low" => (Color.FromArgb(243, 244, 246), Color.FromArgb(107, 114, 128)),
+                "New" => (Color.FromArgb(239, 246, 255), Color.FromArgb(37, 99, 235)),
+                "In Review" => (Color.FromArgb(254, 243, 199), Color.FromArgb(180, 83, 9)),
+                "Quoted" => (Color.FromArgb(243, 232, 255), Color.FromArgb(126, 34, 206)),
+                "Converted" => (ColorBadgeBg, ColorSuccess),
+                _ => (Color.FromArgb(243, 244, 246), ColorNavInactiveText)
+            };
+
+            var badgeRect = new Rectangle(e.CellBounds.X + 6, e.CellBounds.Y + 10, 78, 24);
+            using (var brush = new SolidBrush(bg))
+            using (var path = CreateRoundedRectangle(badgeRect, 4))
+            {
+                e.Graphics.FillPath(brush, path);
+            }
+
+            using var font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold);
+            TextRenderer.DrawText(e.Graphics, text, font, badgeRect, fg, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+
+            e.Handled = true;
+        }
+    }
+
+    private void DgvInquiries_CellMouseMove(object? sender, DataGridViewCellMouseEventArgs e)
+    {
+        if (e.RowIndex >= 0 && e.ColumnIndex >= 0 && _pipelineData?.Rows != null && e.RowIndex < _pipelineData.Rows.Count)
+        {
+            var colName = dgvInquiries.Columns[e.ColumnIndex]?.Name;
+            var row = _pipelineData.Rows[e.RowIndex];
+            bool isConvertedOrClosed = string.Equals(row.Status, "Converted", StringComparison.OrdinalIgnoreCase) ||
+                                      string.Equals(row.Status, "Closed", StringComparison.OrdinalIgnoreCase);
+
+            if (colName == "ColView" || (colName == "ColConvert" && !isConvertedOrClosed))
+            {
+                dgvInquiries.Cursor = Cursors.Hand;
+                return;
+            }
+        }
+        dgvInquiries.Cursor = Cursors.Default;
     }
 
     private async void Grid_CellContentClick(object? sender, DataGridViewCellEventArgs e)
@@ -380,6 +568,13 @@ public partial class InquiriesView : UserControl
         }
         else if (colName == "ColConvert")
         {
+            // Guard: Do not allow converting an already converted or closed inquiry
+            if (string.Equals(row.Status, "Converted", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(row.Status, "Closed", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
             var confirm = MessageBox.Show(
                 $"Convert inquiry {row.InquiryCode} for '{row.ClientName}' into a confirmed booking draft?",
                 "Convert to Booking",
@@ -406,14 +601,16 @@ public partial class InquiriesView : UserControl
         }
     }
 
-    private static void ApplyRoundedCard(Panel pnl, Color borderColor)
+    private static GraphicsPath CreateRoundedRectangle(Rectangle rect, int radius)
     {
-        pnl.Paint += (s, e) =>
-        {
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            using var pen = new Pen(borderColor, 1f);
-            using var path = GraphicsHelper.CreateRoundedRectangle(new Rectangle(0, 0, pnl.Width - 1, pnl.Height - 1), 8);
-            e.Graphics.DrawPath(pen, path);
-        };
+        var path = new GraphicsPath();
+        int d = radius * 2;
+        path.StartFigure();
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 }

@@ -40,66 +40,70 @@ partial class Step2GarmentDatesView
         // lblTitle
         // 
         lblTitle.AutoSize = true;
-        lblTitle.Font = new Font("Segoe UI Semibold", 15.75F, FontStyle.Bold, GraphicsUnit.Point, 0);
+        lblTitle.Font = new Font("Segoe UI", 16F, FontStyle.Bold, GraphicsUnit.Point, 0);
         lblTitle.ForeColor = Color.FromArgb(38, 22, 24);
-        lblTitle.Location = new Point(0, 0);
+        lblTitle.Location = new Point(32, 20);
         lblTitle.Name = "lblTitle";
-        lblTitle.Size = new Size(261, 30);
+        lblTitle.Size = new Size(256, 30);
         lblTitle.TabIndex = 0;
-        lblTitle.Text = "Select Garment and Dates";
+        lblTitle.Text = "Select Garment & Dates";
+        lblTitle.UseMnemonic = false;
         // 
         // lblStartDate
         // 
         lblStartDate.AutoSize = true;
-        lblStartDate.Font = new Font("Segoe UI", 9F);
+        lblStartDate.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
         lblStartDate.ForeColor = Color.FromArgb(145, 135, 140);
-        lblStartDate.Location = new Point(2, 68);
+        lblStartDate.Location = new Point(32, 64);
         lblStartDate.Name = "lblStartDate";
-        lblStartDate.Size = new Size(94, 15);
-        lblStartDate.TabIndex = 2;
+        lblStartDate.Size = new Size(97, 15);
+        lblStartDate.TabIndex = 1;
         lblStartDate.Text = "Rental Start Date";
+        lblStartDate.UseMnemonic = false;
         // 
         // dtpStartDate
         // 
         dtpStartDate.CalendarFont = new Font("Segoe UI", 9.5F);
-        dtpStartDate.Font = new Font("Segoe UI", 9.5F);
+        dtpStartDate.Font = new Font("Segoe UI", 9.5F, FontStyle.Regular, GraphicsUnit.Point, 0);
         dtpStartDate.Format = DateTimePickerFormat.Short;
-        dtpStartDate.Location = new Point(2, 88);
+        dtpStartDate.Location = new Point(32, 86);
         dtpStartDate.Name = "dtpStartDate";
-        dtpStartDate.Size = new Size(200, 24);
-        dtpStartDate.TabIndex = 3;
+        dtpStartDate.Size = new Size(240, 29);
+        dtpStartDate.TabIndex = 2;
         // 
         // lblEndDate
         // 
         lblEndDate.AutoSize = true;
-        lblEndDate.Font = new Font("Segoe UI", 9F);
+        lblEndDate.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
         lblEndDate.ForeColor = Color.FromArgb(145, 135, 140);
-        lblEndDate.Location = new Point(220, 68);
+        lblEndDate.Location = new Point(296, 64);
         lblEndDate.Name = "lblEndDate";
-        lblEndDate.Size = new Size(90, 15);
-        lblEndDate.TabIndex = 4;
+        lblEndDate.Size = new Size(93, 15);
+        lblEndDate.TabIndex = 3;
         lblEndDate.Text = "Rental End Date";
+        lblEndDate.UseMnemonic = false;
         // 
         // dtpEndDate
         // 
         dtpEndDate.CalendarFont = new Font("Segoe UI", 9.5F);
-        dtpEndDate.Font = new Font("Segoe UI", 9.5F);
+        dtpEndDate.Font = new Font("Segoe UI", 9.5F, FontStyle.Regular, GraphicsUnit.Point, 0);
         dtpEndDate.Format = DateTimePickerFormat.Short;
-        dtpEndDate.Location = new Point(220, 88);
+        dtpEndDate.Location = new Point(296, 86);
         dtpEndDate.Name = "dtpEndDate";
-        dtpEndDate.Size = new Size(200, 24);
-        dtpEndDate.TabIndex = 5;
+        dtpEndDate.Size = new Size(240, 29);
+        dtpEndDate.TabIndex = 4;
         // 
         // lblAvailableGarments
         // 
         lblAvailableGarments.AutoSize = true;
-        lblAvailableGarments.Font = new Font("Segoe UI Semibold", 8.5F, FontStyle.Bold);
-        lblAvailableGarments.ForeColor = Color.FromArgb(145, 135, 140);
-        lblAvailableGarments.Location = new Point(2, 130);
+        lblAvailableGarments.Font = new Font("Segoe UI Semibold", 8.5F, FontStyle.Bold, GraphicsUnit.Point, 0);
+        lblAvailableGarments.ForeColor = Color.FromArgb(140, 124, 126);
+        lblAvailableGarments.Location = new Point(32, 134);
         lblAvailableGarments.Name = "lblAvailableGarments";
-        lblAvailableGarments.Size = new Size(132, 15);
-        lblAvailableGarments.TabIndex = 6;
+        lblAvailableGarments.Size = new Size(130, 15);
+        lblAvailableGarments.TabIndex = 5;
         lblAvailableGarments.Text = "AVAILABLE GARMENTS";
+        lblAvailableGarments.UseMnemonic = false;
         // 
         // listBoxGarments
         // 
@@ -110,10 +114,10 @@ partial class Step2GarmentDatesView
         listBoxGarments.FormattingEnabled = true;
         listBoxGarments.IntegralHeight = false;
         listBoxGarments.ItemHeight = 68;
-        listBoxGarments.Location = new Point(2, 154);
+        listBoxGarments.Location = new Point(32, 158);
         listBoxGarments.Name = "listBoxGarments";
-        listBoxGarments.Size = new Size(1600, 480);
-        listBoxGarments.TabIndex = 7;
+        listBoxGarments.Size = new Size(1546, 455);
+        listBoxGarments.TabIndex = 6;
         // 
         // Step2GarmentDatesView
         // 
@@ -128,6 +132,7 @@ partial class Step2GarmentDatesView
         Controls.Add(lblStartDate);
         Controls.Add(lblTitle);
         Name = "Step2GarmentDatesView";
+        Padding = new Padding(32, 20, 32, 20);
         Size = new Size(1610, 645);
         ResumeLayout(false);
         PerformLayout();

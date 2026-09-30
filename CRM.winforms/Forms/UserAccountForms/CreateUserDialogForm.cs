@@ -52,7 +52,7 @@ public partial class CreateUserDialogForm : Form
         {
             Text = "Provision Boutique User Account",
             Font = new Font("Segoe UI Semibold", 13f, FontStyle.Bold),
-            ForeColor = ColorPrimary,
+            ForeColor = ColorAccent,
             Location = new Point(24, 18),
             AutoSize = true
         };
@@ -77,7 +77,7 @@ public partial class CreateUserDialogForm : Form
             Size = new Size(48, 26),
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI", 10f),
-            ForeColor = ColorPrimary,
+            ForeColor = ColorAccent,
             BackColor = Color.FromArgb(245, 240, 240),
             Cursor = Cursors.Hand
         };
@@ -114,7 +114,7 @@ public partial class CreateUserDialogForm : Form
             Location = new Point(222, 410),
             Size = new Size(90, 36),
             FlatStyle = FlatStyle.Flat,
-            ForeColor = ColorPrimary,
+            ForeColor = ColorAccent,
             BackColor = Color.FromArgb(245, 240, 240),
             Cursor = Cursors.Hand
         };
@@ -128,7 +128,7 @@ public partial class CreateUserDialogForm : Form
             Size = new Size(100, 36),
             FlatStyle = FlatStyle.Flat,
             ForeColor = Color.White,
-            BackColor = ColorAccent,
+            BackColor = ColorPrimary,
             Font = new Font("Segoe UI Semibold", 9.25f, FontStyle.Bold),
             Cursor = Cursors.Hand
         };
