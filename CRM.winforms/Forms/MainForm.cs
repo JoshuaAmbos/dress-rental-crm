@@ -530,8 +530,7 @@ public partial class MainForm : Form
 
     public void ShowTenantsManagementView()
     {
-        var config = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        var provisioningService = new TenantProvisioningService(_masterContextFactory(), config);
+        var provisioningService = new TenantProvisioningService(_masterContextFactory());
 
         _tenantsView ??= new TenantsManagementView(_masterContextFactory, provisioningService);
         SwitchView(_tenantsView);
