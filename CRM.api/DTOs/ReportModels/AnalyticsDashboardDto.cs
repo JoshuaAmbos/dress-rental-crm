@@ -10,11 +10,11 @@ public class AnalyticsDashboardDto
     public int TotalActiveGarments { get; set; }
     public int CurrentlyRentedGarments { get; set; }
 
-    public List<MonthlyRevenueMetric> MonthlyRevenueTrend { get; set; } = new();
-    public List<StageDistributionMetric> StageDistribution { get; set; } = new();
-    public List<TopGarmentReportRow> TopPerformingGarments { get; set; } = new();
-    public List<TopCustomerReportRow> TopValuedCustomers { get; set; } = new();
-    public List<RentalLedgerRowDto> AuditLedger { get; set; } = new();
+    public List<MonthlyRevenueMetric> MonthlyRevenueTrend { get; set; } = [];
+    public List<StageDistributionMetric> StageDistribution { get; set; } = [];
+    public List<TopGarmentReportRow> TopPerformingGarments { get; set; } = [];
+    public List<TopCustomerReportRow> TopValuedCustomers { get; set; } = [];
+    public List<RentalLedgerRowDto> AuditLedger { get; set; } = [];
 }
 
 public class MonthlyRevenueMetric

@@ -1,5 +1,5 @@
-﻿using CRM.api.Services;
-using CRM.domain.entities;
+﻿using CRM.domain.entities;
+using CRM.infrastructure.services;
 using Microsoft.EntityFrameworkCore;
 
 namespace CRM.api.Endpoints;
@@ -10,35 +10,55 @@ public static class TenantEndpoints
     {
         var group = routes.MapGroup("/tenant/{companyId:int}");
 
+        // Diagnostics
         routes.MapGet("/test-tenant/{companyId:int}", async (int companyId, ITenantDbContextFactory factory) =>
         {
             await using var db = await factory.CreateAsync(companyId);
-            var rentalItemCount = await db.RentalItems.CountAsync();
+            var rentalItemCount = await db.Garments.CountAsync();
             return Results.Ok(new { companyId, rentalItemCount });
         });
 
+        // GARMENT WARDROBE CATALOG ENDPOINTS
         group.MapGet("/rental-items", async (int companyId, ITenantDbContextFactory factory) =>
         {
             await using var db = await factory.CreateAsync(companyId);
-            var items = await db.RentalItems.AsNoTracking().OrderBy(x => x.GarmentId).ToListAsync();
+            var items = await db.Garments
+                .AsNoTracking()
+                .OrderBy(x => x.GarmentId)
+                .ToListAsync();
             return Results.Ok(items);
         });
 
+        group.MapPost("/rental-items", async (int companyId, Garment rentalItem, ITenantDbContextFactory factory) =>
+        {
+            await using var db = await factory.CreateAsync(companyId);
+            rentalItem.CompanyId = companyId;
+            db.Garments.Add(rentalItem);
+            await db.SaveChangesAsync();
+            return Results.Created($"/tenant/{companyId}/rental-items/{rentalItem.GarmentId}", rentalItem);
+        });
+
+        // CUSTOMER DIRECTORY
         group.MapGet("/customers", async (int companyId, ITenantDbContextFactory factory) =>
         {
             await using var db = await factory.CreateAsync(companyId);
-            var customers = await db.Customers.AsNoTracking().OrderBy(x => x.CustomerId).ToListAsync();
+            var customers = await db.Customers
+                .AsNoTracking()
+                .OrderBy(x => x.CustomerId)
+                .ToListAsync();
             return Results.Ok(customers);
         });
 
         group.MapPost("/customers", async (int companyId, Customer customer, ITenantDbContextFactory factory) =>
         {
             await using var db = await factory.CreateAsync(companyId);
+            customer.CompanyId = companyId;
             db.Customers.Add(customer);
             await db.SaveChangesAsync();
             return Results.Created($"/tenant/{companyId}/customers/{customer.CustomerId}", customer);
         });
 
+        // RENTAL BOOKINGS PIPELINE
         group.MapGet("/bookings", async (int companyId, ITenantDbContextFactory factory) =>
         {
             await using var db = await factory.CreateAsync(companyId);
@@ -66,6 +86,7 @@ public static class TenantEndpoints
             if (!customerExists)
                 return Results.NotFound(new { error = $"Customer with ID {booking.CustomerId} not found." });
 
+            booking.CompanyId = companyId;
             booking.CreatedAt = DateTime.UtcNow;
             db.RentalBookings.Add(booking);
             await db.SaveChangesAsync();

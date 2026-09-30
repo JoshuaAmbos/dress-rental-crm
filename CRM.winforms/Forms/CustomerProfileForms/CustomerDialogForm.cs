@@ -415,7 +415,7 @@ public partial class CustomerDialogForm : Form
             return;
         }
 
-        var cleanPhone = new string(phone.Where(char.IsDigit).ToArray());
+        var cleanPhone = new string([.. phone.Where(char.IsDigit)]);
         if (cleanPhone.Length < 7 || cleanPhone.Length > 15)
         {
             MessageBox.Show("Please enter a valid contact phone number.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);

@@ -165,7 +165,18 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
             Padding = new Padding(24, 0, 24, 0)
         };
 
-        card.Resize += (s, e) => card.Invalidate();
+        // Reposition labels on resize so they remain visible regardless of form size
+        card.Resize += (s, e) =>
+        {
+            foreach (Control ctrl in card.Controls)
+            {
+                if (ctrl is Label lbl && lbl.TextAlign == ContentAlignment.MiddleRight)
+                {
+                    lbl.Left = Math.Max(220, card.ClientSize.Width - lbl.Width - 24);
+                }
+            }
+            card.Invalidate();
+        };
 
         card.Paint += (s, e) =>
         {
@@ -216,10 +227,9 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
             UseMnemonic = false,
             Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold),
             ForeColor = ColorPrimary,
-            Anchor = AnchorStyles.Top | AnchorStyles.Right,
-            Location = new Point(Math.Max(240, container.Width - 524), y + 11),
             Size = new Size(500, 22),
-            TextAlign = ContentAlignment.MiddleRight
+            TextAlign = ContentAlignment.MiddleRight,
+            Location = new Point(Math.Max(220, container.Width - 524), y + 11)
         };
 
         container.Controls.Add(lblTag);
@@ -233,7 +243,10 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
         _draft = draft;
 
         lblBookingIdVal.Text = "Pending (Auto-generated)";
-        lblClientVal.Text = _draft.SelectedCustomer is { } c ? $"{c.FirstName} {c.LastName}".Trim() : "—";
+
+        string clientName = _draft.SelectedCustomer is { } c ? $"{c.FirstName} {c.LastName}".Trim() : "";
+        lblClientVal.Text = string.IsNullOrWhiteSpace(clientName) ? "—" : clientName;
+
         lblGarmentVal.Text = _draft.SelectedGarments.Count switch
         {
             1 => _draft.SelectedGarments[0].StyleName,

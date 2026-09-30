@@ -41,7 +41,7 @@ public partial class AnalyticsAndReportsView : UserControl
     private DataGridView dgvAuditLedger = null!;
 
     // Cached state
-    private List<RentalLedgerRowDto> _currentLedger = new();
+    private List<RentalLedgerRowDto> _currentLedger = [];
 
     // Parameterless constructor for WinForms Designer
     public AnalyticsAndReportsView() : this(() =>

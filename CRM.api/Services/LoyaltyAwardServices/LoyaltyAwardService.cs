@@ -61,7 +61,7 @@ public class LoyaltyAwardService
             // Scope customer's booking spend to the branch if selected
             var validBookings = branchId.HasValue
                 ? c.RentalBookings.Where(b => b.BranchId == branchId.Value).ToList()
-                : c.RentalBookings.ToList();
+                : [.. c.RentalBookings];
 
             decimal totalSpend = validBookings.Sum(b => b.RentalFee);
             int rentalCount = validBookings.Count;
@@ -172,7 +172,7 @@ public class LoyaltyAwardService
 
         var validBookings = branchId.HasValue
             ? customer.RentalBookings.Where(b => b.BranchId == branchId.Value).ToList()
-            : customer.RentalBookings.ToList();
+            : [.. customer.RentalBookings];
 
         decimal totalSpend = validBookings.Sum(b => b.RentalFee);
         int rentalCount = validBookings.Count;

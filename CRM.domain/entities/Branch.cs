@@ -12,6 +12,9 @@ public class Branch
     public bool IsActive { get; set; } = true;
 
     // Navigation properties
-    public ICollection<Garment> Garments { get; set; } = new List<Garment>();
-    public ICollection<RentalBooking> RentalBookings { get; set; } = new List<RentalBooking>();
+    public ICollection<Garment> Garments { get; set; } = [];
+    public ICollection<RentalBooking> RentalBookings { get; set; } = [];
+    public ICollection<Customer> Customers { get; set; } = [];
+    public ICollection<Inquiry> Inquiries { get; set; } = [];
+    public ICollection<Complaint> Complaints { get; set; } = [];
 }

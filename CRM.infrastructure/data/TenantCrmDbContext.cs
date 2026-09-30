@@ -3,14 +3,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CRM.infrastructure.data;
 
-public class TenantCrmDbContext : DbContext
+public class TenantCrmDbContext(DbContextOptions<TenantCrmDbContext> options) : DbContext(options)
 {
-    public TenantCrmDbContext(DbContextOptions<TenantCrmDbContext> options)
-        : base(options)
-    {
-    }
-
-    public DbSet<Garment> RentalItems => Set<Garment>();
+    public DbSet<Branch> Branches => Set<Branch>();
+    public DbSet<Garment> Garments => Set<Garment>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<RentalBooking> RentalBookings => Set<RentalBooking>();
     public DbSet<BookingDetail> BookingDetails => Set<BookingDetail>();
@@ -19,14 +15,21 @@ public class TenantCrmDbContext : DbContext
     public DbSet<Inquiry> Inquiries => Set<Inquiry>();
     public DbSet<LoyaltyAward> LoyaltyAwards => Set<LoyaltyAward>();
     public DbSet<RentalTerm> RentalTerms => Set<RentalTerm>();
-    public DbSet<Garment> Garments { get; set; } = null!;
     public DbSet<CustomerNotification> CustomerNotifications => Set<CustomerNotification>();
     public DbSet<SystemConfiguration> SystemConfigurations => Set<SystemConfiguration>();
-    public DbSet<Branch> Branches => Set<Branch>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        // Branch
+        builder.Entity<Branch>(entity =>
+        {
+            entity.HasKey(e => e.BranchId);
+            entity.Property(e => e.BranchCode).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.BranchName).HasMaxLength(150).IsRequired();
+            entity.Property(e => e.City).HasMaxLength(100).IsRequired();
+        });
 
         // Garment
         builder.Entity<Garment>(entity =>
@@ -38,6 +41,11 @@ public class TenantCrmDbContext : DbContext
             entity.Property(e => e.BustSize).HasPrecision(5, 2);
             entity.Property(e => e.WaistSize).HasPrecision(5, 2);
             entity.Property(e => e.HipSize).HasPrecision(5, 2);
+
+            entity.HasOne(e => e.Branch)
+                  .WithMany(b => b.Garments)
+                  .HasForeignKey(e => e.BranchId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         // Customer
@@ -56,35 +64,35 @@ public class TenantCrmDbContext : DbContext
             entity.Property(x => x.WaistSize).HasPrecision(5, 2);
             entity.Property(x => x.HipSize).HasPrecision(5, 2);
             entity.HasIndex(x => new { x.CompanyId, x.CustomerCode }).IsUnique();
+
+            entity.HasOne(x => x.Branch)
+                  .WithMany(b => b.Customers)
+                  .HasForeignKey(x => x.BranchId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         // RentalBooking
         builder.Entity<RentalBooking>(entity =>
         {
             entity.ToTable("RentalBookings");
-
             entity.HasKey(x => x.RentalBookingId);
 
-            entity.Property(x => x.BookingStage)
-                  .HasMaxLength(50)
-                  .IsRequired();
+            entity.Property(x => x.BookingStage).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.RentalFee).HasPrecision(18, 2);
+            entity.Property(x => x.SecurityDeposit).HasPrecision(18, 2);
+            entity.Property(x => x.TotalAmount).HasPrecision(18, 2);
+            entity.Property(x => x.AlterationNotes).HasMaxLength(500);
 
-            entity.Property(x => x.RentalFee)
-                  .HasPrecision(18, 2);
+            entity.HasOne(x => x.Branch)
+                  .WithMany(b => b.RentalBookings)
+                  .HasForeignKey(x => x.BranchId)
+                  .OnDelete(DeleteBehavior.SetNull);
 
-            entity.Property(x => x.SecurityDeposit)
-                  .HasPrecision(18, 2);
-
-            entity.Property(x => x.AlterationNotes)
-                  .HasMaxLength(500);
-
-            // Relationship to Customer
             entity.HasOne(x => x.Customer)
                   .WithMany(x => x.RentalBookings)
                   .HasForeignKey(x => x.CustomerId)
                   .OnDelete(DeleteBehavior.Restrict);
 
-            // 1-to-Many Relationship to BookingDetail (Multi-Item)
             entity.HasMany(x => x.BookingDetails)
                   .WithOne(x => x.RentalBooking)
                   .HasForeignKey(x => x.RentalBookingId)
@@ -95,17 +103,10 @@ public class TenantCrmDbContext : DbContext
         builder.Entity<BookingDetail>(entity =>
         {
             entity.ToTable("BookingDetails");
-
             entity.HasKey(x => x.BookingDetailId);
+            entity.Property(x => x.AlterationNotes).HasMaxLength(500);
+            entity.Property(x => x.UnitPrice).HasPrecision(18, 2);
 
-            entity.Property(x => x.AlterationNotes)
-                  .HasMaxLength(500);
-
-            // If BookingDetail tracks line-item rental pricing:
-            entity.Property(x => x.UnitPrice)
-                  .HasPrecision(18, 2);
-
-            // Many-to-1 Relationship to Garment
             entity.HasOne(x => x.Garment)
                   .WithMany(x => x.BookingDetails)
                   .HasForeignKey(x => x.GarmentId)
@@ -142,9 +143,9 @@ public class TenantCrmDbContext : DbContext
             entity.Property(e => e.CompensationAmount).HasPrecision(18, 2);
 
             entity.HasOne(e => e.Branch)
-                  .WithMany()
+                  .WithMany(b => b.Complaints)
                   .HasForeignKey(e => e.BranchId)
-                  .OnDelete(DeleteBehavior.Restrict);
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         // Inquiry
@@ -159,9 +160,9 @@ public class TenantCrmDbContext : DbContext
             entity.Property(e => e.Priority).HasMaxLength(50).HasDefaultValue("Medium");
 
             entity.HasOne(e => e.Branch)
-                  .WithMany()
+                  .WithMany(b => b.Inquiries)
                   .HasForeignKey(e => e.BranchId)
-                  .OnDelete(DeleteBehavior.Restrict);
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         // LoyaltyAward
@@ -188,7 +189,6 @@ public class TenantCrmDbContext : DbContext
         {
             entity.ToTable("CustomerNotifications");
             entity.HasKey(e => e.NotificationId);
-
             entity.Property(e => e.RecipientEmail).HasMaxLength(150).IsRequired();
             entity.Property(e => e.Subject).HasMaxLength(250).IsRequired();
             entity.Property(e => e.Module).HasMaxLength(50).IsRequired();
@@ -197,7 +197,7 @@ public class TenantCrmDbContext : DbContext
             entity.HasOne(e => e.Branch)
                   .WithMany()
                   .HasForeignKey(e => e.BranchId)
-                  .OnDelete(DeleteBehavior.Restrict);
+                  .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasOne(e => e.Customer)
                   .WithMany()

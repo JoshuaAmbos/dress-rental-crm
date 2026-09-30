@@ -1,17 +1,17 @@
 using CRM.api.Endpoints;
-using CRM.api.Extensions;
 using CRM.domain.Constants;
-using CRM.api.Services;
+using CRM.domain.DTOs;
+using CRM.domain.entities;
 using CRM.infrastructure.data;
+using CRM.infrastructure.services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json.Serialization;
 using System.Security.Claims;
-using CRM.api.DTOs;
-using CRM.domain.entities;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// SERVICES & DEPENDENCY INJECTION CONFIGURATION
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
@@ -33,21 +33,22 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<MasterCrmDbContext>()
 .AddDefaultTokenProviders();
 
+// Dynamic Multi-Tenant Services
 builder.Services.AddScoped<ITenantDatabaseResolver, TenantDatabaseResolver>();
 builder.Services.AddScoped<ITenantDbContextFactory, TenantDbContextFactory>();
+builder.Services.AddScoped<TenantProvisioningService>();
 
 var app = builder.Build();
 
-// =============================================================
-// 2. DATABASE STARTUP INITIALIZATION & ROLE/TENANT USER SEEDING
-// =============================================================
+
+// DATABASE STARTUP INITIALIZATION & SEEDING
 using (var scope = app.Services.CreateScope())
 {
-    var masterDb = scope.ServiceProvider.GetRequiredService<MasterCrmDbContext>();
-    await masterDb.Database.EnsureCreatedAsync();
+    var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+    var server = config["DatabaseSettings:Server"] ?? "localhost,1433";
+    var saPassword = config["DatabaseSettings:SaPassword"] ?? "YourStrong@Passw0rd!";
 
-    var tenantDb = scope.ServiceProvider.GetRequiredService<TenantCrmDbContext>();
-    await tenantDb.Database.EnsureCreatedAsync();
+    await CRM.infrastructure.data.DatabaseSeeder.ProvisionAndSeedAllTenantsAsync(server, saPassword);
 
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
@@ -60,7 +61,14 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
-    async Task EnsureUserAsync(string username, string email, string password, string role, int companyId, string companyName)
+    async Task EnsureUserAsync(
+        string username,
+        string email,
+        string password,
+        string role,
+        int companyId,
+        string companyName,
+        string branchName = "All Showrooms")
     {
         var user = await userManager.FindByNameAsync(username);
         if (user == null)
@@ -72,6 +80,7 @@ using (var scope = app.Services.CreateScope())
                 await userManager.AddToRoleAsync(user, role);
                 await userManager.AddClaimAsync(user, new Claim("CompanyId", companyId.ToString()));
                 await userManager.AddClaimAsync(user, new Claim("CompanyName", companyName));
+                await userManager.AddClaimAsync(user, new Claim("BranchName", branchName));
             }
         }
         else
@@ -82,41 +91,80 @@ using (var scope = app.Services.CreateScope())
             }
 
             var claims = await userManager.GetClaimsAsync(user);
-            foreach (var c in claims.Where(c => c.Type == "CompanyId" || c.Type == "CompanyName"))
+            foreach (var c in claims.Where(c => c.Type is "CompanyId" or "CompanyName" or "BranchName"))
             {
                 await userManager.RemoveClaimAsync(user, c);
             }
+
             await userManager.AddClaimAsync(user, new Claim("CompanyId", companyId.ToString()));
             await userManager.AddClaimAsync(user, new Claim("CompanyName", companyName));
+            await userManager.AddClaimAsync(user, new Claim("BranchName", branchName));
         }
     }
 
-    // Tenant C Accounts: Atelier Haute Couture
-    await EnsureUserAsync("superadmin", "superadmin@crm.local", "SuperSecret123!", AppRoles.Superadmin, 1, "Atelier Haute Couture");
-    await EnsureUserAsync("atelier_admin", "admin@atelier.local", "SuperSecret123!", AppRoles.Admin, 1, "Atelier Haute Couture");
-    await EnsureUserAsync("atelier_manager", "manager@atelier.local", "SuperSecret123!", AppRoles.Manager, 1, "Atelier Haute Couture");
-    await EnsureUserAsync("atelier_staff", "staff@atelier.local", "SuperSecret123!", AppRoles.Staff, 1, "Atelier Haute Couture");
+    // Tenant C: Atelier Haute Couture (Package A - Multi-Branch)
+    await EnsureUserAsync("superadmin", "superadmin@crm.local", "SuperSecret123!", AppRoles.Superadmin, 1, "Atelier Haute Couture", "Global Corporate");
+    await EnsureUserAsync("atelier_admin", "admin@atelier.local", "SuperSecret123!", AppRoles.Admin, 1, "Atelier Haute Couture", "All Showrooms");
+    await EnsureUserAsync("atelier_manager", "manager@atelier.local", "SuperSecret123!", AppRoles.Manager, 1, "Atelier Haute Couture", "Flagship Atelier (Makati)");
+    await EnsureUserAsync("atelier_staff", "staff@atelier.local", "SuperSecret123!", AppRoles.Staff, 1, "Atelier Haute Couture", "Flagship Atelier (Makati)");
 
-    // Tenant B Accounts: Maison Étoile Bridal
-    await EnsureUserAsync("maison_admin", "admin@maisonetoile.local", "SuperSecret123!", AppRoles.Admin, 2, "Maison Étoile Bridal");
-    await EnsureUserAsync("maison_manager", "manager@maisonetoile.local", "SuperSecret123!", AppRoles.Manager, 2, "Maison Étoile Bridal");
-    await EnsureUserAsync("maison_staff", "staff@maisonetoile.local", "SuperSecret123!", AppRoles.Staff, 2, "Maison Étoile Bridal");
+    // Tenant B: Maison Étoile Bridal (Package B - Single-Branch)
+    await EnsureUserAsync("maison_admin", "admin@maisonetoile.local", "SuperSecret123!", AppRoles.Admin, 2, "Maison Étoile Bridal", "Maison Étoile Atelier");
+    await EnsureUserAsync("maison_manager", "manager@maisonetoile.local", "SuperSecret123!", AppRoles.Manager, 2, "Maison Étoile Bridal", "Maison Étoile Atelier");
+    await EnsureUserAsync("maison_staff", "staff@maisonetoile.local", "SuperSecret123!", AppRoles.Staff, 2, "Maison Étoile Bridal", "Maison Étoile Atelier");
 
-    // Tenant A Accounts: Davao Haute Rentals
-    await EnsureUserAsync("davao_admin", "admin@davaohaute.local", "SuperSecret123!", AppRoles.Admin, 3, "Davao Haute Rentals");
-    await EnsureUserAsync("davao_manager", "manager@davaohaute.local", "SuperSecret123!", AppRoles.Manager, 3, "Davao Haute Rentals");
-    await EnsureUserAsync("davao_staff", "staff@davaohaute.local", "SuperSecret123!", AppRoles.Staff, 3, "Davao Haute Rentals");
+    // Tenant A: Davao Haute Rentals (Package C - Starter)
+    await EnsureUserAsync("davao_admin", "admin@davaohaute.local", "SuperSecret123!", AppRoles.Admin, 3, "Davao Haute Rentals", "Davao Haute Flagship");
+    await EnsureUserAsync("davao_manager", "manager@davaohaute.local", "SuperSecret123!", AppRoles.Manager, 3, "Davao Haute Rentals", "Davao Haute Flagship");
+    await EnsureUserAsync("davao_staff", "staff@davaohaute.local", "SuperSecret123!", AppRoles.Staff, 3, "Davao Haute Rentals", "Davao Haute Flagship");
 }
 
-// =============================================================
-// 3. AUTHENTICATION & IDENTITY ENDPOINTS
-// =============================================================
 
 app.MapAuthEndpoints();
 
-// =============================================================
-// 4. MASTER CRM INFRASTRUCTURE ENDPOINTS
-// =============================================================
+app.MapPost("/api/superadmin/tenants", async (
+    CreateTenantRequestDto dto,
+    TenantProvisioningService provisioningService) =>
+{
+    var createdTenant = await provisioningService.ProvisionTenantAsync(
+        dto.CompanyCode,
+        dto.CompanyName,
+        dto.SubscriptionPackageId,
+        dto.InitialBranchName,
+        dto.InitialBranchCity);
+
+    return Results.Created($"/api/superadmin/tenants/{createdTenant.CompanyId}", createdTenant);
+});
+
+app.MapGet("/api/superadmin/tenants", async (MasterCrmDbContext db) =>
+{
+    var tenants = await db.Companies
+        .Include(c => c.SubscriptionPackage)
+        .Include(c => c.CompanyDatabases)
+        .OrderByDescending(c => c.IsActive)
+        .ThenBy(c => c.CompanyName)
+        .ToListAsync();
+
+    return Results.Ok(tenants);
+});
+
+app.MapDelete("/api/superadmin/tenants/{companyId:int}", async (int companyId, MasterCrmDbContext db) =>
+{
+    var tenant = await db.Companies.FindAsync(companyId);
+    if (tenant == null) return Results.NotFound();
+
+    tenant.IsActive = !tenant.IsActive;
+    tenant.DeactivatedAt = tenant.IsActive ? null : DateTime.UtcNow;
+
+    var databases = await db.CompanyDatabases.Where(d => d.CompanyId == companyId).ToListAsync();
+    foreach (var d in databases)
+    {
+        d.IsActive = tenant.IsActive;
+    }
+
+    await db.SaveChangesAsync();
+    return Results.Ok(new { message = tenant.IsActive ? "Tenant reactivated" : "Tenant deactivated" });
+});
 
 app.MapPost("/companies", async (Company company, MasterCrmDbContext db) =>
 {
@@ -139,118 +187,6 @@ app.MapPost("/company-databases", async (CompanyDatabase companyDatabase, Master
     return Results.Created($"/company-databases/{companyDatabase.CompanyDatabaseId}", companyDatabase);
 });
 
-// =============================================================
-// 5. TENANT CATALOG & DIAGNOSTIC ENDPOINTS
-// =============================================================
-
-app.MapGet("/test-tenant/{companyId:int}", async (int companyId, ITenantDbContextFactory tenantFactory) =>
-{
-    await using var tenantDb = await tenantFactory.CreateAsync(companyId);
-    var rentalItemCount = await tenantDb.RentalItems.CountAsync();
-    return Results.Ok(new { companyId, rentalItemCount });
-});
-
-app.MapPost("/tenant/{companyId:int}/rental-items", async (
-    int companyId,
-    Garment rentalItem,
-    ITenantDbContextFactory tenantFactory) =>
-{
-    await using var tenantDb = await tenantFactory.CreateAsync(companyId);
-    tenantDb.RentalItems.Add(rentalItem);
-    await tenantDb.SaveChangesAsync();
-    return Results.Created($"/tenant/{companyId}/rental-items/{rentalItem.GarmentId}", rentalItem);
-});
-
-app.MapGet("/tenant/{companyId:int}/rental-items", async (
-    int companyId,
-    ITenantDbContextFactory tenantFactory) =>
-{
-    await using var tenantDb = await tenantFactory.CreateAsync(companyId);
-    var items = await tenantDb.RentalItems
-        .AsNoTracking()
-        .OrderBy(x => x.GarmentId)
-        .ToListAsync();
-    return Results.Ok(items);
-});
-
-// =============================================================
-// 6. TENANT CUSTOMER PROFILE ENDPOINTS (UC-01)
-// =============================================================
-
-app.MapPost("/tenant/{companyId:int}/customers", async (
-    int companyId,
-    Customer customer,
-    ITenantDbContextFactory tenantFactory) =>
-{
-    await using var tenantDb = await tenantFactory.CreateAsync(companyId);
-    tenantDb.Customers.Add(customer);
-    await tenantDb.SaveChangesAsync();
-
-    return Results.Created(
-        $"/tenant/{companyId}/customers/{customer.CustomerId}",
-        customer);
-});
-
-app.MapGet("/tenant/{companyId:int}/customers", async (
-    int companyId,
-    ITenantDbContextFactory tenantFactory) =>
-{
-    await using var tenantDb = await tenantFactory.CreateAsync(companyId);
-    var customers = await tenantDb.Customers
-        .AsNoTracking()
-        .OrderBy(x => x.CustomerId)
-        .ToListAsync();
-
-    return Results.Ok(customers);
-});
-
-// =============================================================
-// 7. TENANT RENTAL BOOKINGS PIPELINE ENDPOINTS (UC-02)
-// =============================================================
-
-app.MapPost("/tenant/{companyId:int}/bookings", async (
-    int companyId,
-    RentalBooking booking,
-    ITenantDbContextFactory tenantFactory) =>
-{
-    if (!booking.AgreedToTerms)
-    {
-        return Results.BadRequest(new { error = "Terms and conditions must be acknowledged before processing a rental." });
-    }
-
-    await using var tenantDb = await tenantFactory.CreateAsync(companyId);
-
-    var customerExists = await tenantDb.Customers.AnyAsync(c => c.CustomerId == booking.CustomerId);
-    if (!customerExists)
-    {
-        return Results.NotFound(new { error = $"Customer with ID {booking.CustomerId} not found." });
-    }
-
-    booking.CreatedAt = DateTime.UtcNow;
-    tenantDb.RentalBookings.Add(booking);
-    await tenantDb.SaveChangesAsync();
-
-    return Results.Created($"/tenant/{companyId}/bookings/{booking.RentalBookingId}", booking);
-});
-
-app.MapGet("/tenant/{companyId:int}/bookings", async (
-    int companyId,
-    ITenantDbContextFactory tenantFactory) =>
-{
-    await using var tenantDb = await tenantFactory.CreateAsync(companyId);
-
-    var activeStages = new[] { "Fitting", "Reserved", "Active", "Overdue" };
-
-    var bookings = await tenantDb.RentalBookings
-        .Include(b => b.Customer)
-        .Include(b => b.BookingDetails)
-            .ThenInclude(d => d.Garment)
-        .AsNoTracking()
-        .Where(b => b.CompanyId == companyId && activeStages.Contains(b.BookingStage))
-        .OrderByDescending(b => b.RentalStartDate)
-        .ToListAsync();
-
-    return Results.Ok(bookings);
-});
+app.MapTenantEndpoints();
 
 app.Run();

@@ -16,8 +16,8 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
     private readonly Func<int>? _getCompanyId;
 
     private BookingDraftModel? _draft;
-    private List<GarmentPickerRowViewModel> _garments = new();
-    private readonly HashSet<int> _selectedGarmentIds = new();
+    private List<GarmentPickerRowViewModel> _garments = [];
+    private readonly HashSet<int> _selectedGarmentIds = [];
     private bool _isUpdatingDates = false;
 
     // UI Controls
@@ -403,15 +403,14 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
 
         decimal depPct = draft.DepositPercentage > 0 ? draft.DepositPercentage : 50m;
 
-        draft.SelectedGarments = _garments
+        draft.SelectedGarments = [.. _garments
             .Where(g => _selectedGarmentIds.Contains(g.GarmentId))
             .Select(g =>
             {
                 var entity = g.GarmentEntity;
                 entity.SecurityDeposit = Math.Round(entity.RentalRate * (depPct / 100m), 2);
                 return entity;
-            })
-            .ToList();
+            })];
     }
 
     public bool ValidateStep(out string errorMessage)

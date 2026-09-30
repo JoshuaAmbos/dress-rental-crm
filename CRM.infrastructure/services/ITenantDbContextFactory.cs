@@ -1,6 +1,6 @@
 using CRM.infrastructure.data;
 
-namespace CRM.api.Services;
+namespace CRM.infrastructure.services;
 
 public interface ITenantDbContextFactory
 {

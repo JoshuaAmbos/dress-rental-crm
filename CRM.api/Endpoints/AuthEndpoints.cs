@@ -2,7 +2,9 @@
 using System.Text.RegularExpressions;
 using CRM.api.DTOs;
 using CRM.domain.Constants;
+using CRM.infrastructure.data;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace CRM.api.Endpoints;
 
@@ -15,7 +17,10 @@ public static class AuthEndpoints
         // -------------------------------------------------------------
         var authGroup = routes.MapGroup("/api/auth");
 
-        authGroup.MapPost("/login", async (LoginRequestDto request, UserManager<IdentityUser> userManager) =>
+        authGroup.MapPost("/login", async (
+            LoginRequestDto request, 
+            UserManager<IdentityUser> userManager,
+            MasterCrmDbContext masterDb) =>
         {
             var user = await userManager.FindByNameAsync(request.Username);
             if (user == null || !await userManager.CheckPasswordAsync(user, request.Password))
@@ -32,14 +37,31 @@ public static class AuthEndpoints
             int companyId = int.TryParse(companyIdClaim, out var cid) ? cid : 1;
             string companyName = companyNameClaim ?? "Atelier Haute Couture";
 
+            // Resolve company subscription & database routing from Master CRM
+            var company = await masterDb.Companies
+                .Include(c => c.SubscriptionPackage)
+                .Include(c => c.CompanyDatabases)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.CompanyId == companyId);
+
+            var pkg = company?.SubscriptionPackage;
+            var activeDb = company?.CompanyDatabases.FirstOrDefault(d => d.IsActive);
+
             return Results.Ok(new LoginResult
             {
                 UserId = user.Id,
                 Username = user.UserName ?? string.Empty,
                 Email = user.Email ?? string.Empty,
                 CompanyId = companyId,
-                CompanyName = companyName,
-                Roles = roles.ToArray()
+                CompanyName = company?.CompanyName ?? companyName,
+                Roles = [.. roles],
+                PackageName = pkg?.PackageName ?? "Package A - Complete",
+                MaxBranches = pkg?.MaxBranches ?? 99,
+                HasMultiBranch = pkg?.HasMultiBranch ?? true,
+                HasLoyalty = pkg?.HasLoyalty ?? true,
+                HasAnalytics = pkg?.HasAnalytics ?? true,
+                DatabaseName = activeDb?.DatabaseName ?? $"DB_Tenant_{company?.CompanyCode ?? "CRM"}",
+                ServerName = activeDb?.ServerName ?? "localhost,1433"
             });
         });
 

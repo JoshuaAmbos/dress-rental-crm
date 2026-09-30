@@ -10,15 +10,15 @@ public partial class Step4PaymentDepositView : UserControl, IBookingWizardStep
     private BookingDraftModel? _draft;
     private string _selectedPaymentMethod = "Gcash";
 
-    private readonly List<string> _paymentMethods = new()
-    {
+    private readonly List<string> _paymentMethods =
+    [
         "Gcash",
         "Credit Card – Visa",
         "Credit Card – Mastercard",
         "Credit Card – Amex",
         "Bank Transfer / Instapay",
         "Cash on Pickup"
-    };
+    ];
 
     private Label lblRentalFeeTitle = null!;
     private Label lblRentalFeeAmount = null!;

@@ -33,8 +33,8 @@ public class LoyaltyOverviewDto
     public int GoldClientsCount { get; set; }
     public int StandardClientsCount { get; set; }
     public decimal AverageSpendPerClient { get; set; }
-    public List<LoyaltyTierDto> Tiers { get; set; } = new();
-    public List<CustomerLoyaltyDto> Customers { get; set; } = new();
+    public List<LoyaltyTierDto> Tiers { get; set; } = [];
+    public List<CustomerLoyaltyDto> Customers { get; set; } = [];
 }
 
 public class LoyaltyDiscountCalculationDto

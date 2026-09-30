@@ -21,7 +21,7 @@ public partial class CatalogView : UserControl
     private string _currentSearchTerm = string.Empty;
     private decimal _currentDepositPct = 50m;
 
-    private readonly List<Button> _filterButtons = new();
+    private readonly List<Button> _filterButtons = [];
 
     // Parameterless constructor for WinForms Designer
     public CatalogView() : this(() =>
@@ -155,16 +155,16 @@ public partial class CatalogView : UserControl
 
             var filtered = (_currentStatusFilter == "All")
                 ? allGarments
-                : allGarments.Where(g => string.Equals(g.Status, _currentStatusFilter, StringComparison.OrdinalIgnoreCase)).ToList();
+                : [.. allGarments.Where(g => string.Equals(g.Status, _currentStatusFilter, StringComparison.OrdinalIgnoreCase))];
 
             if (!string.IsNullOrWhiteSpace(_currentSearchTerm))
             {
                 string term = _currentSearchTerm.Trim().ToLower();
-                filtered = filtered.Where(g =>
+                filtered = [.. filtered.Where(g =>
                     g.ItemCode.ToLower().Contains(term) ||
                     g.StyleName.ToLower().Contains(term) ||
                     g.Category.ToLower().Contains(term) ||
-                    g.Color.ToLower().Contains(term)).ToList();
+                    g.Color.ToLower().Contains(term))];
             }
 
             flpGarments.SuspendLayout();
@@ -199,7 +199,7 @@ public partial class CatalogView : UserControl
                 cardList.Add(card);
             }
 
-            flpGarments.Controls.AddRange(cardList.ToArray());
+            flpGarments.Controls.AddRange([.. cardList]);
             flpGarments.ResumeLayout();
         }
         catch (Exception ex)

@@ -1,7 +1,8 @@
 using CRM.infrastructure.data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
-namespace CRM.api.Services;
+namespace CRM.infrastructure.services;
 
 public class TenantDbContextFactory : ITenantDbContextFactory
 {

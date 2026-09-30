@@ -122,7 +122,6 @@ public partial class CustomerProfilesView : UserControl
         dgvCustomers.MultiSelect = false;
         dgvCustomers.RowTemplate.Height = 42;
 
-        // Modern flat column headers
         dgvCustomers.EnableHeadersVisualStyles = false;
         dgvCustomers.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
         dgvCustomers.ColumnHeadersHeight = 42;
@@ -132,7 +131,6 @@ public partial class CustomerProfilesView : UserControl
         dgvCustomers.ColumnHeadersDefaultCellStyle.SelectionForeColor = ColorMutedLabel;
         dgvCustomers.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold);
 
-        // Standardized row styles
         dgvCustomers.DefaultCellStyle.BackColor = ColorCardBg;
         dgvCustomers.DefaultCellStyle.ForeColor = ColorBrandDark;
         dgvCustomers.DefaultCellStyle.Font = new Font("Segoe UI", 9.25f);
@@ -144,7 +142,6 @@ public partial class CustomerProfilesView : UserControl
         dgvCustomers.AlternatingRowsDefaultCellStyle.SelectionBackColor = ColorSelectedBg;
         dgvCustomers.AlternatingRowsDefaultCellStyle.SelectionForeColor = ColorPrimary;
 
-        // Custom render flat action pills
         dgvCustomers.CellPainting += DgvCustomers_CellPainting;
     }
 

@@ -25,5 +25,5 @@ public class RentalPipelineDto
     public int FittingCount { get; set; }
     public int ReturnedCount { get; set; }
 
-    public List<BookingRowViewModel> Rows { get; set; } = new();
+    public List<BookingRowViewModel> Rows { get; set; } = [];
 }

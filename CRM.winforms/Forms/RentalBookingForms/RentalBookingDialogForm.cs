@@ -32,8 +32,8 @@ public partial class RentalBookingDialogForm : Form
     private Button btnCancel = null!;
 
     // Cached data
-    private List<Customer> _customers = new();
-    private List<Garment> _availableGarments = new();
+    private List<Customer> _customers = [];
+    private List<Garment> _availableGarments = [];
 
     public int? CreatedBookingId { get; private set; }
 

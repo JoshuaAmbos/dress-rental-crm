@@ -1,4 +1,4 @@
-namespace CRM.api.Services;
+namespace CRM.infrastructure.services;
 
 public class TenantDatabaseInfo
 {

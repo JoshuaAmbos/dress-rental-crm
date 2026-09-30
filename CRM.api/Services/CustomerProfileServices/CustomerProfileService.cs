@@ -50,7 +50,7 @@ public class CustomerProfileService
             .ThenBy(c => c.FirstName)
             .ToListAsync();
 
-        return customers.Select(c =>
+        return [.. customers.Select(c =>
         {
             string fullName = $"{c.FirstName} {c.MiddleName} {c.LastName}".Trim();
             if (string.IsNullOrWhiteSpace(fullName))
@@ -72,7 +72,7 @@ public class CustomerProfileService
                 HipSize = c.HipSize > 0 ? $"{c.HipSize:0.#} in" : "—",
                 IsActive = c.IsActive
             };
-        }).ToList();
+        })];
     }
 
     public async Task ArchiveCustomerAsync(int customerId)

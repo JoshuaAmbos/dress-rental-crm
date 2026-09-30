@@ -12,7 +12,7 @@ public partial class NewBookingWizardView : UserControl
     private readonly Action? _onCloseWizard;
 
     private readonly BookingDraftModel _draft = new();
-    private readonly List<IBookingWizardStep> _steps = new();
+    private readonly List<IBookingWizardStep> _steps = [];
 
     private int _currentStepIndex = 0;
 

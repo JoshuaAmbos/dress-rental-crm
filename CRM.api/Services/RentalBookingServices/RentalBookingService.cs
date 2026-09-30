@@ -100,11 +100,11 @@ public class RentalBookingService
 
         var filteredRows = stageFilter switch
         {
-            "Reserved" => allRows.Where(r => r.Stage == "Reserved").ToList(),
-            "Fitting" => allRows.Where(r => r.Stage == "Fitting").ToList(),
-            "Active" => allRows.Where(r => r.Stage == "Active").ToList(),
-            "Overdue" => allRows.Where(r => r.IsOverdue).ToList(),
-            "Returned" => allRows.Where(r => r.Stage == "Returned").ToList(),
+            "Reserved" => [.. allRows.Where(r => r.Stage == "Reserved")],
+            "Fitting" => [.. allRows.Where(r => r.Stage == "Fitting")],
+            "Active" => [.. allRows.Where(r => r.Stage == "Active")],
+            "Overdue" => [.. allRows.Where(r => r.IsOverdue)],
+            "Returned" => [.. allRows.Where(r => r.Stage == "Returned")],
             _ => allRows
         };
 
@@ -171,7 +171,7 @@ public class RentalBookingService
 
         var list = await query.OrderBy(g => g.StyleName).ToListAsync();
 
-        return list.Select(g => new GarmentPickerRowViewModel
+        return [.. list.Select(g => new GarmentPickerRowViewModel
         {
             GarmentEntity = g,
             GarmentId = g.GarmentId,
@@ -180,7 +180,7 @@ public class RentalBookingService
             SizeLabel = string.IsNullOrWhiteSpace(g.Size) ? "Standard" : g.Size,
             RentalRate = g.RentalRate,
             SecurityDeposit = g.SecurityDeposit
-        }).ToList();
+        })];
     }
 
     // =========================================================================

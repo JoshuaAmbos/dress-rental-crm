@@ -1,7 +1,7 @@
 using CRM.infrastructure.data;
 using Microsoft.EntityFrameworkCore;
 
-namespace CRM.api.Services;
+namespace CRM.infrastructure.services;
 
 public class TenantDatabaseResolver : ITenantDatabaseResolver
 {

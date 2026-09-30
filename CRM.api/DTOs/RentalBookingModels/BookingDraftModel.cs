@@ -5,7 +5,7 @@ namespace CRM.api.DTOs;
 public class BookingDraftModel
 {
     public Customer? SelectedCustomer { get; set; }
-    public List<Garment> SelectedGarments { get; set; } = new();
+    public List<Garment> SelectedGarments { get; set; } = [];
 
     public DateTime RentalStartDate { get; set; } = DateTime.Today;
     public DateTime RentalEndDate { get; set; } = DateTime.Today.AddDays(7);

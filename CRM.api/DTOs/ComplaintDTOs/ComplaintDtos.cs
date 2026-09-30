@@ -26,5 +26,5 @@ public class ComplaintPipelineDto
     public int EscalatedCount { get; set; }
     public int TotalCount { get; set; }
     public double ResolutionRate { get; set; }
-    public List<ComplaintRowViewModel> Rows { get; set; } = new();
+    public List<ComplaintRowViewModel> Rows { get; set; } = [];
 }

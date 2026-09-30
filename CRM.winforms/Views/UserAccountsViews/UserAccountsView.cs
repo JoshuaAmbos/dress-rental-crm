@@ -1,4 +1,5 @@
-﻿using CRM.infrastructure.data;
+﻿using CRM.domain.entities;
+using CRM.infrastructure.data;
 using CRM.winforms.Forms;
 using CRM.winforms.Services;
 using Microsoft.EntityFrameworkCore;
@@ -430,16 +431,16 @@ public partial class UserAccountsView : UserControl
 
             if (!_isSuperAdmin)
             {
-                list = list.Where(u => u.CompanyId == _currentCompanyId.ToString()).ToList();
+                list = [.. list.Where(u => u.CompanyId == _currentCompanyId.ToString())];
             }
 
             if (!string.IsNullOrWhiteSpace(query))
             {
-                list = list.Where(u =>
+                list = [.. list.Where(u =>
                     (u.UserName != null && u.UserName.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
                     (u.Email != null && u.Email.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
                     (u.Role != null && u.Role.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
-                    (u.Branch != null && u.Branch.Contains(query, StringComparison.OrdinalIgnoreCase))).ToList();
+                    (u.Branch != null && u.Branch.Contains(query, StringComparison.OrdinalIgnoreCase)))];
             }
 
             dgvUsers.AutoGenerateColumns = false;
@@ -485,7 +486,7 @@ public partial class UserAccountsView : UserControl
         string userId = row.Cells["UserId"].Value?.ToString() ?? "";
         string username = row.Cells["Username"].Value?.ToString() ?? "";
         string currentBranch = row.Cells["ShowroomBranch"].Value?.ToString() ?? "All Showrooms";
-        int companyId = row.Cells["CompanyId"].Value is int cid ? cid : _currentCompanyId;
+        int targetCompanyId = row.Cells["CompanyId"].Value is int cid ? cid : _currentCompanyId;
         string companyName = row.Cells["CompanyName"].Value?.ToString() ?? _currentCompanyName;
 
         if (username.Equals("superadmin", StringComparison.OrdinalIgnoreCase))
@@ -496,17 +497,34 @@ public partial class UserAccountsView : UserControl
 
         try
         {
-            await using var db = _tenantDbFactory();
-            var branches = await db.Branches
-                .AsNoTracking()
-                .Where(b => b.CompanyId == companyId && b.IsActive)
-                .OrderBy(b => b.BranchName)
-                .ToListAsync();
+            List<Branch> branches;
+
+            await using (var masterDb = _masterDbFactory())
+            {
+                var dbRouting = await masterDb.CompanyDatabases
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(d => d.CompanyId == targetCompanyId && d.IsActive);
+
+                var dbName = dbRouting?.DatabaseName ?? $"DB_Tenant_{targetCompanyId}";
+                var server = dbRouting?.ServerName ?? "localhost,1433";
+                var connStr = $"Server={server};Database={dbName};User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;MultipleActiveResultSets=True;";
+
+                var options = new DbContextOptionsBuilder<TenantCrmDbContext>()
+                    .UseSqlServer(connStr)
+                    .Options;
+
+                await using var targetTenantDb = new TenantCrmDbContext(options);
+                branches = await targetTenantDb.Branches
+                    .AsNoTracking()
+                    .Where(b => b.CompanyId == targetCompanyId && b.IsActive)
+                    .OrderBy(b => b.BranchName)
+                    .ToListAsync();
+            }
 
             if (branches.Count == 0)
             {
                 MessageBox.Show(
-                    $"This boutique tenant ({companyName}) does not have any showroom branches configured in the database.",
+                    $"This boutique tenant ({companyName}) does not have any active showroom branches configured in its database.",
                     "No Branches Available",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);

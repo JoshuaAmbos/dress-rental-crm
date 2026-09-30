@@ -1,8 +1,10 @@
 ﻿using CRM.domain.Constants;
 using CRM.domain.entities;
 using CRM.infrastructure.data;
+using CRM.infrastructure.services;
 using CRM.winforms.Views;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using System.ComponentModel;
 using System.Drawing.Drawing2D;
 using static CRM.winforms.Assets.Themes.ColorThemes;
@@ -60,6 +62,10 @@ public partial class MainForm : Form
     private Button _btnTerms = null!;
     private Button _btnUsers = null!;
     private Button _btnSettings = null!;
+    private Button _btnTenants = null!;
+    private Button _btnBranches = null!;
+    private TenantsManagementView? _tenantsView;
+    private BranchesView? _branchesView;
 
     public MainForm() : this(new LoginResult
     {
@@ -78,8 +84,10 @@ public partial class MainForm : Form
 
         _contextFactory = () =>
         {
+            var targetDb = !string.IsNullOrWhiteSpace(_user.DatabaseName) ? _user.DatabaseName : "DB_TenantCRM";
+            var connStr = $"Server={_user.ServerName};Database={targetDb};User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;MultipleActiveResultSets=True;";
             var options = new DbContextOptionsBuilder<TenantCrmDbContext>()
-                .UseSqlServer("Server=10.0.2.2,1433;Database=DB_TenantCRM;User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;")
+                .UseSqlServer(connStr)
                 .Options;
             return new TenantCrmDbContext(options);
         };
@@ -87,13 +95,14 @@ public partial class MainForm : Form
         _masterContextFactory = () =>
         {
             var options = new DbContextOptionsBuilder<MasterCrmDbContext>()
-                .UseSqlServer("Server=10.0.2.2,1433;Database=DB_MasterCRM;User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;")
+                .UseSqlServer("Server=localhost,1433;Database=DB_MasterCRM;User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;")
                 .Options;
             return new MasterCrmDbContext(options);
         };
 
         InitializeComponent();
         BuildAtelierShell();
+        ApplySubscriptionPackageGating();
     }
 
     private async void MainForm_Load(object? sender, EventArgs e)
@@ -141,7 +150,6 @@ public partial class MainForm : Form
         BuildSidebarContents();
         Controls.Add(pnlSidebar);
 
-        // Apply role permissions directly after building the sidebar
         ApplyRolePermissions();
 
         // Main Content Area Wrapper
@@ -436,11 +444,11 @@ public partial class MainForm : Form
             Padding = new Padding(0, 6, 0, 0)
         };
 
-        // Note: With DockStyle.Top, the last control added appears HIGHEST on screen.
-        // We add them in reverse order so the top-to-bottom layout matches the visual design:
-        // Client Directory -> Rental Pipeline -> Garment Catalog -> Inquiries -> Complaints -> Loyalty -> Analytics -> Terms -> Users -> Settings
+        _btnTenants = CreateNavButton("🏢", "Boutique Tenants", (s, e) => ShowTenantsManagementView());
+        _btnSettings = CreateNavButton("⚙️", "System Config", (s, e) => ShowSystemConfigView());
         _btnSettings = CreateNavButton("⚙️", "System Config", (s, e) => ShowSystemConfigView());
         _btnUsers = CreateNavButton("👥", "User Accounts", (s, e) => ShowUsersView());
+        _btnBranches = CreateNavButton("🏢", "Showrooms", (s, e) => ShowBranchesView());
         _btnTerms = CreateNavButton("📜", "Terms and Conditions", (s, e) => ShowTermsView());
         _btnAnalytics = CreateNavButton("📊", "Analytics", (s, e) => ShowDashboardView());
         _btnLoyalty = CreateNavButton("🎗", "Loyalty Awards", (s, e) => ShowLoyaltyAwardsView());
@@ -452,8 +460,10 @@ public partial class MainForm : Form
 
         pnlNavList.Controls.AddRange(new Control[]
         {
+            _btnTenants,
             _btnSettings,
             _btnUsers,
+            _btnBranches,
             _btnTerms,
             _btnAnalytics,
             _btnLoyalty,
@@ -475,23 +485,14 @@ public partial class MainForm : Form
 
     private void ApplyRolePermissions()
     {
-        // 1. Role identification flags
         bool isSuperAdmin = _user.Roles.Any(r =>
             r.Equals(AppRoles.Superadmin, StringComparison.OrdinalIgnoreCase) ||
             r.Equals("Super Admin", StringComparison.OrdinalIgnoreCase));
 
-        bool isAdmin = _user.Roles.Any(r =>
-            r.Equals(AppRoles.Admin, StringComparison.OrdinalIgnoreCase));
+        bool isAdmin = _user.Roles.Any(r => r.Equals(AppRoles.Admin, StringComparison.OrdinalIgnoreCase));
+        bool isManager = _user.Roles.Any(r => r.Equals(AppRoles.Manager, StringComparison.OrdinalIgnoreCase));
+        bool isStaff = _user.Roles.Any(r => r.Equals(AppRoles.Staff, StringComparison.OrdinalIgnoreCase));
 
-        bool isManager = _user.Roles.Any(r =>
-            r.Equals(AppRoles.Manager, StringComparison.OrdinalIgnoreCase) ||
-            r.Equals("Boutique Manager", StringComparison.OrdinalIgnoreCase));
-
-        bool isStaff = _user.Roles.Any(r =>
-            r.Equals(AppRoles.Staff, StringComparison.OrdinalIgnoreCase) ||
-            r.Equals("Sales Staff", StringComparison.OrdinalIgnoreCase));
-
-        // 2. Operational Front-Desk & Loyalty (Staff, Manager, Admin)
         bool hasFrontDeskAccess = isStaff || isManager || isAdmin;
         _btnCustomers.Visible = hasFrontDeskAccess;
         _btnRentals.Visible = hasFrontDeskAccess;
@@ -499,22 +500,40 @@ public partial class MainForm : Form
         _btnInquiries.Visible = hasFrontDeskAccess;
         _btnComplaints.Visible = hasFrontDeskAccess;
         _btnLoyalty.Visible = hasFrontDeskAccess;
-
-        // 3. Oversight & Analytics (Manager and Admin only)
         _btnAnalytics.Visible = isManager || isAdmin;
-
-        // 4. Terms and Conditions (All authenticated boutique roles)
         _btnTerms.Visible = true;
-
-        // 5. User Accounts Management (Admin and Super Admin)
         _btnUsers.Visible = isAdmin || isSuperAdmin;
+        _btnBranches.Visible = isManager || isAdmin || isSuperAdmin;
 
-        // 6. System Configuration Management (Super Admin ONLY)
+        // Super Admin Exclusive Tools
         _btnSettings.Visible = isSuperAdmin;
+        _btnTenants.Visible = isSuperAdmin;
+    }
 
-        // 7. Showroom Switching Lock (Managers and Admins)
-        pnlTenant.Enabled = isManager || isAdmin;
-        pnlTenant.Cursor = (isManager || isAdmin) ? Cursors.Hand : Cursors.Default;
+    private void ApplySubscriptionPackageGating()
+    {
+        if (_user.Roles.Any(r => r.Equals(AppRoles.Superadmin, StringComparison.OrdinalIgnoreCase)))
+            return;
+
+        if (!_user.HasAnalytics) _btnAnalytics.Visible = false;
+        if (!_user.HasLoyalty) _btnLoyalty.Visible = false;
+        if (!_user.HasMultiBranch)
+        {
+            _btnBranches.Visible = false;
+        }
+
+        pnlTenant.Visible = _user.HasMultiBranch;
+        pnlTenant.Enabled = _user.HasMultiBranch;
+    }
+
+    public void ShowTenantsManagementView()
+    {
+        var config = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
+        var provisioningService = new TenantProvisioningService(_masterContextFactory(), config);
+
+        _tenantsView ??= new TenantsManagementView(_masterContextFactory, provisioningService);
+        SwitchView(_tenantsView);
+        HighlightNavByText("Boutique Tenants");
     }
 
     private async Task LoadBranchDropdownMenuAsync()
@@ -715,6 +734,17 @@ public partial class MainForm : Form
 
         SwitchView(_usersView);
         HighlightNavByText("User Accounts");
+    }
+    public void ShowBranchesView()
+    {
+        _branchesView ??= new BranchesView(
+            _contextFactory,
+            () => _currentCompanyId,
+            async () => await LoadBranchDropdownMenuAsync());
+
+        SwitchView(_branchesView);
+        _ = _branchesView.LoadBranchesAsync();
+        HighlightNavByText("Showrooms");
     }
 
     public void ShowSystemConfigView()
