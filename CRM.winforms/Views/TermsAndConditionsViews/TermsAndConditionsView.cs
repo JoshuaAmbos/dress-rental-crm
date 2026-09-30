@@ -3,6 +3,7 @@ using CRM.domain.entities;
 using CRM.infrastructure.data;
 using CRM.winforms.Controllers;
 using System.Drawing.Drawing2D;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Views;
 
@@ -25,14 +26,6 @@ public partial class TermsAndConditionsView : UserControl
 
     private RentalTerm? _selectedTerm;
     private readonly bool _canEdit;
-
-    // Atelier Palette
-    private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
-    private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);
-    private static readonly Color ColorActivePill = Color.FromArgb(253, 241, 242);
-    private static readonly Color ColorViewBg = Color.FromArgb(250, 245, 245);
 
     public TermsAndConditionsView(Func<TenantCrmDbContext> contextFactory, string[] userRoles)
     {
@@ -67,7 +60,7 @@ public partial class TermsAndConditionsView : UserControl
         {
             Text = "Rental Terms & Liability Policies",
             Font = new Font("Segoe UI Semibold", 15f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Location = new Point(0, 0),
             AutoSize = true
         };
@@ -128,7 +121,7 @@ public partial class TermsAndConditionsView : UserControl
         };
         dgvHistory.EnableHeadersVisualStyles = false;
         dgvHistory.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(253, 248, 248);
-        dgvHistory.ColumnHeadersDefaultCellStyle.ForeColor = ColorEspresso;
+        dgvHistory.ColumnHeadersDefaultCellStyle.ForeColor = ColorPrimary;
         dgvHistory.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold);
         dgvHistory.SelectionChanged += DgvHistory_SelectionChanged;
 
@@ -138,7 +131,7 @@ public partial class TermsAndConditionsView : UserControl
             Dock = DockStyle.Bottom,
             Height = 34,
             BackColor = ColorActivePill,
-            ForeColor = ColorDustyRose,
+            ForeColor = ColorAccent,
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
             Cursor = Cursors.Hand,
@@ -169,7 +162,7 @@ public partial class TermsAndConditionsView : UserControl
         {
             Text = "+ New Draft",
             Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             BackColor = Color.FromArgb(245, 240, 240),
             FlatStyle = FlatStyle.Flat,
             Size = new Size(110, 28),
@@ -195,7 +188,7 @@ public partial class TermsAndConditionsView : UserControl
             Location = new Point(20, 68),
             Width = 380,
             Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             ReadOnly = !_canEdit
         };
 
@@ -213,7 +206,7 @@ public partial class TermsAndConditionsView : UserControl
             Location = new Point(415, 68),
             Width = 90,
             Font = new Font("Segoe UI", 9.5f),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             ReadOnly = !_canEdit
         };
 
@@ -243,7 +236,7 @@ public partial class TermsAndConditionsView : UserControl
             ScrollBars = ScrollBars.Vertical,
             Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
             Font = new Font("Segoe UI", 9.5f),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Height = pnlRightCard.Height - 190,
             Width = pnlRightCard.Width - 40,
             ReadOnly = !_canEdit
@@ -255,7 +248,7 @@ public partial class TermsAndConditionsView : UserControl
         {
             Text = "Save Changes",
             Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             BackColor = Color.FromArgb(244, 238, 238),
             FlatStyle = FlatStyle.Flat,
             Size = new Size(130, 36),
@@ -273,7 +266,7 @@ public partial class TermsAndConditionsView : UserControl
             Text = "Publish as New Version",
             Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
             ForeColor = Color.White,
-            BackColor = ColorDustyRose,
+            BackColor = ColorAccent,
             FlatStyle = FlatStyle.Flat,
             Size = new Size(160, 36),
             Anchor = AnchorStyles.Bottom | AnchorStyles.Right,

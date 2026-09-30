@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using CRM.domain.entities;
 using CRM.infrastructure.data;
 using CRM.winforms.Forms;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Forms;
 
@@ -16,12 +17,6 @@ public partial class RentalBookingDialogForm : Form
 {
     private readonly Func<TenantCrmDbContext> _contextFactory;
     private readonly int _companyId;
-
-    // Atelier Color Palette
-    private static readonly Color ColorPrimary = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorAccent = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);
-    private static readonly Color ColorBgSoft = Color.FromArgb(253, 250, 249);
 
     // UI Controls
     private ComboBox cmbCustomer = null!;

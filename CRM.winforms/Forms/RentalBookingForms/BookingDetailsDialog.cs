@@ -1,7 +1,7 @@
-﻿using System.Drawing.Drawing2D;
-using CRM.domain.entities;
+﻿using CRM.domain.entities;
 using CRM.infrastructure.data;
-using CRM.winforms.Services.RentalBookingServices;
+using System.Drawing.Drawing2D;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Forms;
 
@@ -23,14 +23,6 @@ public partial class BookingDetailsDialog : Form
     private Button btnSaveStage = null!;
     private Button btnClose = null!;
     private Button btnQuickAction = null!;
-
-    // Atelier Palette
-    private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
-    private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);
-    private static readonly Color ColorCardBg = Color.White;
-    private static readonly Color ColorDialogBg = Color.FromArgb(249, 241, 241);
 
     public BookingDetailsDialog(int bookingId, Func<TenantCrmDbContext> contextFactory)
     {
@@ -58,7 +50,7 @@ public partial class BookingDetailsDialog : Form
         {
             Text = $"Booking BKG-{_bookingId:D4}",
             Font = new Font("Segoe UI", 15f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             AutoSize = true
         };
         pnlHeader.Controls.Add(lblBookingCode);
@@ -71,7 +63,7 @@ public partial class BookingDetailsDialog : Form
             Text = "Close",
             Size = new Size(100, 38),
             Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             BackColor = Color.White,
             FlatStyle = FlatStyle.Flat,
             Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
@@ -87,7 +79,7 @@ public partial class BookingDetailsDialog : Form
             Size = new Size(130, 38),
             Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
             ForeColor = Color.White,
-            BackColor = ColorDustyRose,
+            BackColor = ColorAccent,
             FlatStyle = FlatStyle.Flat,
             Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
             Location = new Point(pnlBottom.Width - 260, 13),
@@ -169,7 +161,7 @@ public partial class BookingDetailsDialog : Form
         {
             Text = "Loading...",
             Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Location = new Point(160, y),
             AutoSize = true,
             MaximumSize = new Size(360, 60)
@@ -228,7 +220,7 @@ public partial class BookingDetailsDialog : Form
                 break;
             case "Active":
                 btnQuickAction.Text = "Process Return";
-                btnQuickAction.BackColor = ColorDustyRose;
+                btnQuickAction.BackColor = ColorAccent;
                 btnQuickAction.Visible = true;
                 break;
             default:

@@ -1,6 +1,7 @@
 ﻿using CRM.domain.entities;
 using CRM.infrastructure.data;
 using CRM.winforms.Models;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 
@@ -18,16 +19,6 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
     private bool _isUpdatingDates = false;
 
     private Label lblSelectedCustomer = null!;
-
-    // Atelier Palette
-    private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
-    private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);
-    private static readonly Color ColorCardBg = Color.White;
-    private static readonly Color ColorSelectedBg = Color.FromArgb(254, 250, 250);
-    private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
-
     private const string CurrencySymbol = "₱";
 
     public string StepTitle => "Select Garment & Dates";
@@ -61,7 +52,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
         {
             lblTitle.Text = "Select Garment & Dates";
             lblTitle.Font = new Font("Segoe UI Semibold", 15.5f, FontStyle.Bold);
-            lblTitle.ForeColor = ColorEspresso;
+            lblTitle.ForeColor = ColorPrimary;
             lblTitle.Location = new Point(32, 20);
             lblTitle.AutoSize = true;
         }
@@ -74,7 +65,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             Location = new Point(Math.Max(32, Width - 682), 22),
             TextAlign = ContentAlignment.MiddleRight,
             Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Text = "Selected Customer: —"
         };
         Controls.Add(lblSelectedCustomer);
@@ -257,7 +248,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
                 g.FillPath(fillBrush, cardPath);
             }
 
-            using (var borderPen = new Pen(isSelected ? ColorDustyRose : ColorBorder, isSelected ? 1.4f : 1f))
+            using (var borderPen = new Pen(isSelected ? ColorAccent : ColorBorder, isSelected ? 1.4f : 1f))
             {
                 g.DrawPath(borderPen, cardPath);
             }
@@ -272,7 +263,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
         {
             if (isSelected)
             {
-                using var fillBrush = new SolidBrush(ColorDustyRose);
+                using var fillBrush = new SolidBrush(ColorAccent);
                 g.FillPath(fillBrush, boxPath);
 
                 using var checkPen = new Pen(Color.White, 1.75f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
@@ -296,7 +287,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
         using (var titleFont = new Font("Segoe UI Semibold", 10.25f, FontStyle.Bold))
         using (var subFont = new Font("Segoe UI", 8.5f, FontStyle.Regular))
         {
-            TextRenderer.DrawText(g, item.Title, titleFont, new Point(textLeft, topY), ColorEspresso);
+            TextRenderer.DrawText(g, item.Title, titleFont, new Point(textLeft, topY), ColorPrimary);
             string subtitle = $"{item.Code} · Size {item.SizeLabel}";
             TextRenderer.DrawText(g, subtitle, subFont, new Point(textLeft, topY + 20), ColorSubtext);
         }
@@ -315,7 +306,7 @@ public partial class Step2GarmentDatesView : UserControl, IBookingWizardStep
             var depSize = TextRenderer.MeasureText(g, depText, depFont);
 
             int rightMargin = cardRect.Right - 20;
-            TextRenderer.DrawText(g, priceText, priceFont, new Point(rightMargin - priceSize.Width, topY), ColorEspresso);
+            TextRenderer.DrawText(g, priceText, priceFont, new Point(rightMargin - priceSize.Width, topY), ColorPrimary);
             TextRenderer.DrawText(g, depText, depFont, new Point(rightMargin - depSize.Width, topY + 21), ColorSubtext);
         }
     }

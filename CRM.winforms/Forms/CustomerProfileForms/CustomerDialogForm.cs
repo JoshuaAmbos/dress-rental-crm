@@ -2,6 +2,7 @@
 using CRM.infrastructure.data;
 using Microsoft.EntityFrameworkCore;
 using System.Drawing.Drawing2D;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Forms;
 
@@ -33,18 +34,6 @@ public partial class CustomerDialogForm : Form
     private Button btnClose = null!;
 
     private Point _dragStartPoint;
-
-    // Atelier Palette
-    private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorDustyRoseHover = Color.FromArgb(171, 99, 108);
-    private static readonly Color ColorSectionTag = Color.FromArgb(180, 95, 105);
-    private static readonly Color ColorSubtext = Color.FromArgb(130, 120, 125);
-    private static readonly Color ColorFormBorder = Color.FromArgb(170, 150, 155);
-    private static readonly Color ColorInputBorder = Color.FromArgb(204, 188, 184);
-    private static readonly Color ColorDivider = Color.FromArgb(220, 208, 205);
-    private static readonly Color ColorInputBg = Color.White;
-    private static readonly Color ColorCloseBtnBg = Color.FromArgb(246, 240, 238);
 
     public CustomerDialogForm(Func<TenantCrmDbContext> dbFactory, int companyId)
         : this(dbFactory, companyId, null, null)
@@ -126,7 +115,7 @@ public partial class CustomerDialogForm : Form
         {
             Text = _customerId.HasValue ? "Edit Client Profile" : "New Client Intake",
             Font = new Font("Segoe UI", 15.5f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Location = new Point(28, 18),
             AutoSize = true
         };
@@ -217,7 +206,7 @@ public partial class CustomerDialogForm : Form
             Size = new Size(100, 38),
             Location = new Point(pnlFooter.Width - 250, 16),
             BackColor = Color.White,
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
             Cursor = Cursors.Hand
@@ -231,7 +220,7 @@ public partial class CustomerDialogForm : Form
             Text = _customerId.HasValue ? "Update Client" : "Create Client",
             Size = new Size(130, 38),
             Location = new Point(pnlFooter.Width - 140, 16),
-            BackColor = ColorDustyRose,
+            BackColor = ColorAccent,
             ForeColor = Color.White,
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
@@ -239,7 +228,7 @@ public partial class CustomerDialogForm : Form
         };
         btnSave.FlatAppearance.BorderSize = 0;
         btnSave.MouseEnter += (s, e) => btnSave.BackColor = ColorDustyRoseHover;
-        btnSave.MouseLeave += (s, e) => btnSave.BackColor = ColorDustyRose;
+        btnSave.MouseLeave += (s, e) => btnSave.BackColor = ColorAccent;
         btnSave.Click += async (s, e) => await SaveCustomerAsync();
 
         pnlFooter.Controls.AddRange(new Control[] { btnCancel, btnSave });
@@ -290,7 +279,7 @@ public partial class CustomerDialogForm : Form
         {
             BorderStyle = BorderStyle.None,
             Font = new Font("Segoe UI", 9.5f),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             PlaceholderText = placeholder,
             Location = new Point(10, 8),
             Width = width - 20
@@ -315,7 +304,7 @@ public partial class CustomerDialogForm : Form
         {
             DropDownStyle = ComboBoxStyle.DropDownList,
             Font = new Font("Segoe UI", 9.5f),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Location = new Point(x, y + 20),
             Width = width
         };
@@ -353,7 +342,7 @@ public partial class CustomerDialogForm : Form
         {
             BorderStyle = BorderStyle.None,
             Font = new Font("Segoe UI", 9.5f),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             DecimalPlaces = 1,
             Minimum = 0,
             Maximum = 120,

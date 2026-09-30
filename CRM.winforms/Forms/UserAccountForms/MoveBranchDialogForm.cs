@@ -1,9 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Windows.Forms;
 using CRM.domain.entities;
 using CRM.winforms.Services;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Forms;
 
@@ -18,10 +15,6 @@ public partial class MoveBranchDialogForm : Form
     private ComboBox cmbBranches = null!;
     private Button btnSave = null!;
     private Button btnCancel = null!;
-
-    private static readonly Color ColorEspresso  = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorSubtext   = Color.FromArgb(145, 135, 140);
 
     public MoveBranchDialogForm(
         string userId,
@@ -54,7 +47,7 @@ public partial class MoveBranchDialogForm : Form
         {
             Text = $"Move Showroom: {_username}",
             Font = new Font("Segoe UI Semibold", 12f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Location = new Point(24, 18),
             AutoSize = true
         };
@@ -63,7 +56,7 @@ public partial class MoveBranchDialogForm : Form
         {
             Text = $"CURRENT SHOWROOM: {_currentBranchName.ToUpperInvariant()}",
             Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold),
-            ForeColor = ColorDustyRose,
+            ForeColor = ColorAccent,
             Location = new Point(24, 48),
             AutoSize = true
         };
@@ -90,7 +83,7 @@ public partial class MoveBranchDialogForm : Form
             Location = new Point(184, 170),
             Size = new Size(90, 36),
             FlatStyle = FlatStyle.Flat,
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             BackColor = Color.FromArgb(245, 240, 240),
             Cursor = Cursors.Hand
         };
@@ -104,7 +97,7 @@ public partial class MoveBranchDialogForm : Form
             Size = new Size(100, 36),
             FlatStyle = FlatStyle.Flat,
             ForeColor = Color.White,
-            BackColor = ColorDustyRose,
+            BackColor = ColorAccent,
             Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
             Cursor = Cursors.Hand
         };

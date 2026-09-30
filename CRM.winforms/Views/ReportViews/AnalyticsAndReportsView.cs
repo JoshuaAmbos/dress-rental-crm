@@ -1,5 +1,7 @@
 ﻿using CRM.infrastructure.data;
 using CRM.winforms.Controls;
+using static CRM.winforms.Assets.Themes.ColorThemes;
+
 
 namespace CRM.winforms.Views;
 
@@ -36,13 +38,6 @@ public partial class AnalyticsAndReportsView : UserControl
 
     // Cached state
     private List<RentalLedgerRowDto> _currentLedger = new();
-
-    // Atelier Palette
-    private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
-    private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);
-    private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
 
     public AnalyticsAndReportsView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId)
         : this(contextFactory, getCompanyId, null)
@@ -93,7 +88,7 @@ public partial class AnalyticsAndReportsView : UserControl
             Text = "Business Intelligence & Reports",
             UseMnemonic = false,
             Font = new Font("Segoe UI", 18f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             AutoSize = true
         };
 
@@ -112,7 +107,7 @@ public partial class AnalyticsAndReportsView : UserControl
             Text = "📥 Export to CSV",
             Size = new Size(140, 36),
             BackColor = Color.White,
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI Semibold", 9.25f, FontStyle.Bold),
             Cursor = Cursors.Hand
@@ -160,8 +155,8 @@ public partial class AnalyticsAndReportsView : UserControl
                 Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(0, 0, 6, 0),
-                BackColor = preset == _activePreset ? ColorDustyRose : Color.White,
-                ForeColor = preset == _activePreset ? Color.White : ColorEspresso
+                BackColor = preset == _activePreset ? ColorAccent : Color.White,
+                ForeColor = preset == _activePreset ? Color.White : ColorPrimary
             };
             btn.FlatAppearance.BorderColor = ColorBorder;
             btn.FlatAppearance.BorderSize = preset == _activePreset ? 0 : 1;
@@ -209,7 +204,7 @@ public partial class AnalyticsAndReportsView : UserControl
             Text = "Filter",
             Size = new Size(80, 30),
             Location = new Point(312, 4),
-            BackColor = ColorDustyRose,
+            BackColor = ColorAccent,
             ForeColor = Color.White,
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
@@ -259,8 +254,8 @@ public partial class AnalyticsAndReportsView : UserControl
             if (c is Button btn)
             {
                 bool isSelected = btn.Text == _activePreset;
-                btn.BackColor = isSelected ? ColorDustyRose : Color.White;
-                btn.ForeColor = isSelected ? Color.White : ColorEspresso;
+                btn.BackColor = isSelected ? ColorAccent : Color.White;
+                btn.ForeColor = isSelected ? Color.White : ColorPrimary;
                 btn.FlatAppearance.BorderSize = isSelected ? 0 : 1;
             }
         }
@@ -328,7 +323,7 @@ public partial class AnalyticsAndReportsView : UserControl
         dgvTopGarments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "StyleName", HeaderText = "GARMENT STYLE", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, SortMode = DataGridViewColumnSortMode.NotSortable });
         dgvTopGarments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "Size", HeaderText = "SIZE", Width = 65, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleCenter } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleCenter } });
         dgvTopGarments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalRentals", HeaderText = "LEASES", Width = 75, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight } });
-        dgvTopGarments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalRevenueGenerated", HeaderText = "REVENUE", Width = 110, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "₱#,##0.00", Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold), ForeColor = ColorDustyRose } });
+        dgvTopGarments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalRevenueGenerated", HeaderText = "REVENUE", Width = 110, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "₱#,##0.00", Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold), ForeColor = ColorAccent } });
         bodyGarments.Controls.Add(dgvTopGarments);
 
         var cardCustomers = CreateCardContainer("TOP VALUED CLIENTS (VIP LEADERBOARD)", out var bodyCustomers);
@@ -336,9 +331,9 @@ public partial class AnalyticsAndReportsView : UserControl
 
         dgvTopCustomers = CreateBaseDataGrid();
         dgvTopCustomers.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "ClientName", HeaderText = "CLIENT NAME", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, SortMode = DataGridViewColumnSortMode.NotSortable, DefaultCellStyle = { Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold) } });
-        dgvTopCustomers.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "ClientTier", HeaderText = "TIER", Width = 80, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleCenter } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleCenter, Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold), ForeColor = ColorDustyRose } });
+        dgvTopCustomers.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "ClientTier", HeaderText = "TIER", Width = 80, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleCenter } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleCenter, Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold), ForeColor = ColorAccent } });
         dgvTopCustomers.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalBookings", HeaderText = "BOOKINGS", Width = 90, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight } });
-        dgvTopCustomers.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalSpent", HeaderText = "TOTAL SPENT", Width = 120, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "₱#,##0.00", Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold), ForeColor = ColorDustyRose } });
+        dgvTopCustomers.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalSpent", HeaderText = "TOTAL SPENT", Width = 120, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "₱#,##0.00", Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold), ForeColor = ColorAccent } });
         bodyCustomers.Controls.Add(dgvTopCustomers);
 
         table.Controls.Add(cardGarments, 0, 0);
@@ -359,7 +354,7 @@ public partial class AnalyticsAndReportsView : UserControl
         dgvAuditLedger.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "GarmentSummary", HeaderText = "GARMENTS ALLOCATED", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, SortMode = DataGridViewColumnSortMode.NotSortable });
         dgvAuditLedger.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "RentalStartDate", HeaderText = "START", Width = 95, SortMode = DataGridViewColumnSortMode.NotSortable, DefaultCellStyle = { Format = "MMM dd, yyyy" } });
         dgvAuditLedger.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "RentalEndDate", HeaderText = "END", Width = 95, SortMode = DataGridViewColumnSortMode.NotSortable, DefaultCellStyle = { Format = "MMM dd, yyyy" } });
-        dgvAuditLedger.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "RentalFee", HeaderText = "FEE", Width = 110, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "₱#,##0.00", Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold), ForeColor = ColorDustyRose } });
+        dgvAuditLedger.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "RentalFee", HeaderText = "FEE", Width = 110, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "₱#,##0.00", Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold), ForeColor = ColorAccent } });
         dgvAuditLedger.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "SecurityDeposit", HeaderText = "DEPOSIT", Width = 110, SortMode = DataGridViewColumnSortMode.NotSortable, HeaderCell = { Style = { Alignment = DataGridViewContentAlignment.MiddleRight } }, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "₱#,##0.00" } });
         dgvAuditLedger.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "Stage", HeaderText = "STAGE", Width = 95, SortMode = DataGridViewColumnSortMode.NotSortable });
 
@@ -399,9 +394,9 @@ public partial class AnalyticsAndReportsView : UserControl
         dgv.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
 
         dgv.DefaultCellStyle.BackColor = Color.White;
-        dgv.DefaultCellStyle.ForeColor = ColorEspresso;
+        dgv.DefaultCellStyle.ForeColor = ColorPrimary;
         dgv.DefaultCellStyle.SelectionBackColor = Color.FromArgb(254, 246, 246);
-        dgv.DefaultCellStyle.SelectionForeColor = ColorEspresso;
+        dgv.DefaultCellStyle.SelectionForeColor = ColorPrimary;
         dgv.DefaultCellStyle.Padding = new Padding(10, 0, 10, 0);
 
         return dgv;
@@ -456,7 +451,7 @@ public partial class AnalyticsAndReportsView : UserControl
             var data = await _controller.LoadDashboardMetricsAsync(_getCompanyId(), branchId, start, end);
 
             // KPI Cards
-            kpiRevenue.SetData("GROSS LEASE REVENUE", $"₱{data.TotalLeaseRevenue:N2}", "Filtered Period", ColorDustyRose, Color.FromArgb(254, 242, 243), ColorDustyRose);
+            kpiRevenue.SetData("GROSS LEASE REVENUE", $"₱{data.TotalLeaseRevenue:N2}", "Filtered Period", ColorAccent, Color.FromArgb(254, 242, 243), ColorAccent);
             kpiDeposits.SetData("SECURITY DEPOSITS HELD", $"₱{data.ActiveDepositsHeld:N2}", "Active Escrow", Color.FromArgb(37, 99, 235), Color.FromArgb(239, 246, 255), Color.FromArgb(29, 78, 216));
             kpiUtilization.SetData("FLEET UTILIZATION", $"{data.FleetUtilizationRate:0.#}%", $"{data.CurrentlyRentedGarments}/{data.TotalActiveGarments} Rented", Color.FromArgb(5, 150, 105), Color.FromArgb(236, 253, 245), Color.FromArgb(5, 150, 105));
             kpiReturnRate.SetData("RETURN COMPLIANCE", $"{data.OnTimeReturnRate:0.#}%", $"{data.TotalBookingsCompleted} Completed", Color.FromArgb(124, 58, 237), Color.FromArgb(245, 243, 255), Color.FromArgb(124, 58, 237));

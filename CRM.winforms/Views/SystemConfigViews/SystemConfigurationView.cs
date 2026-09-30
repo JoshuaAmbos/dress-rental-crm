@@ -1,7 +1,7 @@
 ﻿using CRM.infrastructure.data;
 using CRM.winforms.Controllers;
 using System.Drawing.Drawing2D;
-
+using static CRM.winforms.Assets.Themes.ColorThemes;
 namespace CRM.winforms.Views;
 
 public partial class SystemConfigurationView : UserControl
@@ -21,14 +21,6 @@ public partial class SystemConfigurationView : UserControl
     private Label lblLastAudit = null!;
     private Button btnSave = null!;
     private Button btnReset = null!;
-
-    // Atelier Palette
-    private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
-    private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);
-    private static readonly Color ColorViewBg = Color.FromArgb(250, 245, 245);
-    private static readonly Color ColorCardBg = Color.White;
 
     public SystemConfigurationView(Func<TenantCrmDbContext> contextFactory)
     {
@@ -58,7 +50,7 @@ public partial class SystemConfigurationView : UserControl
             Text = "System Configuration & Operational Parameters",
             UseMnemonic = false, // Fixes the underscore glitch
             Font = new Font("Segoe UI Semibold", 15f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Location = new Point(0, 0),
             AutoSize = true
         };
@@ -114,7 +106,7 @@ public partial class SystemConfigurationView : UserControl
             Size = new Size(140, 36),
             Location = new Point(0, 8),
             FlatStyle = FlatStyle.Flat,
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             BackColor = Color.FromArgb(245, 240, 240),
             Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
             Cursor = Cursors.Hand
@@ -130,7 +122,7 @@ public partial class SystemConfigurationView : UserControl
             Location = new Point(pnlActions.Width - 160, 8),
             FlatStyle = FlatStyle.Flat,
             ForeColor = Color.White,
-            BackColor = ColorDustyRose,
+            BackColor = ColorAccent,
             Font = new Font("Segoe UI Semibold", 9.25f, FontStyle.Bold),
             Cursor = Cursors.Hand
         };
@@ -169,7 +161,7 @@ public partial class SystemConfigurationView : UserControl
             Text = title,
             UseMnemonic = false,
             Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
-            ForeColor = ColorDustyRose,
+            ForeColor = ColorAccent,
             Location = new Point(24, 14),
             AutoSize = true
         };
@@ -185,7 +177,7 @@ public partial class SystemConfigurationView : UserControl
             Text = title,
             UseMnemonic = false,
             Font = new Font("Segoe UI Semibold", 9.25f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Location = new Point(24, currentY),
             AutoSize = true
         };
@@ -206,7 +198,7 @@ public partial class SystemConfigurationView : UserControl
             Location = new Point(cardWidth - 240, currentY + 6),
             Width = 216,
             Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             TextAlign = HorizontalAlignment.Right
         };
 

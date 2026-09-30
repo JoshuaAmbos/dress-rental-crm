@@ -6,6 +6,7 @@ using CRM.winforms.Views;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
 using System.Drawing.Drawing2D;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Forms;
 
@@ -61,15 +62,6 @@ public partial class MainForm : Form
     private Button _btnUsers = null!;
     private Button _btnSettings = null!;
 
-    // Atelier Palette
-    private static readonly Color ColorCanvasBg = Color.FromArgb(250, 245, 245);
-    private static readonly Color ColorSidebarBg = Color.White;
-    private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorActivePillBg = Color.FromArgb(253, 241, 242);
-    private static readonly Color ColorNavInactiveText = Color.FromArgb(115, 105, 110);
-    private static readonly Color ColorMutedLabel = Color.FromArgb(150, 140, 145);
-    private static readonly Color ColorBorder = Color.FromArgb(234, 224, 224);
 
     public MainForm() : this(new LoginResult
     {
@@ -131,7 +123,7 @@ public partial class MainForm : Form
     private void BuildAtelierShell()
     {
         DoubleBuffered = true;
-        BackColor = ColorCanvasBg;
+        BackColor = ColorViewBg;
 
         // Left Navigation Sidebar
         pnlSidebar = new Panel
@@ -158,7 +150,7 @@ public partial class MainForm : Form
         var pnlMainArea = new Panel
         {
             Dock = DockStyle.Fill,
-            BackColor = ColorCanvasBg
+            BackColor = ColorViewBg
         };
         Controls.Add(pnlMainArea);
         pnlMainArea.BringToFront();
@@ -187,7 +179,7 @@ public partial class MainForm : Form
         panelContents = new Panel
         {
             Dock = DockStyle.Fill,
-            BackColor = ColorCanvasBg
+            BackColor = ColorViewBg
         };
         pnlMainArea.Controls.Add(panelContents);
         panelContents.BringToFront();
@@ -223,7 +215,7 @@ public partial class MainForm : Form
         {
             Text = string.IsNullOrWhiteSpace(_user.CompanyName) ? "Atelier" : _user.CompanyName,
             Font = new Font("Segoe UI", 12f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Location = new Point(50, 2),
             AutoSize = true
         };
@@ -266,7 +258,7 @@ public partial class MainForm : Form
             Text = "M",
             Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
             ForeColor = Color.White,
-            BackColor = ColorDustyRose,
+            BackColor = ColorAccent,
             Size = new Size(20, 20),
             TextAlign = ContentAlignment.MiddleCenter,
             Location = new Point(8, 8),
@@ -282,7 +274,7 @@ public partial class MainForm : Form
         {
             Text = "All Showrooms  ▾",
             Font = new Font("Segoe UI Semibold", 8.75f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Location = new Point(34, 9),
             AutoSize = true,
             Cursor = Cursors.Hand
@@ -332,7 +324,7 @@ public partial class MainForm : Form
             Text = GetInitials(_user.Username),
             Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
             ForeColor = Color.White,
-            BackColor = ColorDustyRose,
+            BackColor = ColorAccent,
             Size = new Size(32, 32),
             Location = new Point(2, 12),
             TextAlign = ContentAlignment.MiddleCenter,
@@ -349,7 +341,7 @@ public partial class MainForm : Form
         {
             Text = _user.Username,
             Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Location = new Point(40, 10),
             AutoSize = true,
             Cursor = Cursors.Hand
@@ -639,8 +631,8 @@ public partial class MainForm : Form
         foreach (var btn in _navButtons)
         {
             bool isActive = (btn == activeBtn);
-            btn.BackColor = isActive ? ColorActivePillBg : Color.Transparent;
-            btn.ForeColor = isActive ? ColorDustyRose : ColorNavInactiveText;
+            btn.BackColor = isActive ? ColorActivePill : Color.Transparent;
+            btn.ForeColor = isActive ? ColorAccent : ColorNavInactiveText;
             btn.Font = new Font("Segoe UI", 9.25f, isActive ? FontStyle.Bold : FontStyle.Regular);
             btn.Invalidate();
         }

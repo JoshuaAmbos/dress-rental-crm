@@ -3,6 +3,8 @@ using CRM.winforms.Controls;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Drawing.Drawing2D;
+using static CRM.winforms.Assets.Themes.ColorThemes;
+
 
 namespace CRM.winforms.Views;
 
@@ -13,14 +15,6 @@ public partial class LoyaltyAwardsView : UserControl
     private readonly Func<int?>? _getBranchId;
     private readonly LoyaltyAwardController _controller;
 
-    // Atelier Color Palette
-    private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
-    private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);
-    private static readonly Color ColorCardBg = Color.White;
-    private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
-    private static readonly Color ColorGold = Color.FromArgb(212, 175, 55);
 
     // UI Controls
     private FlowLayoutPanel pnlTierCards = null!;
@@ -72,7 +66,7 @@ public partial class LoyaltyAwardsView : UserControl
         {
             Text = "Client Loyalty & Tier Rewards",
             Font = new Font("Segoe UI", 18f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Location = new Point(32, 20),
             AutoSize = true
         };
@@ -109,7 +103,7 @@ public partial class LoyaltyAwardsView : UserControl
             Location = new Point(0, 4),
             Size = new Size(320, 30),
             Font = new Font("Segoe UI", 10f),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             PlaceholderText = "Search by client name, code, or tier..."
         };
         txtSearch.TextChanged += async (s, e) => await LoadDataAsync();
@@ -121,7 +115,7 @@ public partial class LoyaltyAwardsView : UserControl
             Size = new Size(120, 32),
             FlatStyle = FlatStyle.Flat,
             BackColor = ColorCardBg,
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
             Cursor = Cursors.Hand
         };
@@ -152,7 +146,7 @@ public partial class LoyaltyAwardsView : UserControl
             ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
             {
                 BackColor = Color.FromArgb(244, 237, 237),
-                ForeColor = ColorEspresso,
+                ForeColor = ColorPrimary,
                 Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
                 Alignment = DataGridViewContentAlignment.MiddleLeft,
                 Padding = new Padding(8, 0, 0, 0)
@@ -160,9 +154,9 @@ public partial class LoyaltyAwardsView : UserControl
             DefaultCellStyle = new DataGridViewCellStyle
             {
                 BackColor = Color.White,
-                ForeColor = ColorEspresso,
+                ForeColor = ColorPrimary,
                 SelectionBackColor = Color.FromArgb(254, 242, 243),
-                SelectionForeColor = ColorEspresso,
+                SelectionForeColor = ColorPrimary,
                 Font = new Font("Segoe UI", 9.25f),
                 Padding = new Padding(8, 0, 0, 0)
             }
@@ -211,7 +205,7 @@ public partial class LoyaltyAwardsView : UserControl
             Color badgeFg = tier switch
             {
                 "VIP" => Color.FromArgb(133, 100, 4),
-                "Gold" => ColorDustyRose,
+                "Gold" => ColorAccent,
                 _ => ColorSubtext
             };
 
@@ -272,7 +266,7 @@ public partial class LoyaltyAwardsView : UserControl
             {
                 Text = tier.TierName.ToUpper(),
                 Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
-                ForeColor = tier.TierName == "VIP" ? ColorGold : (tier.TierName == "Gold" ? ColorDustyRose : ColorEspresso),
+                ForeColor = tier.TierName == "VIP" ? ColorGold : (tier.TierName == "Gold" ? ColorAccent : ColorPrimary),
                 Location = new Point(14, 12),
                 AutoSize = true
             };
@@ -281,7 +275,7 @@ public partial class LoyaltyAwardsView : UserControl
             {
                 Text = $"{tier.DiscountPercentage:0.#}% Discount",
                 Font = new Font("Segoe UI", 13.5f, FontStyle.Bold),
-                ForeColor = ColorEspresso,
+                ForeColor = ColorPrimary,
                 Location = new Point(14, 32),
                 AutoSize = true
             };
@@ -299,7 +293,7 @@ public partial class LoyaltyAwardsView : UserControl
             {
                 Text = $"{tier.EnrolledMembersCount} members",
                 Font = new Font("Segoe UI Semibold", 8.25f, FontStyle.Bold),
-                ForeColor = ColorDustyRose,
+                ForeColor = ColorAccent,
                 Location = new Point(14, 80),
                 AutoSize = true
             };

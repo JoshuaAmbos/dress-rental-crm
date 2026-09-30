@@ -3,6 +3,7 @@ using CRM.infrastructure.data;
 using CRM.winforms.Controls;
 using CRM.winforms.Forms;
 using CRM.winforms.Models;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 
@@ -20,16 +21,6 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
     private SearchBar searchBarClients = null!;
     private ListBox listBoxCustomers = null!;
     private Button btnQuickAdd = null!;
-
-    // Atelier Palette
-    private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
-    private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);
-    private static readonly Color ColorDivider = Color.FromArgb(242, 235, 235);
-    private static readonly Color ColorCardBg = Color.White;
-    private static readonly Color ColorSelectedBg = Color.FromArgb(254, 242, 243);
-    private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
 
     public string StepTitle => "Select Client";
 
@@ -67,7 +58,7 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
         {
             Text = "Select Client",
             Font = new Font("Segoe UI Semibold", 15.5f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Location = new Point(0, 0),
             AutoSize = true
         };
@@ -92,7 +83,7 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
             Height = 44,
             FlatStyle = FlatStyle.Flat,
             BackColor = Color.FromArgb(254, 250, 250),
-            ForeColor = ColorDustyRose,
+            ForeColor = ColorAccent,
             Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
             Cursor = Cursors.Hand
         };
@@ -183,7 +174,7 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
 
         if (isSelected)
         {
-            using var barBrush = new SolidBrush(ColorDustyRose);
+            using var barBrush = new SolidBrush(ColorAccent);
             g.FillRectangle(barBrush, new Rectangle(bounds.Left, bounds.Top, 4, bounds.Height));
         }
 
@@ -215,7 +206,7 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
         using (var nameFont = new Font("Segoe UI Semibold", 9.75f, FontStyle.Bold))
         using (var subFont = new Font("Segoe UI", 8.5f, FontStyle.Regular))
         {
-            TextRenderer.DrawText(g, item.Name, nameFont, new Point(textX, textY), ColorEspresso);
+            TextRenderer.DrawText(g, item.Name, nameFont, new Point(textX, textY), ColorPrimary);
             string subtitle = $"{item.Code} · {(string.IsNullOrWhiteSpace(item.Phone) ? "—" : item.Phone)}";
             TextRenderer.DrawText(g, subtitle, subFont, new Point(textX, textY + 18), ColorSubtext);
         }
@@ -230,7 +221,7 @@ public partial class Step1ClientSelectionView : UserControl, IBookingWizardStep
             {
                 var checkSize = TextRenderer.MeasureText(g, "✓", checkFont);
                 rightOffset -= checkSize.Width;
-                TextRenderer.DrawText(g, "✓", checkFont, new Point(rightOffset, bounds.Top + (bounds.Height - checkSize.Height) / 2), ColorDustyRose);
+                TextRenderer.DrawText(g, "✓", checkFont, new Point(rightOffset, bounds.Top + (bounds.Height - checkSize.Height) / 2), ColorAccent);
                 rightOffset -= 10;
             }
 

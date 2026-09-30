@@ -3,6 +3,7 @@ using CRM.infrastructure.data;
 using CRM.winforms.Services;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Forms;
 
@@ -23,11 +24,6 @@ public partial class CreateUserDialogForm : Form
     private Label lblPasswordFeedback = null!;
     private Button btnSubmit = null!;
     private Button btnCancel = null!;
-
-    private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
-    private static readonly Color ColorError = Color.FromArgb(200, 50, 60);
 
     public CreateUserDialogForm(Func<MasterCrmDbContext> masterDbFactory, int companyId, string companyName, bool isSuperAdmin)
     {
@@ -56,7 +52,7 @@ public partial class CreateUserDialogForm : Form
         {
             Text = "Provision Boutique User Account",
             Font = new Font("Segoe UI Semibold", 13f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Location = new Point(24, 18),
             AutoSize = true
         };
@@ -81,7 +77,7 @@ public partial class CreateUserDialogForm : Form
             Size = new Size(48, 26),
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI", 10f),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             BackColor = Color.FromArgb(245, 240, 240),
             Cursor = Cursors.Hand
         };
@@ -118,7 +114,7 @@ public partial class CreateUserDialogForm : Form
             Location = new Point(222, 410),
             Size = new Size(90, 36),
             FlatStyle = FlatStyle.Flat,
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             BackColor = Color.FromArgb(245, 240, 240),
             Cursor = Cursors.Hand
         };
@@ -132,7 +128,7 @@ public partial class CreateUserDialogForm : Form
             Size = new Size(100, 36),
             FlatStyle = FlatStyle.Flat,
             ForeColor = Color.White,
-            BackColor = ColorDustyRose,
+            BackColor = ColorAccent,
             Font = new Font("Segoe UI Semibold", 9.25f, FontStyle.Bold),
             Cursor = Cursors.Hand
         };

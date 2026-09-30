@@ -2,6 +2,7 @@
 using CRM.winforms.Controls;
 using CRM.winforms.Forms;
 using System.Drawing.Drawing2D;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Views;
 
@@ -28,13 +29,6 @@ public partial class InquiriesView : UserControl
     private Label lblRecordsCount = null!;
     private DataGridView dgvInquiries = null!;
 
-    // Palette Constants
-    private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
-    private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);
-    private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
-
     public InquiriesView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId)
         : this(contextFactory, getCompanyId, null)
     {
@@ -60,7 +54,7 @@ public partial class InquiriesView : UserControl
         Font = new Font("Segoe UI", 9.5f);
 
         var pnlHeader = new Panel { Dock = DockStyle.Top, Height = 64, BackColor = Color.Transparent };
-        var lblTitle = new Label { Text = "Client Inquiries", Font = new Font("Segoe UI", 18f, FontStyle.Bold), ForeColor = ColorEspresso, AutoSize = true };
+        var lblTitle = new Label { Text = "Client Inquiries", Font = new Font("Segoe UI", 18f, FontStyle.Bold), ForeColor = ColorPrimary, AutoSize = true };
         var lblSub = new Label { Text = "Track inbound wardrobe consultations and convert qualified prospects to bookings.", Font = new Font("Segoe UI", 9.75f), ForeColor = ColorSubtext, Location = new Point(0, 34), AutoSize = true };
 
         var btnLog = new Button
@@ -69,7 +63,7 @@ public partial class InquiriesView : UserControl
             Size = new Size(130, 36),
             Location = new Point(Width - 130 - 64, 14),
             Anchor = AnchorStyles.Top | AnchorStyles.Right,
-            BackColor = ColorDustyRose,
+            BackColor = ColorAccent,
             ForeColor = Color.White,
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
@@ -144,7 +138,7 @@ public partial class InquiriesView : UserControl
             Width = 220,
             Location = new Point(8, 7),
             Font = new Font("Segoe UI", 9.5f),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             PlaceholderText = "Search by name, event, ID..."
         };
         txtSearch.TextChanged += async (s, e) =>
@@ -198,8 +192,8 @@ public partial class InquiriesView : UserControl
             if (c is Button btn && btn.Tag is string tabName)
             {
                 bool isSelected = string.Equals(_currentStatusFilter, tabName, StringComparison.OrdinalIgnoreCase);
-                btn.BackColor = isSelected ? ColorDustyRose : Color.White;
-                btn.ForeColor = isSelected ? Color.White : ColorEspresso;
+                btn.BackColor = isSelected ? ColorAccent : Color.White;
+                btn.ForeColor = isSelected ? Color.White : ColorPrimary;
                 btn.FlatAppearance.BorderSize = isSelected ? 0 : 1;
             }
         }
@@ -271,7 +265,7 @@ public partial class InquiriesView : UserControl
             _pipelineData = await _controller.LoadPipelineAsync(_getCompanyId(), branchId, _currentStatusFilter, _currentSearch);
             if (_pipelineData == null) return;
 
-            kpiNew.SetData("NEW INQUIRIES", _pipelineData.NewCount.ToString(), "Unactioned", ColorDustyRose, Color.FromArgb(254, 242, 243), ColorDustyRose);
+            kpiNew.SetData("NEW INQUIRIES", _pipelineData.NewCount.ToString(), "Unactioned", ColorAccent, Color.FromArgb(254, 242, 243), ColorAccent);
             kpiInReview.SetData("IN REVIEW", _pipelineData.InReviewCount.ToString(), "Being assessed", Color.FromArgb(217, 119, 6), Color.FromArgb(254, 243, 199), Color.FromArgb(180, 83, 9));
             kpiRate.SetData("CONVERSION RATE", $"{_pipelineData.ConversionRate:0.#}%", "Inquiries → Bookings", Color.FromArgb(5, 150, 105), Color.FromArgb(236, 253, 245), Color.FromArgb(5, 150, 105));
             kpiTotal.SetData("TOTAL INQUIRIES", _pipelineData.TotalCount.ToString(), "Scoped showroom", Color.FromArgb(37, 99, 235), Color.FromArgb(239, 246, 255), Color.FromArgb(29, 78, 216));
@@ -309,7 +303,7 @@ public partial class InquiriesView : UserControl
         {
             var item = stages[i];
             var container = new Panel { Width = 150, Height = 48, BackColor = Color.Transparent };
-            var lblCount = new Label { Text = item.Count.ToString(), Font = new Font("Segoe UI", 12f, FontStyle.Bold), ForeColor = ColorEspresso, AutoSize = true };
+            var lblCount = new Label { Text = item.Count.ToString(), Font = new Font("Segoe UI", 12f, FontStyle.Bold), ForeColor = ColorPrimary, AutoSize = true };
             var badge = new Label { Text = item.Stage, Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold), ForeColor = item.BadgeText, BackColor = item.BadgeBg, AutoSize = true, Padding = new Padding(8, 2, 8, 2), Location = new Point(0, 24) };
 
             container.Controls.AddRange(new Control[] { lblCount, badge });

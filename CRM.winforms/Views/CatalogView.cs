@@ -3,6 +3,7 @@ using CRM.infrastructure.data;
 using CRM.winforms.Controls;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Views;
 
@@ -19,13 +20,6 @@ public partial class CatalogView : UserControl
 
     private FlowLayoutPanel pnlFilterTabs = null!;
     private readonly List<Button> _filterButtons = new();
-
-    // Atelier Palette
-    private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
-    private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);
-    private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
 
     public CatalogView()
     {
@@ -66,7 +60,7 @@ public partial class CatalogView : UserControl
             label1.Text = "Garment Catalog";
             label1.UseMnemonic = false;
             label1.Font = new Font("Segoe UI", 18f, FontStyle.Bold);
-            label1.ForeColor = ColorEspresso;
+            label1.ForeColor = ColorPrimary;
         }
 
         if (secondaryButtonAll != null) secondaryButtonAll.Visible = false;
@@ -249,8 +243,8 @@ public partial class CatalogView : UserControl
                 FlatStyle = FlatStyle.Flat,
                 Margin = new Padding(0, 0, 8, 0),
                 Cursor = Cursors.Hand,
-                BackColor = isSelected ? ColorDustyRose : Color.White,
-                ForeColor = isSelected ? Color.White : ColorEspresso
+                BackColor = isSelected ? ColorAccent : Color.White,
+                ForeColor = isSelected ? Color.White : ColorPrimary
             };
 
             btn.FlatAppearance.BorderSize = isSelected ? 0 : 1;
@@ -275,8 +269,8 @@ public partial class CatalogView : UserControl
         foreach (var btn in _filterButtons)
         {
             bool isSelected = (btn == activeBtn);
-            btn.BackColor = isSelected ? ColorDustyRose : Color.White;
-            btn.ForeColor = isSelected ? Color.White : ColorEspresso;
+            btn.BackColor = isSelected ? ColorAccent : Color.White;
+            btn.ForeColor = isSelected ? Color.White : ColorPrimary;
             btn.FlatAppearance.BorderSize = isSelected ? 0 : 1;
         }
     }

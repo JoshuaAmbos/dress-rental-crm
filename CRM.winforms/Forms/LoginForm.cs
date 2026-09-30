@@ -1,4 +1,5 @@
 using System.Drawing.Drawing2D;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Forms;
 
@@ -16,15 +17,6 @@ public partial class LoginForm : Form
     private Panel pnlBrandContent = null!;
     private Panel pnlFormArea = null!;
     private Panel pnlCard = null!;
-
-    // Colors
-    private static readonly Color ColorBrandDark = Color.FromArgb(44, 34, 38);
-    private static readonly Color ColorBrandLight = Color.FromArgb(96, 58, 66);
-    private static readonly Color ColorPrimary = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorPrimaryHover = Color.FromArgb(171, 99, 108);
-    private static readonly Color ColorBorder = Color.FromArgb(220, 210, 210);
-    private static readonly Color ColorSubtext = Color.FromArgb(120, 110, 115);
-    private static readonly Color ColorFormBg = Color.FromArgb(250, 248, 248);
 
     public LoginResult? AuthenticatedUser { get; private set; }
 

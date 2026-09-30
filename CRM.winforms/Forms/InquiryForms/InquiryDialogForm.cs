@@ -2,6 +2,7 @@
 using CRM.infrastructure.data;
 using Microsoft.EntityFrameworkCore;
 using System.Drawing.Drawing2D;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Forms;
 
@@ -27,12 +28,6 @@ public partial class InquiryDialogForm : Form
     private Button btnCancel = null!;
     private Button btnClose = null!;
     private Point _dragStartPoint;
-
-    private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorSubtext = Color.FromArgb(130, 120, 125);
-    private static readonly Color ColorBorder = Color.FromArgb(204, 188, 184);
-    private static readonly Color ColorDivider = Color.FromArgb(220, 208, 205);
 
     public InquiryDialogForm(Func<TenantCrmDbContext> contextFactory, int companyId, Inquiry? existing = null, int? defaultBranchId = null)
     {
@@ -88,7 +83,7 @@ public partial class InquiryDialogForm : Form
         {
             Text = InquiryModel.InquiryId > 0 ? $"Edit Inquiry ({InquiryModel.InquiryCode})" : "Log Inbound Inquiry",
             Font = new Font("Segoe UI", 15f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Location = new Point(28, 16),
             AutoSize = true
         };
@@ -178,7 +173,7 @@ public partial class InquiryDialogForm : Form
             Size = new Size(95, 36),
             Location = new Point(pnlFooter.Width - 245, 14),
             BackColor = Color.White,
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
             Cursor = Cursors.Hand
@@ -191,7 +186,7 @@ public partial class InquiryDialogForm : Form
             Text = InquiryModel.InquiryId > 0 ? "Update Inquiry" : "Save Inquiry",
             Size = new Size(135, 36),
             Location = new Point(pnlFooter.Width - 140, 14),
-            BackColor = ColorDustyRose,
+            BackColor = ColorAccent,
             ForeColor = Color.White,
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
@@ -210,7 +205,7 @@ public partial class InquiryDialogForm : Form
         var pnl = new Panel { Location = new Point(x, y + 18), Size = new Size(width, 34), BackColor = Color.White };
         pnl.Paint += (s, e) => { using var p = new Pen(ColorBorder, 1.25f); e.Graphics.DrawRectangle(p, 0, 0, pnl.Width - 1, pnl.Height - 1); };
 
-        tb = new TextBox { BorderStyle = BorderStyle.None, Font = new Font("Segoe UI", 9.5f), Location = new Point(8, 7), Width = width - 16, ForeColor = ColorEspresso };
+        tb = new TextBox { BorderStyle = BorderStyle.None, Font = new Font("Segoe UI", 9.5f), Location = new Point(8, 7), Width = width - 16, ForeColor = ColorPrimary };
         pnl.Controls.Add(tb);
         Controls.AddRange(new Control[] { lbl, pnl });
     }
@@ -218,14 +213,14 @@ public partial class InquiryDialogForm : Form
     private void AddLabeledComboBox(string label, int x, int y, int width, out ComboBox cb)
     {
         var lbl = new Label { Text = label, Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold), ForeColor = ColorSubtext, Location = new Point(x, y), AutoSize = true };
-        cb = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 9.5f), Location = new Point(x, y + 18), Width = width, ForeColor = ColorEspresso };
+        cb = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 9.5f), Location = new Point(x, y + 18), Width = width, ForeColor = ColorPrimary };
         Controls.AddRange(new Control[] { lbl, cb });
     }
 
     private void AddLabeledDatePicker(string label, int x, int y, int width, out DateTimePicker dtp)
     {
         var lbl = new Label { Text = label, Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold), ForeColor = ColorSubtext, Location = new Point(x, y), AutoSize = true };
-        dtp = new DateTimePicker { Format = DateTimePickerFormat.Short, Font = new Font("Segoe UI", 9.5f), Location = new Point(x, y + 18), Width = width, CalendarForeColor = ColorEspresso };
+        dtp = new DateTimePicker { Format = DateTimePickerFormat.Short, Font = new Font("Segoe UI", 9.5f), Location = new Point(x, y + 18), Width = width, CalendarForeColor = ColorPrimary };
         Controls.AddRange(new Control[] { lbl, dtp });
     }
 
@@ -235,7 +230,7 @@ public partial class InquiryDialogForm : Form
         var pnl = new Panel { Location = new Point(x, y + 18), Size = new Size(width, height), BackColor = Color.White };
         pnl.Paint += (s, e) => { using var p = new Pen(ColorBorder, 1.25f); e.Graphics.DrawRectangle(p, 0, 0, pnl.Width - 1, pnl.Height - 1); };
 
-        tb = new TextBox { BorderStyle = BorderStyle.None, Multiline = true, ScrollBars = ScrollBars.Vertical, Font = new Font("Segoe UI", 9f), Location = new Point(8, 6), Size = new Size(width - 16, height - 12), ForeColor = ColorEspresso };
+        tb = new TextBox { BorderStyle = BorderStyle.None, Multiline = true, ScrollBars = ScrollBars.Vertical, Font = new Font("Segoe UI", 9f), Location = new Point(8, 6), Size = new Size(width - 16, height - 12), ForeColor = ColorPrimary };
         pnl.Controls.Add(tb);
         Controls.AddRange(new Control[] { lbl, pnl });
     }

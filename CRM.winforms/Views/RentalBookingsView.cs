@@ -1,8 +1,9 @@
-﻿using System.ComponentModel;
-using CRM.infrastructure.data;
+﻿using CRM.infrastructure.data;
 using CRM.winforms.Controls.RentalBookingControls;
 using CRM.winforms.Forms;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Views;
 
@@ -20,12 +21,6 @@ public partial class RentalBookingsView : UserControl
 
     private FlowLayoutPanel pnlFilterTabs = null!;
     private TextBox txtSearch = null!;
-
-    // Atelier Palette
-    private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);
-    private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
 
     public event EventHandler? RequestNewBooking;
 
@@ -99,7 +94,7 @@ public partial class RentalBookingsView : UserControl
         {
             BorderStyle = BorderStyle.None,
             Font = new Font("Segoe UI", 9.5f),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Location = new Point(10, 8),
             Width = 240,
             PlaceholderText = "Search bookings..."
@@ -213,8 +208,8 @@ public partial class RentalBookingsView : UserControl
                 FlatStyle = FlatStyle.Flat,
                 Margin = new Padding(0, 0, 8, 0),
                 Cursor = Cursors.Hand,
-                BackColor = isSelected ? ColorDustyRose : Color.White,
-                ForeColor = isSelected ? Color.White : ColorEspresso
+                BackColor = isSelected ? ColorAccent : Color.White,
+                ForeColor = isSelected ? Color.White : ColorPrimary
             };
 
             btn.FlatAppearance.BorderSize = isSelected ? 0 : 1;

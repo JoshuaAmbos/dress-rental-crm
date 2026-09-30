@@ -2,6 +2,7 @@
 using CRM.winforms.Controls;
 using CRM.winforms.Forms;
 using System.Drawing.Drawing2D;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Views;
 
@@ -28,13 +29,6 @@ public partial class ComplaintsView : UserControl
     private Label lblRecordsCount = null!;
     private DataGridView dgvComplaints = null!;
 
-    // Atelier Palette
-    private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
-    private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);
-    private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
-
     public ComplaintsView(Func<TenantCrmDbContext> contextFactory, Func<int> getCompanyId, Func<int?>? getBranchId = null)
     {
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
@@ -55,7 +49,7 @@ public partial class ComplaintsView : UserControl
         Font = new Font("Segoe UI", 9.5f);
 
         var pnlHeader = new Panel { Dock = DockStyle.Top, Height = 64, BackColor = Color.Transparent };
-        var lblTitle = new Label { Text = "Client Complaints & Incidents", Font = new Font("Segoe UI", 18f, FontStyle.Bold), ForeColor = ColorEspresso, AutoSize = true };
+        var lblTitle = new Label { Text = "Client Complaints & Incidents", Font = new Font("Segoe UI", 18f, FontStyle.Bold), ForeColor = ColorPrimary, AutoSize = true };
         var lblSub = new Label { Text = "Log customer disputes, track quality escalations, and audit corrective resolutions.", Font = new Font("Segoe UI", 9.75f), ForeColor = ColorSubtext, Location = new Point(0, 34), AutoSize = true };
 
         var btnLog = new Button
@@ -64,7 +58,7 @@ public partial class ComplaintsView : UserControl
             Size = new Size(140, 36),
             Location = new Point(Width - 140 - 64, 14),
             Anchor = AnchorStyles.Top | AnchorStyles.Right,
-            BackColor = ColorDustyRose,
+            BackColor = ColorAccent,
             ForeColor = Color.White,
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold),
@@ -128,7 +122,7 @@ public partial class ComplaintsView : UserControl
             Width = 240,
             Location = new Point(8, 7),
             Font = new Font("Segoe UI", 9.5f),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             PlaceholderText = "Search by client, ID, category..."
         };
         txtSearch.TextChanged += async (s, e) =>
@@ -182,8 +176,8 @@ public partial class ComplaintsView : UserControl
             if (c is Button btn && btn.Tag is string tabName)
             {
                 bool isSelected = string.Equals(_currentStatusFilter, tabName, StringComparison.OrdinalIgnoreCase);
-                btn.BackColor = isSelected ? ColorDustyRose : Color.White;
-                btn.ForeColor = isSelected ? Color.White : ColorEspresso;
+                btn.BackColor = isSelected ? ColorAccent : Color.White;
+                btn.ForeColor = isSelected ? Color.White : ColorPrimary;
                 btn.FlatAppearance.BorderSize = isSelected ? 0 : 1;
             }
         }
@@ -228,7 +222,7 @@ public partial class ComplaintsView : UserControl
             new DataGridViewTextBoxColumn { DataPropertyName = "Severity", HeaderText = "SEVERITY", Width = 110 },
             new DataGridViewTextBoxColumn { DataPropertyName = "Status", HeaderText = "STATUS", Width = 140 },
             new DataGridViewTextBoxColumn { DataPropertyName = "Description", HeaderText = "INCIDENT DESCRIPTION", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill },
-            new DataGridViewTextBoxColumn { DataPropertyName = "CompensationAmount", HeaderText = "REFUND/CREDIT", Width = 120, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "₱#,##0.00", Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold), ForeColor = ColorDustyRose } },
+            new DataGridViewTextBoxColumn { DataPropertyName = "CompensationAmount", HeaderText = "REFUND/CREDIT", Width = 120, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "₱#,##0.00", Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold), ForeColor = ColorAccent } },
             new DataGridViewTextBoxColumn { DataPropertyName = "LoggedDateFormatted", HeaderText = "LOGGED", Width = 110 },
             new DataGridViewButtonColumn { Name = "ColView", HeaderText = "", Text = "View", UseColumnTextForButtonValue = true, Width = 75, FlatStyle = FlatStyle.Flat },
             new DataGridViewButtonColumn { Name = "ColResolve", HeaderText = "ACTION", Text = "Resolve", UseColumnTextForButtonValue = true, Width = 85, FlatStyle = FlatStyle.Flat }
@@ -290,7 +284,7 @@ public partial class ComplaintsView : UserControl
         {
             var item = stages[i];
             var container = new Panel { Width = 150, Height = 48, BackColor = Color.Transparent };
-            var lblCount = new Label { Text = item.Count.ToString(), Font = new Font("Segoe UI", 12f, FontStyle.Bold), ForeColor = ColorEspresso, AutoSize = true };
+            var lblCount = new Label { Text = item.Count.ToString(), Font = new Font("Segoe UI", 12f, FontStyle.Bold), ForeColor = ColorPrimary, AutoSize = true };
             var badge = new Label { Text = item.Stage, Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold), ForeColor = item.Fg, BackColor = item.Bg, AutoSize = true, Padding = new Padding(8, 2, 8, 2), Location = new Point(0, 24) };
 
             container.Controls.AddRange(new Control[] { lblCount, badge });

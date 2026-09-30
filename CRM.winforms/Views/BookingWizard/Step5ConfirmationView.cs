@@ -1,4 +1,5 @@
 ﻿using CRM.winforms.Models;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 using System.Drawing.Drawing2D;
 
 namespace CRM.winforms.Views;
@@ -18,15 +19,6 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
     private Label lblPaymentMethodVal = null!;
 
     private CheckBox chkAgreeTerms = null!;
-
-    private static readonly Color ColorEspresso = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorSubtext = Color.FromArgb(145, 135, 140);
-    private static readonly Color ColorBorder = Color.FromArgb(234, 223, 217);
-    private static readonly Color ColorDivider = Color.FromArgb(242, 235, 235);
-    private static readonly Color ColorCardBg = Color.White;
-    private static readonly Color ColorViewBg = Color.FromArgb(249, 241, 241);
-    private static readonly Color ColorSuccess = Color.FromArgb(5, 150, 105);
 
     private const string CurrencySymbol = "₱";
     private const int RowHeight = 44;
@@ -52,7 +44,7 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
             Text = "Review & Confirm",
             UseMnemonic = false,
             Font = new Font("Segoe UI Semibold", 15.5f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Location = new Point(0, 0),
             AutoSize = true
         };
@@ -73,7 +65,7 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
             Text = "Client agrees to rental terms, return deadlines, and security deposit policies.",
             UseMnemonic = false,
             Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Dock = DockStyle.Fill,
             Cursor = Cursors.Hand
         };
@@ -146,7 +138,7 @@ public partial class Step5ConfirmationView : UserControl, IBookingWizardStep
             Text = "—",
             UseMnemonic = false,
             Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Anchor = AnchorStyles.Top | AnchorStyles.Right,
             Location = new Point(container.Width - 524, y + 11),
             Size = new Size(500, 22),

@@ -2,12 +2,8 @@
 using CRM.winforms.Forms;
 using CRM.winforms.Services;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+using static CRM.winforms.Assets.Themes.ColorThemes;
 
 namespace CRM.winforms.Views;
 
@@ -28,14 +24,6 @@ public partial class UserAccountsView : UserControl
     private Button btnMoveBranch = null!;
     private TextBox txtSearch = null!;
 
-    private static readonly Color ColorEspresso  = Color.FromArgb(38, 22, 24);
-    private static readonly Color ColorDustyRose = Color.FromArgb(190, 110, 120);
-    private static readonly Color ColorSubtext   = Color.FromArgb(145, 135, 140);
-    private static readonly Color ColorBorder    = Color.FromArgb(234, 223, 217);
-    private static readonly Color ColorCardBg    = Color.White;
-    private static readonly Color ColorViewBg    = Color.FromArgb(250, 245, 245);
-
-    // Primary 5-parameter constructor
     public UserAccountsView(
         Func<MasterCrmDbContext> masterDbFactory,
         Func<TenantCrmDbContext> tenantDbFactory,
@@ -54,7 +42,6 @@ public partial class UserAccountsView : UserControl
         _ = LoadUsersAsync();
     }
 
-    // Defensive 4-parameter chaining constructor (prevents compilation breakages)
     public UserAccountsView(
         Func<MasterCrmDbContext> masterDbFactory,
         int currentCompanyId,
@@ -89,7 +76,7 @@ public partial class UserAccountsView : UserControl
         {
             Text = _isSuperAdmin ? "Global User Accounts (Cross-Tenant)" : $"Staff & Manager Accounts — {_currentCompanyName}",
             Font = new Font("Segoe UI Semibold", 15f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             Location = new Point(0, 0),
             AutoSize = true
         };
@@ -99,7 +86,7 @@ public partial class UserAccountsView : UserControl
             Text = "+ New User Account",
             Font = new Font("Segoe UI Semibold", 9.25f, FontStyle.Bold),
             ForeColor = Color.White,
-            BackColor = ColorDustyRose,
+            BackColor = ColorAccent,
             FlatStyle = FlatStyle.Flat,
             Size = new Size(160, 34),
             Anchor = AnchorStyles.Top | AnchorStyles.Right,
@@ -111,7 +98,6 @@ public partial class UserAccountsView : UserControl
 
         pnlHeader.Controls.AddRange(new Control[] { lblTitle, btnCreateUser });
 
-        // Action Toolbar
         var pnlToolbar = new Panel
         {
             Dock = DockStyle.Top,
@@ -165,7 +151,7 @@ public partial class UserAccountsView : UserControl
         };
         dgvUsers.EnableHeadersVisualStyles = false;
         dgvUsers.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(253, 248, 248);
-        dgvUsers.ColumnHeadersDefaultCellStyle.ForeColor = ColorEspresso;
+        dgvUsers.ColumnHeadersDefaultCellStyle.ForeColor = ColorPrimary;
         dgvUsers.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI Semibold", 9.25f, FontStyle.Bold);
         dgvUsers.ColumnHeadersHeight = 36;
 
@@ -185,7 +171,7 @@ public partial class UserAccountsView : UserControl
             Size = new Size(width, 32),
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI Semibold", 8.75f, FontStyle.Bold),
-            ForeColor = ColorEspresso,
+            ForeColor = ColorPrimary,
             BackColor = Color.FromArgb(245, 240, 240),
             Cursor = Cursors.Hand
         };
@@ -368,7 +354,7 @@ public partial class UserAccountsView : UserControl
 
         var lbl = new Label { Text = "New Temporary Password:", Left = 20, Top = 20, AutoSize = true, Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold) };
         var txt = new TextBox { Left = 20, Top = 45, Width = 320, Text = "TempPass@2026!" };
-        var btn = new Button { Text = "Reset Password", Left = 200, Top = 95, Width = 140, Height = 34, FlatStyle = FlatStyle.Flat, ForeColor = Color.White, BackColor = ColorDustyRose, DialogResult = DialogResult.OK };
+        var btn = new Button { Text = "Reset Password", Left = 200, Top = 95, Width = 140, Height = 34, FlatStyle = FlatStyle.Flat, ForeColor = Color.White, BackColor = ColorAccent, DialogResult = DialogResult.OK };
         btn.FlatAppearance.BorderSize = 0;
         prompt.Controls.AddRange(new Control[] { lbl, txt, btn });
 
