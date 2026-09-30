@@ -28,10 +28,19 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 
 var masterConn = Environment.GetEnvironmentVariable("MASTER_CRM_CONNECTION")
-                 ?? builder.Configuration.GetConnectionString("MasterCrm");
+                 ?? builder.Configuration.GetConnectionString("MasterCrm")
+                 ?? "Server=localhost,1433;Database=DB_MasterCRM;User Id=sa;Password=YourStrong@Passw0rd!;Encrypt=False;TrustServerCertificate=True;";
 
 var tenantConn = Environment.GetEnvironmentVariable("TENANT_CRM_CONNECTION")
-                 ?? builder.Configuration.GetConnectionString("TenantCrm");
+                 ?? builder.Configuration.GetConnectionString("TenantCrm")
+                 ?? "Server=localhost,1433;Database=DB_TenantCRM;User Id=sa;Password=YourStrong@Passw0rd!;Encrypt=False;TrustServerCertificate=True;";
+
+// If running natively on Linux/Ubuntu, force 10.0.2.2 back to localhost
+if (OperatingSystem.IsLinux())
+{
+    masterConn = masterConn.Replace("10.0.2.2", "localhost");
+    tenantConn = tenantConn.Replace("10.0.2.2", "localhost");
+}
 
 builder.Services.AddDbContext<MasterCrmDbContext>(options =>
     options.UseSqlServer(masterConn, sql => sql.CommandTimeout(60)));
@@ -68,9 +77,16 @@ using (var scope = app.Services.CreateScope())
                  ?? config["DatabaseSettings:Server"]
                  ?? "localhost,1433";
 
+    if (OperatingSystem.IsLinux())
+    {
+        server = server.Replace("10.0.2.2", "localhost");
+    }
+
     var saPassword = Environment.GetEnvironmentVariable("DB_PASSWORD")
                      ?? config["DatabaseSettings:SaPassword"]
                      ?? "YourStrong@Passw0rd!";
+
+    await DatabaseSeeder.ProvisionAndSeedAllTenantsAsync(server, saPassword);
 
     // 1. Provision Master CRM, Subscription Packages, and the 3 Isolated Tenant Databases
     await DatabaseSeeder.ProvisionAndSeedAllTenantsAsync(server, saPassword);
