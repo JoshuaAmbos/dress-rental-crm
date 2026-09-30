@@ -4,24 +4,40 @@ using CRM.domain.DTOs;
 using CRM.domain.entities;
 using CRM.infrastructure.data;
 using CRM.infrastructure.services;
+using DotNetEnv;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
 
+// Load environment variables from .env file if present
+Env.TraversePath().Load();
+
 var builder = WebApplication.CreateBuilder(args);
 
-// SERVICES & DEPENDENCY INJECTION CONFIGURATION
+// Allow Windows VM or external devices to connect via Ubuntu host gateway
+builder.WebHost.UseUrls("http://0.0.0.0:5171");
+
+// =============================================================
+// 1. SERVICES & DEPENDENCY INJECTION CONFIGURATION
+// =============================================================
+
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
 });
 
+var masterConn = Environment.GetEnvironmentVariable("MASTER_CRM_CONNECTION")
+                 ?? builder.Configuration.GetConnectionString("MasterCrm");
+
+var tenantConn = Environment.GetEnvironmentVariable("TENANT_CRM_CONNECTION")
+                 ?? builder.Configuration.GetConnectionString("TenantCrm");
+
 builder.Services.AddDbContext<MasterCrmDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("MasterCrm")));
+    options.UseSqlServer(masterConn, sql => sql.CommandTimeout(60)));
 
 builder.Services.AddDbContext<TenantCrmDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("TenantCrm")));
+    options.UseSqlServer(tenantConn, sql => sql.CommandTimeout(60)));
 
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {
@@ -33,23 +49,33 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<MasterCrmDbContext>()
 .AddDefaultTokenProviders();
 
-// Dynamic Multi-Tenant Services
+// Dynamic Multi-Tenant Infrastructure Services
 builder.Services.AddScoped<ITenantDatabaseResolver, TenantDatabaseResolver>();
 builder.Services.AddScoped<ITenantDbContextFactory, TenantDbContextFactory>();
 builder.Services.AddScoped<TenantProvisioningService>();
 
 var app = builder.Build();
 
+// =============================================================
+// 2. DATABASE STARTUP INITIALIZATION & MULTI-TENANT SEEDING
+// =============================================================
 
-// DATABASE STARTUP INITIALIZATION & SEEDING
 using (var scope = app.Services.CreateScope())
 {
     var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
-    var server = config["DatabaseSettings:Server"] ?? "localhost,1433";
-    var saPassword = config["DatabaseSettings:SaPassword"] ?? "YourStrong@Passw0rd!";
 
-    await CRM.infrastructure.data.DatabaseSeeder.ProvisionAndSeedAllTenantsAsync(server, saPassword);
+    var server = Environment.GetEnvironmentVariable("DB_SERVER")
+                 ?? config["DatabaseSettings:Server"]
+                 ?? "localhost,1433";
 
+    var saPassword = Environment.GetEnvironmentVariable("DB_PASSWORD")
+                     ?? config["DatabaseSettings:SaPassword"]
+                     ?? "YourStrong@Passw0rd!";
+
+    // 1. Provision Master CRM, Subscription Packages, and the 3 Isolated Tenant Databases
+    await DatabaseSeeder.ProvisionAndSeedAllTenantsAsync(server, saPassword);
+
+    // 2. Seed Identity Roles
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
 
@@ -61,6 +87,7 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
+    // 3. User Provisioning Helper with Showroom Branch Claims
     async Task EnsureUserAsync(
         string username,
         string email,
@@ -102,25 +129,32 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
-    // Tenant C: Atelier Haute Couture (Package A - Multi-Branch)
+    // Tenant 1: Atelier Haute Couture (Package A - Multi-Branch)
     await EnsureUserAsync("superadmin", "superadmin@crm.local", "SuperSecret123!", AppRoles.Superadmin, 1, "Atelier Haute Couture", "Global Corporate");
     await EnsureUserAsync("atelier_admin", "admin@atelier.local", "SuperSecret123!", AppRoles.Admin, 1, "Atelier Haute Couture", "All Showrooms");
     await EnsureUserAsync("atelier_manager", "manager@atelier.local", "SuperSecret123!", AppRoles.Manager, 1, "Atelier Haute Couture", "Flagship Atelier (Makati)");
     await EnsureUserAsync("atelier_staff", "staff@atelier.local", "SuperSecret123!", AppRoles.Staff, 1, "Atelier Haute Couture", "Flagship Atelier (Makati)");
 
-    // Tenant B: Maison Étoile Bridal (Package B - Single-Branch)
+    // Tenant 2: Maison Étoile Bridal (Package B - Single-Branch)
     await EnsureUserAsync("maison_admin", "admin@maisonetoile.local", "SuperSecret123!", AppRoles.Admin, 2, "Maison Étoile Bridal", "Maison Étoile Atelier");
     await EnsureUserAsync("maison_manager", "manager@maisonetoile.local", "SuperSecret123!", AppRoles.Manager, 2, "Maison Étoile Bridal", "Maison Étoile Atelier");
     await EnsureUserAsync("maison_staff", "staff@maisonetoile.local", "SuperSecret123!", AppRoles.Staff, 2, "Maison Étoile Bridal", "Maison Étoile Atelier");
 
-    // Tenant A: Davao Haute Rentals (Package C - Starter)
+    // Tenant 3: Davao Haute Rentals (Package C - Starter)
     await EnsureUserAsync("davao_admin", "admin@davaohaute.local", "SuperSecret123!", AppRoles.Admin, 3, "Davao Haute Rentals", "Davao Haute Flagship");
     await EnsureUserAsync("davao_manager", "manager@davaohaute.local", "SuperSecret123!", AppRoles.Manager, 3, "Davao Haute Rentals", "Davao Haute Flagship");
     await EnsureUserAsync("davao_staff", "staff@davaohaute.local", "SuperSecret123!", AppRoles.Staff, 3, "Davao Haute Rentals", "Davao Haute Flagship");
 }
 
+// =============================================================
+// 3. AUTHENTICATION & IDENTITY ENDPOINTS
+// =============================================================
 
 app.MapAuthEndpoints();
+
+// =============================================================
+// 4. SUPERADMIN PROVISIONING & TENANT MANAGEMENT
+// =============================================================
 
 app.MapPost("/api/superadmin/tenants", async (
     CreateTenantRequestDto dto,
@@ -166,6 +200,7 @@ app.MapDelete("/api/superadmin/tenants/{companyId:int}", async (int companyId, M
     return Results.Ok(new { message = tenant.IsActive ? "Tenant reactivated" : "Tenant deactivated" });
 });
 
+// Master CRM Infrastructure Endpoints
 app.MapPost("/companies", async (Company company, MasterCrmDbContext db) =>
 {
     db.Companies.Add(company);
@@ -186,6 +221,10 @@ app.MapPost("/company-databases", async (CompanyDatabase companyDatabase, Master
     await db.SaveChangesAsync();
     return Results.Created($"/company-databases/{companyDatabase.CompanyDatabaseId}", companyDatabase);
 });
+
+// =============================================================
+// 5. MODULAR TENANT CRM ENDPOINTS
+// =============================================================
 
 app.MapTenantEndpoints();
 

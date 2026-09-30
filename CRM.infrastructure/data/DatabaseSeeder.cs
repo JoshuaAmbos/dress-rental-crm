@@ -8,14 +8,18 @@ namespace CRM.infrastructure.data;
 public static class DatabaseSeeder
 {
     public static async Task ProvisionAndSeedAllTenantsAsync(
-        string server = "localhost,1433",
-        string saPassword = "YourStrong@Passw0rd!")
+    string server = "localhost,1433",
+    string saPassword = "YourStrong@Passw0rd!")
     {
-        var masterConnStr = $"Server={server};Database=DB_MasterCRM;User Id=sa;Password={saPassword};TrustServerCertificate=True;MultipleActiveResultSets=True;";
-        var masterOptions = new DbContextOptionsBuilder<MasterCrmDbContext>().UseSqlServer(masterConnStr).Options;
+        // 1. Configure Master DB with a 180-second timeout and explicit Encrypt=False
+        var masterConnStr = $"Server={server};Database=DB_MasterCRM;User Id=sa;Password={saPassword};Encrypt=False;TrustServerCertificate=True;MultipleActiveResultSets=True;";
+        var masterOptions = new DbContextOptionsBuilder<MasterCrmDbContext>()
+            .UseSqlServer(masterConnStr, sql => sql.CommandTimeout(180))
+            .Options;
+
         await using var masterDb = new MasterCrmDbContext(masterOptions);
 
-        // 1. Seed Master CRM Metadata & Packages
+        // Seed Master CRM Metadata & Subscription Packages
         await MasterDbSeeder.SeedMasterCatalogAsync(masterDb, server);
 
         var companies = await masterDb.Companies
@@ -23,29 +27,42 @@ public static class DatabaseSeeder
             .AsNoTracking()
             .ToListAsync();
 
-        // 2. Provision and Seed Each Tenant Database Separately
+        var sysConnStr = $"Server={server};Database=master;User Id=sa;Password={saPassword};Encrypt=False;TrustServerCertificate=True;";
+
         foreach (var company in companies)
         {
             var dbName = company.CompanyDatabases.FirstOrDefault(d => d.IsActive)?.DatabaseName
                          ?? $"DB_Tenant_{company.CompanyCode}";
 
-            // Ensure physical SQL database exists
-            var sysConnStr = $"Server={server};Database=master;User Id=sa;Password={saPassword};TrustServerCertificate=True;";
+            // Ensure physical SQL database exists with an extended 180-second command timeout
             await using (var conn = new SqlConnection(sysConnStr))
             {
                 await conn.OpenAsync();
-                var sql = $"IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = '{dbName}') CREATE DATABASE [{dbName}];";
-                await using var cmd = new SqlCommand(sql, conn);
+                var sql = $@"
+                IF NOT EXISTS (SELECT 1 FROM sys.databases WHERE name = '{dbName}')
+                BEGIN
+                    CREATE DATABASE [{dbName}];
+                END";
+
+                await using var cmd = new SqlCommand(sql, conn)
+                {
+                    CommandTimeout = 180 // Prevents wait operation timeout during SQL file allocation
+                };
                 await cmd.ExecuteNonQueryAsync();
             }
 
-            // Apply EF Schema to the dedicated database
-            var tenantConnStr = $"Server={server};Database={dbName};User Id=sa;Password={saPassword};TrustServerCertificate=True;MultipleActiveResultSets=True;";
-            var tenantOptions = new DbContextOptionsBuilder<TenantCrmDbContext>().UseSqlServer(tenantConnStr).Options;
+            // Apply EF Schema to the dedicated database with an extended 180-second timeout
+            var tenantConnStr = $"Server={server};Database={dbName};User Id=sa;Password={saPassword};Encrypt=False;TrustServerCertificate=True;MultipleActiveResultSets=True;";
+            var tenantOptions = new DbContextOptionsBuilder<TenantCrmDbContext>()
+                .UseSqlServer(tenantConnStr, sql => sql.CommandTimeout(180))
+                .Options;
 
             await using var tenantDb = new TenantCrmDbContext(tenantOptions);
+
+            // Apply tables only if the schema has not been built yet
             await tenantDb.Database.EnsureCreatedAsync();
 
+            // Seed initial showroom branches, garments, and customers
             await SeedTenantSpecificDataAsync(tenantDb, company.CompanyId, company.CompanyCode);
         }
     }

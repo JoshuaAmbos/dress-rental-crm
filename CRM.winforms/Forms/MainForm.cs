@@ -2,6 +2,7 @@
 using CRM.domain.entities;
 using CRM.infrastructure.data;
 using CRM.infrastructure.services;
+using CRM.winforms.Configuration;
 using CRM.winforms.Views;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -84,19 +85,20 @@ public partial class MainForm : Form
 
         _contextFactory = () =>
         {
-            var targetDb = !string.IsNullOrWhiteSpace(_user.DatabaseName) ? _user.DatabaseName : "DB_TenantCRM";
-            var connStr = $"Server={_user.ServerName};Database={targetDb};User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;MultipleActiveResultSets=True;";
+            var connStr = DatabaseConfig.BuildTenantConnectionString(_user.DatabaseName, _user.ServerName);
             var options = new DbContextOptionsBuilder<TenantCrmDbContext>()
-                .UseSqlServer(connStr)
+                .UseSqlServer(connStr, sql => sql.CommandTimeout(60))
                 .Options;
+
             return new TenantCrmDbContext(options);
         };
 
         _masterContextFactory = () =>
         {
             var options = new DbContextOptionsBuilder<MasterCrmDbContext>()
-                .UseSqlServer("Server=localhost,1433;Database=DB_MasterCRM;User Id=sa;Password=YourStrong@Passw0rd!;TrustServerCertificate=True;")
+                .UseSqlServer(DatabaseConfig.MasterConnectionString, sql => sql.CommandTimeout(60))
                 .Options;
+
             return new MasterCrmDbContext(options);
         };
 
