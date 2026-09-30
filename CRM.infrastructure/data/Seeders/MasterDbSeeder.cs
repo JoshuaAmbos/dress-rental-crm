@@ -9,69 +9,74 @@ public static class MasterDbSeeder
     {
         await masterDb.Database.EnsureCreatedAsync();
 
-        // 1. Seed Subscription Packages
+        // 1. Seed Subscription Packages (Let SQL Server generate SubscriptionPackageId)
+        SubscriptionPackage pkgEnterprise;
+        SubscriptionPackage pkgGrowth;
+        SubscriptionPackage pkgStarter;
+
         if (!await masterDb.SubscriptionPackages.AnyAsync())
         {
-            var packages = new List<SubscriptionPackage>
+            pkgEnterprise = new SubscriptionPackage
             {
-                new()
-                {
-                    SubscriptionPackageId = 1,
-                    PackageName = "Package A - Enterprise",
-                    Description = "Full suite with multi-branch management, advanced BI analytics, and loyalty automation.",
-                    MaxBranches = 10,
-                    HasMultiBranch = true,
-                    HasLoyalty = true,
-                    HasAnalytics = true,
-                    MonthlyFee = 9999.00m,
-                    IsActive = true
-                },
-                new()
-                {
-                    SubscriptionPackageId = 2,
-                    PackageName = "Package B - Growth",
-                    Description = "Core rental transactions, customer profiles, and analytics for single boutique showrooms.",
-                    MaxBranches = 1,
-                    HasMultiBranch = false,
-                    HasLoyalty = true,
-                    HasAnalytics = true,
-                    MonthlyFee = 4999.00m,
-                    IsActive = true
-                },
-                new()
-                {
-                    SubscriptionPackageId = 3,
-                    PackageName = "Package C - Starter",
-                    Description = "Essential bookings, client intake, and inventory tracking for micro boutiques.",
-                    MaxBranches = 1,
-                    HasMultiBranch = false,
-                    HasLoyalty = false,
-                    HasAnalytics = false,
-                    MonthlyFee = 1999.00m,
-                    IsActive = true
-                }
+                PackageName = "Package A - Enterprise",
+                Description = "Full suite with multi-branch management, advanced BI analytics, and loyalty automation.",
+                MaxBranches = 10,
+                HasMultiBranch = true,
+                HasLoyalty = true,
+                HasAnalytics = true,
+                MonthlyFee = 9999.00m,
+                IsActive = true
             };
 
-            await masterDb.SubscriptionPackages.AddRangeAsync(packages);
+            pkgGrowth = new SubscriptionPackage
+            {
+                PackageName = "Package B - Growth",
+                Description = "Core rental transactions, customer profiles, and analytics for single boutique showrooms.",
+                MaxBranches = 1,
+                HasMultiBranch = false,
+                HasLoyalty = true,
+                HasAnalytics = true,
+                MonthlyFee = 4999.00m,
+                IsActive = true
+            };
+
+            pkgStarter = new SubscriptionPackage
+            {
+                PackageName = "Package C - Starter",
+                Description = "Essential bookings, client intake, and inventory tracking for micro boutiques.",
+                MaxBranches = 1,
+                HasMultiBranch = false,
+                HasLoyalty = false,
+                HasAnalytics = false,
+                MonthlyFee = 1999.00m,
+                IsActive = true
+            };
+
+            masterDb.SubscriptionPackages.AddRange(pkgEnterprise, pkgGrowth, pkgStarter);
             await masterDb.SaveChangesAsync();
         }
+        else
+        {
+            pkgEnterprise = await masterDb.SubscriptionPackages.FirstAsync(p => p.PackageName.Contains("Enterprise"));
+            pkgGrowth = await masterDb.SubscriptionPackages.FirstAsync(p => p.PackageName.Contains("Growth"));
+            pkgStarter = await masterDb.SubscriptionPackages.FirstAsync(p => p.PackageName.Contains("Starter"));
+        }
 
-        // 2. Seed Boutique Companies and Database Routing Entries
+        // 2. Seed Boutique Companies (Let SQL Server generate CompanyId)
         var tenantConfigs = new[]
         {
-            new { Id = 1, Code = "ATELIER", Name = "Atelier Haute Couture", PackageId = 1, Db = "DB_Tenant_ATELIER" },
-            new { Id = 2, Code = "MAISON",  Name = "Maison Étoile Bridal",   PackageId = 2, Db = "DB_Tenant_MAISON" },
-            new { Id = 3, Code = "DAVAO",   Name = "Davao Haute Rentals",     PackageId = 3, Db = "DB_Tenant_DAVAO" }
+            new { Code = "ATELIER", Name = "Atelier Haute Couture", PackageId = pkgEnterprise.SubscriptionPackageId, Db = "DB_Tenant_ATELIER" },
+            new { Code = "MAISON",  Name = "Maison Étoile Bridal",   PackageId = pkgGrowth.SubscriptionPackageId,      Db = "DB_Tenant_MAISON" },
+            new { Code = "DAVAO",   Name = "Davao Haute Rentals",     PackageId = pkgStarter.SubscriptionPackageId,     Db = "DB_Tenant_DAVAO" }
         };
 
         foreach (var cfg in tenantConfigs)
         {
-            var company = await masterDb.Companies.FirstOrDefaultAsync(c => c.CompanyId == cfg.Id);
+            var company = await masterDb.Companies.FirstOrDefaultAsync(c => c.CompanyCode == cfg.Code);
             if (company == null)
             {
                 company = new Company
                 {
-                    CompanyId = cfg.Id,
                     CompanyCode = cfg.Code,
                     CompanyName = cfg.Name,
                     SubscriptionPackageId = cfg.PackageId,
@@ -82,12 +87,12 @@ public static class MasterDbSeeder
                 await masterDb.SaveChangesAsync();
             }
 
-            var dbEntry = await masterDb.CompanyDatabases.FirstOrDefaultAsync(d => d.CompanyId == cfg.Id);
+            var dbEntry = await masterDb.CompanyDatabases.FirstOrDefaultAsync(d => d.CompanyId == company.CompanyId);
             if (dbEntry == null)
             {
                 masterDb.CompanyDatabases.Add(new CompanyDatabase
                 {
-                    CompanyId = cfg.Id,
+                    CompanyId = company.CompanyId,
                     ServerName = server,
                     DatabaseName = cfg.Db,
                     CredentialKey = "DefaultKey",
